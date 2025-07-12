@@ -109,7 +109,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   const handleStaffCallChange = (day: number, callType: 'cranial' | 'spine', staffName: string) => {
     setAppState(prev => {
         const otherCalls = prev.staffCall.filter(c => !(c.day === day && c.callType === callType));
-        if (staffName) {
+        if (staffName && staffName !== 'none') {
             return { ...prev, staffCall: [...otherCalls, { day, callType, staffName }]};
         }
         return { ...prev, staffCall: otherCalls };
@@ -159,12 +159,12 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
                     <div>
                         <Label className="flex items-center gap-2 font-semibold"><Brain className="w-5 h-5 text-red-500"/> Cranial Call</Label>
                         <Select 
-                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'cranial')?.staffName || ''}
+                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'cranial')?.staffName || 'none'}
                             onValueChange={val => handleStaffCallChange(currentEditingDay, 'cranial', val)}
                         >
                             <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {allStaff.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
@@ -172,12 +172,12 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
                     <div>
                         <Label className="flex items-center gap-2 font-semibold"><Bone className="w-5 h-5 text-blue-500"/> Spine Call</Label>
                          <Select
-                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'spine')?.staffName || ''}
+                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'spine')?.staffName || 'none'}
                             onValueChange={val => handleStaffCallChange(currentEditingDay, 'spine', val)}
                         >
                             <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {allStaff.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
