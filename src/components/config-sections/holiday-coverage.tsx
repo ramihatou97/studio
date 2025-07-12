@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Info } from 'lucide-react';
 
 interface HolidayCoverageProps {
   appState: AppState;
@@ -53,9 +54,39 @@ export function HolidayCoverage({ appState, setAppState }: HolidayCoverageProps)
 
   return (
     <AccordionItem value="holiday-coverage">
-      <AccordionTrigger className="text-lg font-medium">Holiday Coverage Assignments</AccordionTrigger>
+      <AccordionTrigger className="text-lg font-medium">Holiday Coverage Assignments (Dec/Jan)</AccordionTrigger>
       <AccordionContent>
         <div className="space-y-4">
+            <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-700 mb-6">
+                <h4 className="text-md font-semibold mb-2 text-sky-800 dark:text-sky-300 flex items-center gap-2">
+                    <Info className="w-5 h-5" />
+                    How Holiday Coverage Works
+                </h4>
+                <div className="text-sm text-muted-foreground space-y-4">
+                    <div>
+                        <h5 className="font-semibold text-foreground">1. How to Configure Holiday Coverage</h5>
+                        <p className="font-medium mt-2">Define Holiday Blocks:</p>
+                        <p>You must first enter the start and end dates for the two holiday periods: the Christmas Block and the New Year&apos;s Block.</p>
+                        <p className="font-medium mt-2">Assign Residents to Groups:</p>
+                        <p>For each eligible resident, assign them to one of three groups using the dropdown menu:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                            <li><span className="font-semibold">Christmas Group:</span> These residents will be off during the entire Christmas block.</li>
+                            <li><span className="font-semibold">New Year&apos;s Group:</span> These residents will be off during the entire New Year&apos;s block.</li>
+                            <li><span className="font-semibold">Neither:</span> These residents are not part of the special holiday swap and will follow their normal schedule.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 className="font-semibold text-foreground">2. How the Scheduling Algorithm Applies These Rules</h5>
+                        <p>The algorithm treats holiday assignments as a top priority.</p>
+                         <ul className="list-disc pl-5 mt-1 space-y-1">
+                            <li><span className="font-semibold">Holiday Assignment Lock:</span> The algorithm assigns &quot;Holiday&quot; to every day of the block for residents in the corresponding group. They are then unavailable for any other duties.</li>
+                            <li><span className="font-semibold">Reciprocal Call Coverage:</span> During the Christmas Block, only residents from the New Year&apos;s Group (and &quot;Neither&quot; group) are eligible for call. Conversely, during the New Year&apos;s Block, only residents from the Christmas Group (and &quot;Neither&quot;) are eligible for call.</li>
+                            <li><span className="font-semibold">Statutory Holidays:</span> Call shifts on specific statutory holidays (e.g., Dec 25, Jan 1) are treated like weekend calls, requiring appropriate junior/senior backup from within the same on-duty holiday group.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-6 mb-4">
               <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
                 <CardContent className="pt-6">
