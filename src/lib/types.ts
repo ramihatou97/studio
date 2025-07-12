@@ -83,6 +83,12 @@ export interface ClinicSlots {
   [day: string]: { red: number; blue: number };
 }
 
+export interface StaffCall {
+  day: number;
+  callType: 'cranial' | 'spine';
+  staffName: string;
+}
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];
@@ -92,7 +98,7 @@ export interface AppState {
     redTeam: Staff[];
     blueTeam: Staff[];
   };
-  staffCall: { day: number, callType: 'cranial' | 'spine', staffName: string }[];
+  staffCall: StaffCall[];
   orCases: { [dayIndex: number]: OrCase[] };
   clinicSlots: ClinicSlots;
   residentCall: { day: number; residentId: string; call: string }[];

@@ -35,6 +35,17 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return { numberOfDays: 0 };
     return { numberOfDays: Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 };
   })();
+  
+  if (numberOfDays === 0) {
+    return (
+        <AccordionItem value="or-clinic-config">
+            <AccordionTrigger className="text-lg font-medium">OR & Clinic Configuration</AccordionTrigger>
+            <AccordionContent>
+                <p className="text-muted-foreground italic text-center">Please set a valid date range to configure OR cases.</p>
+            </AccordionContent>
+        </AccordionItem>
+    );
+  }
 
   const allStaff = [...staff.redTeam, ...staff.blueTeam];
 
@@ -83,7 +94,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
             <div key={day}>
               <Label className="capitalize font-medium">{day}</Label>
               <Input type="number" className="mt-1 w-full bg-red-100 dark:bg-red-900/50" placeholder="Red" value={clinicSlots[day].red} onChange={e => setAppState(prev => ({...prev, clinicSlots: {...prev.clinicSlots, [day]: {...prev.clinicSlots[day], red: parseInt(e.target.value)}}}))} />
-              <Input type="number" className="mt-1 w-full bg-blue-100 dark:bg-blue-900/50" placeholder="Blue" value={clinicSlots[day].blue} onChange={e => setAppState(prev => ({...prev, clinicSlots: {...prev.clinicSlots[day], [day]: {...prev.clinicSlots[day], blue: parseInt(e.target.value)}}}))} />
+              <Input type="number" className="mt-1 w-full bg-blue-100 dark:bg-blue-900/50" placeholder="Blue" value={clinicSlots[day].blue} onChange={e => setAppState(prev => ({...prev, clinicSlots: {...prev.clinicSlots, [day]: {...prev.clinicSlots[day], blue: parseInt(e.target.value)}}}))} />
             </div>
           ))}
         </div>

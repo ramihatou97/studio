@@ -1,10 +1,11 @@
 'use server';
 
 import { prepopulateResidentData as prepopulateResidentDataFlow } from '@/ai/flows/pre-populate-resident-data';
+import { prepopulateStaffCall as prepopulateStaffCallFlow } from '@/ai/flows/pre-populate-staff-call';
 import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/flows/analyze-schedule-conflicts';
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
-import type { AppState } from './types';
+import type { AppState, StaffCall } from './types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
   try {
@@ -14,6 +15,17 @@ export async function prepopulateDataAction(sourceType: 'text' | 'image', source
     console.error('Error in prepopulateDataAction:', error);
     return { success: false, error: 'Failed to parse data from source.' };
   }
+}
+
+export async function prepopulateStaffCallAction(scheduleText: string, staffList: string[]) {
+    try {
+      const result = await prepopulateStaffCallFlow({ scheduleText, staffList });
+      return { success: true, data: result.staffCall };
+    } catch (error)
+    {
+      console.error('Error in prepopulateStaffCallAction:', error);
+      return { success: false, error: 'Failed to parse staff call data.' };
+    }
 }
 
 export async function analyzeScheduleConflictsAction(appState: AppState, scheduleOutput: any) {
