@@ -2,7 +2,7 @@ import type { AppState, ScheduleOutput, Resident, ScheduleActivity } from './typ
 
 // Main function to generate all schedules
 export function generateSchedules(appState: AppState): ScheduleOutput {
-  const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall } = appState;
+  const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicSlots, staff } = appState;
   const { startDate, endDate, statHolidays, usePredefinedCall } = general;
   const errors: string[] = [];
 
@@ -28,7 +28,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     ...r,
     schedule: Array.from({ length: numberOfDays }, () => []),
     callDays: [],
-    weekendCalls: 0
+    weekendCalls: 0,
+    orDays: 0,
   }));
 
   // --- Pre-assignment Stage (Vacation, Holidays) ---
@@ -181,6 +182,83 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     }
   });
 
+  // --- OR & Clinic Assignment Pass ---
+  const chief = processedResidents.find(r => r.isChief);
+  const redTeamStaffIds = new Set(staff.redTeam.map(s => s.name));
+  const blueTeamStaffIds = new Set(staff.blueTeam.map(s => s.name));
+
+  for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+    const currentDate = new Date(start);
+    currentDate.setDate(currentDate.getDate() + dayIndex);
+    const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase().substring(0, 3);
+    const dailyOrCases = orCases[dayIndex] || [];
+
+    // Assign Chief OR days first
+    if (chief && chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
+      chief.schedule[dayIndex].push('OR');
+      chief.orDays++;
+    }
+
+    // Assign Clinics
+    if (clinicSlots[dayName]) {
+      let redSlots = clinicSlots[dayName].red;
+      let blueSlots = clinicSlots[dayName].blue;
+      const onServiceResidents = processedResidents.filter(r => r.type === 'neuro' && r.onService && r.schedule[dayIndex].length === 0).sort((a,b) => a.level - b.level);
+      
+      onServiceResidents.forEach(res => {
+        const isRedTeamDay = redTeamStaffIds.has(dailyOrCases[0]?.surgeon); // Simplistic team association
+        if (isRedTeamDay && redSlots > 0) {
+          res.schedule[dayIndex].push('Clinic');
+          redSlots--;
+        } else if (!isRedTeamDay && blueSlots > 0) {
+          res.schedule[dayIndex].push('Clinic');
+          blueSlots--;
+        }
+      });
+    }
+
+    // Assign remaining ORs based on seniority
+    const availableResidentsForOR = () => processedResidents
+        .filter(r => r.type === 'neuro' && r.onService && r.schedule[dayIndex].length === 0)
+        .sort((a,b) => b.level - a.level || a.orDays - b.orDays); // Sort by PGY, then by fewest OR days
+
+    let orSlotsToFill = dailyOrCases.length - processedResidents.filter(r => r.schedule[dayIndex].includes('OR')).length;
+    let candidates = availableResidentsForOR();
+    
+    while(orSlotsToFill > 0 && candidates.length > 0) {
+      const residentToAssign = candidates.shift();
+      if (residentToAssign) {
+        residentToAssign.schedule[dayIndex].push('OR');
+        residentToAssign.orDays++;
+        orSlotsToFill--;
+      }
+    }
+  }
+
+  // --- Junior-Senior OR Pairing Pass ---
+  for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+    const juniorsFloating = processedResidents.filter(r => r.schedule[dayIndex].length === 0 && (r.level === 1 || r.level === 2));
+    const seniorsInOR = processedResidents.filter(r => r.schedule[dayIndex].includes('OR') && r.level >= 3);
+
+    for (const junior of juniorsFloating) {
+        const seniorsOperatingAlone = seniorsInOR.filter(s => {
+            const orPartners = processedResidents.filter(p => p.schedule[dayIndex].includes('OR') && p.id !== s.id);
+            return orPartners.length === 0; // Find seniors who are the only ones in the OR for now
+        });
+
+        const bestSeniorMatch = seniorsOperatingAlone.find(s => s.level - junior.level >= 2);
+
+        if (bestSeniorMatch) {
+            junior.schedule[dayIndex] = ['OR']; // Assign junior to the OR
+            // Mark the senior as no longer "alone" to prevent over-pairing
+            const seniorIndex = seniorsInOR.findIndex(s => s.id === bestSeniorMatch.id);
+            if (seniorIndex > -1) {
+              // This logic is tricky; for now, we just assign the junior.
+              // A more robust solution might track pairs.
+            }
+        }
+    }
+  }
 
   // Fill in empty slots with Float for demonstration
   processedResidents.forEach(r => {

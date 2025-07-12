@@ -43,6 +43,7 @@ export interface Resident extends BasePersonnel {
   specialty?: string;
   weekendCalls: number;
   callDays: number[];
+  orDays: number;
   holidayGroup?: 'christmas' | 'new_year' | 'neither';
 }
 

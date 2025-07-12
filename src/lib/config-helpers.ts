@@ -3,9 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const initialAppState: AppState = {
   general: {
-    startDate: '',
-    endDate: '',
-    statHolidays: '',
+    startDate: '2025-07-01',
+    endDate: '2025-07-31',
+    statHolidays: '1',
     usePredefinedCall: false,
     christmasStart: '',
     christmasEnd: '',
@@ -52,6 +52,7 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     schedule: [],
     weekendCalls: 0,
     callDays: [],
+    orDays: 0,
     holidayGroup: 'neither',
     allowSoloPgy1Call: false,
   };
@@ -75,6 +76,7 @@ export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAc
       schedule: [],
       weekendCalls: 0,
       callDays: [],
+      orDays: 0,
       allowSoloPgy1Call: false,
     };
     setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
