@@ -6,7 +6,7 @@ import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/f
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
 import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-populate-or-cases';
-import type { AppState, StaffCall } from './types';
+import type { AppState, StaffCall, Resident } from './types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
   try {
@@ -94,14 +94,20 @@ export async function generateHandoverEmailAction(appState: AppState, scheduleOu
 
 export async function optimizeScheduleAction(appState: AppState, scheduleOutput: any, conflictDetails: string) {
   try {
-    const scheduleString = JSON.stringify(
-        scheduleOutput.residents.map((r: any) => ({ name: r.name, schedule: r.schedule })),
-        null, 2
-    );
-    const residentPreferences = JSON.stringify(
-        appState.residents.map(r => ({ name: r.name, level: r.level, vacationDays: r.vacationDays, holidayGroup: r.holidayGroup })),
-        null, 2
-    );
+    const scheduleString = scheduleOutput.residents.map((r: Resident) => 
+        `${r.name} (PGY-${r.level}): Call on days ${r.callDays.map(d => d + 1).join(', ')}`
+    ).join('\n');
+    
+    const residentPreferences = appState.residents.map((r: Resident) => {
+        let preferences = `${r.name}: PGY-${r.level}, On Service: ${r.onService}`;
+        if (r.vacationDays.length > 0) {
+            preferences += `, Vacation on days: ${r.vacationDays.join(', ')}`;
+        }
+        if (r.holidayGroup && r.holidayGroup !== 'neither') {
+            preferences += `, Holiday Group: ${r.holidayGroup}`;
+        }
+        return preferences;
+    }).join('\n');
 
     const result = await optimizeOnCallScheduleFlow({
       currentSchedule: scheduleString,
