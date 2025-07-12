@@ -3,14 +3,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const initialAppState: AppState = {
   general: {
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+    startDate: '',
+    endDate: '',
     statHolidays: '',
     usePredefinedCall: false,
-    christmasStart: `${new Date().getFullYear()}-12-23`,
-    christmasEnd: `${new Date().getFullYear()}-12-26`,
-    newYearStart: `${new Date().getFullYear()}-12-30`,
-    newYearEnd: `${new Date().getFullYear() + 1}-01-02`,
+    christmasStart: '',
+    christmasEnd: '',
+    newYearStart: '',
+    newYearEnd: '',
   },
   residents: [],
   medicalStudents: [],
@@ -53,6 +53,7 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     weekendCalls: 0,
     callDays: [],
     holidayGroup: 'neither',
+    allowSoloPgy1Call: false,
   };
   setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
 };
@@ -74,6 +75,7 @@ export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAc
       schedule: [],
       weekendCalls: 0,
       callDays: [],
+      allowSoloPgy1Call: false,
     };
     setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
 };

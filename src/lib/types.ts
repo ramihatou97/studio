@@ -39,6 +39,7 @@ export interface Resident extends BasePersonnel {
   maxOnServiceCalls: number;
   offServiceMaxCall: number;
   exemptFromCall?: boolean;
+  allowSoloPgy1Call?: boolean;
   specialty?: string;
   weekendCalls: number;
   callDays: number[];
@@ -89,6 +90,12 @@ export interface StaffCall {
   staffName: string;
 }
 
+export interface ResidentCall {
+  day: number;
+  residentId: string;
+  call: 'D' | 'N' | 'W';
+}
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];
@@ -101,6 +108,6 @@ export interface AppState {
   staffCall: StaffCall[];
   orCases: { [dayIndex: number]: OrCase[] };
   clinicSlots: ClinicSlots;
-  residentCall: { day: number; residentId: string; call: string }[];
+  residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
 }

@@ -126,6 +126,17 @@ export function ResidentCard({ resident, updateResident, removeResident, appStat
         )}
       </div>
 
+       {resident.level === 1 && (
+        <div className="flex items-center space-x-2 pt-2 border-t">
+          <Switch 
+            id={`allow-solo-${resident.id}`} 
+            checked={resident.allowSoloPgy1Call} 
+            onCheckedChange={(checked) => updateResident(resident.id, { allowSoloPgy1Call: checked })} 
+          />
+          <Label htmlFor={`allow-solo-${resident.id}`} className="text-sm">Allow solo PGY-1 call without senior backup</Label>
+        </div>
+      )}
+
       {resident.type === 'neuro' && (
         <>
             <div className="flex items-center space-x-2 pt-2 border-t">
