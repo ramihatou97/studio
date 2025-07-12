@@ -1,0 +1,52 @@
+export const MediShiftLogo = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 256 256"
+    {...props}
+  >
+    <rect width={256} height={256} fill="none" />
+    <path
+      d="M48,160V128a80,80,0,0,1,160,0v32"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={24}
+    />
+    <path
+      d="M208,160v32a40,40,0,0,1-80,0V160Z"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={24}
+    />
+    <path
+      d="M48,160v32a40,40,0,0,0,80,0V160Z"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={24}
+    />
+    <line
+      x1={128}
+      y1={48}
+      x2={128}
+      y2={88}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={24}
+    />
+    <polyline
+      points="88 88 128 48 168 88"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={24}
+    />
+  </svg>
+);

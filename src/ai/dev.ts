@@ -1,1 +1,7 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/pre-populate-resident-data.ts';
+import '@/ai/flows/generate-handover-email.ts';
+import '@/ai/flows/analyze-schedule-conflicts.ts';
+import '@/ai/flows/optimize-on-call-schedule.ts';

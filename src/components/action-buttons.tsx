@@ -1,0 +1,76 @@
+import { useState } from 'react';
+import type { AppState, ScheduleOutput } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { AnalysisModal } from './modals/analysis-modal';
+import { HandoverModal } from './modals/handover-modal';
+import { OptimizerModal } from './modals/optimizer-modal';
+import { Bot, FileText, Sparkles, Wand2 } from 'lucide-react';
+
+interface ActionButtonsProps {
+  onGenerate: () => void;
+  scheduleOutput: ScheduleOutput | null;
+  appState: AppState;
+  isLoading: boolean;
+}
+
+export function ActionButtons({ onGenerate, scheduleOutput, appState, isLoading }: ActionButtonsProps) {
+  const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
+  const [isOptimizerModalOpen, setOptimizerModalOpen] = useState(false);
+  const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
+  
+  return (
+    <>
+      <div className="my-8 flex flex-col items-center space-y-4">
+        <Button
+          onClick={onGenerate}
+          disabled={isLoading}
+          className="w-full md:w-1/2 text-lg py-6"
+        >
+          {isLoading ? (
+            <><Bot className="mr-2 h-5 w-5 animate-spin" /> Generating...</>
+          ) : (
+            <><Wand2 className="mr-2 h-5 w-5" /> Generate Schedules</>
+          )}
+        </Button>
+        {scheduleOutput && (
+          <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-3 gap-2">
+            {scheduleOutput.errors.length > 0 && (
+                <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
+                    <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
+                </Button>
+            )}
+            <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-500/20">
+              <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
+            </Button>
+            <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20 col-span-1 md:col-span-2">
+              <FileText className="mr-2 h-4 w-4" /> Generate Handover Email
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {scheduleOutput && (
+        <>
+          <AnalysisModal
+            isOpen={isAnalysisModalOpen}
+            onOpenChange={setAnalysisModalOpen}
+            appState={appState}
+            scheduleOutput={scheduleOutput}
+          />
+          <HandoverModal
+            isOpen={isHandoverModalOpen}
+            onOpenChange={setHandoverModalOpen}
+            appState={appState}
+            scheduleOutput={scheduleOutput}
+          />
+          <OptimizerModal
+            isOpen={isOptimizerModalOpen}
+            onOpenChange={setOptimizerModalOpen}
+            appState={appState}
+            scheduleOutput={scheduleOutput}
+          />
+        </>
+      )}
+    </>
+  );
+}
