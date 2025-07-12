@@ -5,6 +5,7 @@ import { prepopulateStaffCall as prepopulateStaffCallFlow } from '@/ai/flows/pre
 import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/flows/analyze-schedule-conflicts';
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
+import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-populate-or-cases';
 import type { AppState, StaffCall } from './types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
@@ -26,6 +27,16 @@ export async function prepopulateStaffCallAction(scheduleText: string, staffList
       console.error('Error in prepopulateStaffCallAction:', error);
       return { success: false, error: 'Failed to parse staff call data.' };
     }
+}
+
+export async function prepopulateOrCasesAction(orScheduleText: string, staffList: string[]) {
+  try {
+    const result = await prepopulateOrCasesFlow({ orScheduleText, staffList });
+    return { success: true, data: result.orCases };
+  } catch (error) {
+    console.error('Error in prepopulateOrCasesAction:', error);
+    return { success: false, error: 'Failed to parse OR case data.' };
+  }
 }
 
 export async function analyzeScheduleConflictsAction(appState: AppState, scheduleOutput: any) {
