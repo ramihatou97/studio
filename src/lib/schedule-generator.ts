@@ -1,3 +1,4 @@
+
 import type { AppState, ScheduleOutput, Resident, ScheduleActivity } from './types';
 
 // Main function to generate all schedules
@@ -184,8 +185,6 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
   // --- OR & Clinic Assignment Pass ---
   const chief = processedResidents.find(r => r.isChief);
-  const redTeamStaffIds = new Set(staff.redTeam.map(s => s.name));
-  const blueTeamStaffIds = new Set(staff.blueTeam.map(s => s.name));
 
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
     const currentDate = new Date(start);
@@ -201,26 +200,55 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
     // Assign Clinics
     if (clinicSlots[dayName]) {
-      let redSlots = clinicSlots[dayName].red;
-      let blueSlots = clinicSlots[dayName].blue;
-      const onServiceResidents = processedResidents.filter(r => r.type === 'neuro' && r.onService && r.schedule[dayIndex].length === 0).sort((a,b) => a.level - b.level);
-      
-      onServiceResidents.forEach(res => {
-        const isRedTeamDay = redTeamStaffIds.has(dailyOrCases[0]?.surgeon); // Simplistic team association
-        if (isRedTeamDay && redSlots > 0) {
-          res.schedule[dayIndex].push('Clinic');
-          redSlots--;
-        } else if (!isRedTeamDay && blueSlots > 0) {
-          res.schedule[dayIndex].push('Clinic');
-          blueSlots--;
+        let availableSlots = clinicSlots[dayName].red + clinicSlots[dayName].blue;
+        
+        // 1. Identify clinic candidates
+        let clinicCandidates = processedResidents.filter(r => {
+            if (r.schedule[dayIndex].length > 0) return false; // already assigned
+            if (r.type === 'non-neuro' && r.onService) return true; // non-neuro rotators are eligible
+            if (r.type === 'neuro' && r.onService && r.level < 4) return true; // junior neuro residents are eligible
+            return false;
+        });
+
+        // 2. Prioritize candidates
+        clinicCandidates.sort((a, b) => {
+            // Non-neuro first
+            if (a.type === 'non-neuro' && b.type !== 'non-neuro') return -1;
+            if (b.type === 'non-neuro' && a.type !== 'non-neuro') return 1;
+            // Then most junior PGY level
+            return a.level - b.level;
+        });
+        
+        // Soft rule: balance clinic vs OR for juniors
+        const pgy1s = clinicCandidates.filter(r => r.level === 1);
+        const pgy1_avg_or_days = pgy1s.length > 0 ? pgy1s.reduce((sum, r) => sum + r.orDays, 0) / pgy1s.length : 0;
+        
+        // This is a simple form of balancing. A more complex system could be used.
+        // It moves PGY1s with low OR counts to the end of the clinic priority list.
+        clinicCandidates = clinicCandidates.sort((a, b) => {
+            if (a.level === 1 && a.orDays < pgy1_avg_or_days) return 1; // Move to end
+            if (b.level === 1 && b.orDays < pgy1_avg_or_days) return -1;
+            return 0; // Keep original order otherwise
+        });
+        
+        // 3. Assign to clinic
+        let assignedCount = 0;
+        while(assignedCount < availableSlots && clinicCandidates.length > 0) {
+            const residentToAssign = clinicCandidates.shift();
+            if (residentToAssign) {
+                residentToAssign.schedule[dayIndex].push('Clinic');
+                assignedCount++;
+            }
         }
-      });
     }
 
     // Assign remaining ORs based on seniority
     const availableResidentsForOR = () => processedResidents
         .filter(r => r.type === 'neuro' && r.onService && r.schedule[dayIndex].length === 0)
-        .sort((a,b) => b.level - a.level || a.orDays - b.orDays); // Sort by PGY, then by fewest OR days
+        .sort((a,b) => {
+            if (a.level !== b.level) return b.level - a.level; // Seniority first
+            return a.orDays - b.orDays; // Then fairness
+        });
 
     let orSlotsToFill = dailyOrCases.length - processedResidents.filter(r => r.schedule[dayIndex].includes('OR')).length;
     let candidates = availableResidentsForOR();
@@ -237,25 +265,23 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
   // --- Junior-Senior OR Pairing Pass ---
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
-    const juniorsFloating = processedResidents.filter(r => r.schedule[dayIndex].length === 0 && (r.level === 1 || r.level === 2));
+    const juniorsFloating = processedResidents.filter(r => r.schedule[dayIndex].length === 0 && r.type === 'neuro' && (r.level === 1 || r.level === 2));
     const seniorsInOR = processedResidents.filter(r => r.schedule[dayIndex].includes('OR') && r.level >= 3);
 
     for (const junior of juniorsFloating) {
         const seniorsOperatingAlone = seniorsInOR.filter(s => {
+            // Count how many people are already in the OR with this senior
             const orPartners = processedResidents.filter(p => p.schedule[dayIndex].includes('OR') && p.id !== s.id);
-            return orPartners.length === 0; // Find seniors who are the only ones in the OR for now
+            // This is a simplification; a better approach would be to track pairs explicitly
+            return orPartners.length < (orCases[dayIndex]?.length || 1);
         });
 
-        const bestSeniorMatch = seniorsOperatingAlone.find(s => s.level - junior.level >= 2);
+        // Find a senior with a sufficient PGY gap who has space
+        const bestSeniorMatch = seniorsOperatingAlone.find(s => (s.level - junior.level) >= 2);
 
         if (bestSeniorMatch) {
-            junior.schedule[dayIndex] = ['OR']; // Assign junior to the OR
-            // Mark the senior as no longer "alone" to prevent over-pairing
-            const seniorIndex = seniorsInOR.findIndex(s => s.id === bestSeniorMatch.id);
-            if (seniorIndex > -1) {
-              // This logic is tricky; for now, we just assign the junior.
-              // A more robust solution might track pairs.
-            }
+            junior.schedule[dayIndex] = ['OR'];
+            junior.orDays++;
         }
     }
   }
