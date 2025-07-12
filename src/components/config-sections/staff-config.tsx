@@ -229,7 +229,7 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
       <AccordionTrigger className="text-lg font-medium">Staffing & On-Call Configuration</AccordionTrigger>
       <AccordionContent>
         <div className="grid md:grid-cols-2 gap-8">
-          <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+          <Card className="bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
             <CardHeader><CardTitle className="text-red-800 dark:text-red-300">Red Team Staff</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-2">
@@ -248,7 +248,7 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
             </CardContent>
           </Card>
 
-          <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+          <Card className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
             <CardHeader><CardTitle className="text-blue-800 dark:text-blue-300">Blue Team Staff</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-2">
