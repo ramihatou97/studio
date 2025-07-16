@@ -1,4 +1,3 @@
-
 import type { AppState, ScheduleOutput, Resident, ScheduleActivity } from './types';
 
 // Main function to generate all schedules
@@ -104,20 +103,26 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
           if (isWeekend || isHoliday) resident.weekendCalls++;
       }
 
+      const findAndAssignBackup = (primaryResident: Resident, availableCandidates: Resident[]) => {
+          const needsBackup = (primaryResident.type === 'neuro' && primaryResident.level === 1 && !primaryResident.allowSoloPgy1Call) || (primaryResident.type === 'non-neuro' && !primaryResident.exemptFromCall);
+          
+          if (needsBackup) {
+              const backup = availableCandidates.find(c => c.type === 'neuro' && (c.level >= 4 || (c.level === 3 && c.canBeBackup)));
+              if (backup) {
+                  assignCall(backup, 'Backup');
+              } else {
+                  errors.push(`Could not find eligible backup for ${primaryResident.name} on day ${dayIndex + 1}`);
+              }
+          }
+      };
+
       if (isWeekend || isHoliday) {
           // Weekend/Holiday Call Logic
           const candidates = getEligibleCandidates();
           const primary = candidates[0];
           if (primary) {
               assignCall(primary, 'Weekend Call');
-              if (primary.level === 1 && !primary.allowSoloPgy1Call) {
-                  const backup = candidates.slice(1).find(c => c.level >= 3);
-                  if (backup) {
-                    assignCall(backup, 'Backup');
-                  } else {
-                    errors.push(`Could not find PGY3+ backup for PGY1 ${primary.name} on day ${dayIndex + 1}`);
-                  }
-              }
+              findAndAssignBackup(primary, candidates.slice(1));
           } else {
             errors.push(`No eligible resident for Weekend Call on day ${dayIndex + 1}`);
           }
@@ -135,14 +140,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
               if (dayResident) {
                   assignCall(dayResident, 'Day Call');
-                  if (dayResident.level === 1 && !dayResident.allowSoloPgy1Call) {
-                      const backup = dayCandidates.slice(1).find(c => c.level >= 3) || nightCandidates.slice(1).find(c=>c.level >=3);
-                       if (backup) {
-                          assignCall(backup, 'Backup');
-                       } else {
-                           errors.push(`Could not find PGY3+ backup for PGY1 ${dayResident.name} on day ${dayIndex + 1}`);
-                       }
-                  }
+                  findAndAssignBackup(dayResident, dayCandidates.slice(1));
               } else {
                   errors.push(`No eligible resident for Day Call on day ${dayIndex + 1}`);
               }
@@ -153,14 +151,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
               if (resident24hr) {
                   assignCall(resident24hr, 'Day Call');
                   assignCall(resident24hr, 'Night Call');
-                  if (resident24hr.level === 1 && !resident24hr.allowSoloPgy1Call) {
-                      const backup = dayCandidates.slice(1).find(c => c.level >= 3);
-                      if (backup) {
-                        assignCall(backup, 'Backup');
-                      } else {
-                        errors.push(`Could not find PGY3+ backup for PGY1 ${resident24hr.name} on day ${dayIndex + 1} (24h call)`);
-                      }
-                  }
+                  findAndAssignBackup(resident24hr, dayCandidates.slice(1));
               } else {
                 errors.push(`No eligible residents for any call on weekday ${dayIndex + 1}`);
               }

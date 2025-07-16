@@ -126,16 +126,30 @@ export function ResidentCard({ resident, updateResident, removeResident, appStat
         )}
       </div>
 
-       {resident.level === 1 && (
-        <div className="flex items-center space-x-2 pt-2 border-t">
-          <Switch 
-            id={`allow-solo-${resident.id}`} 
-            checked={resident.allowSoloPgy1Call} 
-            onCheckedChange={(checked) => updateResident(resident.id, { allowSoloPgy1Call: checked })} 
-          />
-          <Label htmlFor={`allow-solo-${resident.id}`} className="text-sm">Allow solo PGY-1 call without senior backup</Label>
-        </div>
-      )}
+      <div className="space-y-2 pt-2 border-t">
+        {resident.level === 1 && resident.type === 'neuro' && (
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id={`allow-solo-${resident.id}`} 
+              checked={resident.allowSoloPgy1Call} 
+              onCheckedChange={(checked) => updateResident(resident.id, { allowSoloPgy1Call: checked })} 
+            />
+            <Label htmlFor={`allow-solo-${resident.id}`} className="text-sm">Allow solo PGY-1 call without senior backup</Label>
+          </div>
+        )}
+
+        {resident.level === 3 && resident.type === 'neuro' && (
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id={`can-backup-${resident.id}`} 
+              checked={resident.canBeBackup} 
+              onCheckedChange={(checked) => updateResident(resident.id, { canBeBackup: checked })} 
+            />
+            <Label htmlFor={`can-backup-${resident.id}`} className="text-sm">Can act as backup</Label>
+          </div>
+        )}
+      </div>
+
 
       {resident.type === 'neuro' && (
         <>

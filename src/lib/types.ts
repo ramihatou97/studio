@@ -40,6 +40,7 @@ export interface Resident extends BasePersonnel {
   offServiceMaxCall: number;
   exemptFromCall?: boolean;
   allowSoloPgy1Call?: boolean;
+  canBeBackup?: boolean;
   specialty?: string;
   weekendCalls: number;
   callDays: number[];
