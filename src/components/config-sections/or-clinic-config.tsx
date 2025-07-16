@@ -17,7 +17,7 @@ import { useState } from "react";
 import { Trash2, Sparkles, Wand2, BriefcaseMedical } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { prepopulateOrCasesAction } from "@/lib/actions";
+import { prepopulateOrCasesAction } from "@/ai/actions";
 
 
 function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState>> }) {

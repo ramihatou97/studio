@@ -1,131 +1,29 @@
 import { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
-const staffMembers: Staff[] = [
-    { id: uuidv4(), name: 'Dr. Andrews', subspecialty: 'Tumor', specialtyType: 'cranial' },
-    { id: uuidv4(), name: 'Dr. Chen', subspecialty: 'Vascular', specialtyType: 'cranial' },
-    { id: uuidv4(), name: 'Dr. Patel', subspecialty: 'Functional', specialtyType: 'other' },
-    { id: uuidv4(), name: 'Dr. Garcia', subspecialty: 'Spine', specialtyType: 'spine' },
-    { id: uuidv4(), name: 'Dr. Williams', subspecialty: 'Pediatrics', specialtyType: 'other' },
-    { id: uuidv4(), name: 'Dr. Kim', subspecialty: 'Trauma', specialtyType: 'spine' },
-];
-
-const neuroResidents: Resident[] = [
-    {
-        id: 'chief-resident', type: 'neuro', name: 'Dr. Evelyn Reed', level: 6, onService: true, isChief: true,
-        vacationDays: [], chiefOrDays: [3, 10, 17, 24], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true
-    },
-    {
-        id: 'pgy5-resident', type: 'neuro', name: 'Dr. Ben Carter', level: 5, onService: true, isChief: false,
-        vacationDays: [1, 2], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true
-    },
-    {
-        id: 'pgy4-resident', type: 'neuro', name: 'Dr. Olivia Martinez', level: 4, onService: true, isChief: false,
-        vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true
-    },
-    {
-        id: 'pgy3-off-service', type: 'neuro', name: 'Dr. Sam Taylor', level: 3, onService: false, isChief: false,
-        vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false
-    },
-    {
-        id: 'pgy3-can-backup', type: 'neuro', name: 'Dr. Isaac Brown', level: 3, onService: true, isChief: false,
-        vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true
-    },
-    {
-        id: 'pgy2-resident', type: 'neuro', name: 'Dr. Chloe Davis', level: 2, onService: true, isChief: false,
-        vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'new_year', allowSoloPgy1Call: false,
-    },
-    {
-        id: 'pgy1-no-solo', type: 'neuro', name: 'Dr. Alex Johnson', level: 1, onService: true, isChief: false,
-        vacationDays: [29, 30, 31], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false,
-    },
-    {
-        id: 'pgy1-can-solo', type: 'neuro', name: 'Dr. Maya Singh', level: 1, onService: true, isChief: false,
-        vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: true,
-    },
-];
-
-const nonNeuroResidents: Resident[] = [
-    {
-        id: 'ortho-resident', type: 'non-neuro', name: 'Dr. James Wilson (Ortho)', specialty: 'Orthopedics', level: 3, onService: true,
-        vacationDays: [], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 0, exemptFromCall: false,
-        schedule: [], weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, allowSoloPgy1Call: false
-    },
-    {
-        id: 'ent-resident', type: 'non-neuro', name: 'Dr. Laura Brown (ENT)', specialty: 'ENT', level: 2, onService: true,
-        vacationDays: [15, 16, 17], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 0, exemptFromCall: true,
-        schedule: [], weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, allowSoloPgy1Call: false
-    },
-];
-
-const orCasesData = {
-    0: [{ surgeon: 'Dr. Chen', diagnosis: 'Aneurysm', procedure: 'Clipping' }],
-    1: [{ surgeon: 'Dr. Garcia', diagnosis: 'Stenosis', procedure: 'ACDF C5-6' }, { surgeon: 'Dr. Kim', diagnosis: 'Scoliosis', procedure: 'Fusion' }],
-    2: [{ surgeon: 'Dr. Andrews', diagnosis: 'Glioblastoma', procedure: 'Craniotomy' }],
-    3: [{ surgeon: 'Dr. Williams', diagnosis: 'Chiari', procedure: 'Decompression' }],
-    4: [],
-    7: [{ surgeon: 'Dr. Chen', diagnosis: 'AVM', procedure: 'Embolization' }],
-    8: [{ surgeon: 'Dr. Garcia', diagnosis: 'Herniated Disc', procedure: 'Laminectomy' }, { surgeon: 'Dr. Kim', diagnosis: 'Trauma', procedure: 'Spinal Fix' }],
-    9: [{ surgeon: 'Dr. Andrews', diagnosis: 'Meningioma', procedure: 'Resection' }],
-    10: [{ surgeon: 'Dr. Williams', diagnosis: 'Tethered Cord', procedure: 'Release' }],
-    11: [],
-    14: [{ surgeon: 'Dr. Chen', diagnosis: 'Cavernoma', procedure: 'Resection' }],
-    15: [{ surgeon: 'Dr. Garcia', diagnosis: 'Spondylolisthesis', procedure: 'Fusion' }],
-    16: [{ surgeon: 'Dr. Andrews', diagnosis: 'Pituitary Adenoma', procedure: 'Endoscopic Resection' }],
-    17: [],
-    18: [],
-    21: [{ surgeon: 'Dr. Garcia', diagnosis: 'Discitis', procedure: 'IBD' }],
-    22: [{ surgeon: 'Dr. Andrews', diagnosis: 'Metastasis', procedure: 'Stereotactic Biopsy' }],
-    23: [{ surgeon: 'Dr. Kim', diagnosis: 'Spinal Fracture', procedure: 'Stabilization' }],
-    28: [{ surgeon: 'Dr. Garcia', diagnosis: 'Degenerative Disc', procedure: 'ADR' }],
-    29: [{ surgeon: 'Dr. Andrews', diagnosis: 'Low Grade Glioma', procedure: 'Awake Craniotomy' }],
-    30: [],
-};
-
-
 export function getInitialAppState(): AppState {
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
   return {
     general: {
-      startDate: '2024-12-01',
-      endDate: '2024-12-31',
-      statHolidays: '25, 26',
+      startDate: firstDayOfMonth.toISOString().split('T')[0],
+      endDate: lastDayOfMonth.toISOString().split('T')[0],
+      statHolidays: '',
       usePredefinedCall: false,
-      christmasStart: '2024-12-22',
-      christmasEnd: '2024-12-28',
-      newYearStart: '2024-12-29',
-      newYearEnd: '2025-01-04',
+      christmasStart: '',
+      christmasEnd: '',
+      newYearStart: '',
+      newYearEnd: '',
     },
-    residents: [...neuroResidents, ...nonNeuroResidents],
-    medicalStudents: [
-      {
-        id: uuidv4(), type: 'student', name: 'Sarah Jenkins', level: 'MS3', preceptor: 'Dr. Andrews', weeks: [1, 2],
-        calls: [4, 11, 18], vacationDays: [], schedule: []
-      }
-    ],
+    residents: [],
+    medicalStudents: [],
     otherLearners: [],
-    staff: staffMembers,
-    staffCall: [
-      { day: 24, callType: 'cranial', staffName: 'Dr. Chen'},
-      { day: 24, callType: 'spine', staffName: 'Dr. Kim'},
-      { day: 25, callType: 'cranial', staffName: 'Dr. Chen'},
-      { day: 25, callType: 'spine', staffName: 'Dr. Kim'},
-      { day: 30, callType: 'cranial', staffName: 'Dr. Andrews'},
-      { day: 30, callType: 'spine', staffName: 'Dr. Garcia'},
-    ],
-    orCases: orCasesData,
-    clinicAssignments: [
-        { day: 1, staffName: 'Dr. Garcia', clinicType: 'spine' },
-        { day: 2, staffName: 'Dr. Andrews', clinicType: 'cranial' },
-        { day: 2, staffName: 'Dr. Williams', clinicType: 'general' },
-    ],
+    staff: [],
+    staffCall: [],
+    orCases: {},
+    clinicAssignments: [],
     residentCall: [],
     onServiceCallRules: [
       { minDays: 19, maxDays: 22, calls: 5 },
