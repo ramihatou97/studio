@@ -196,6 +196,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
         // 1. Identify clinic candidates
         let clinicCandidates = processedResidents.filter(r => {
             if (r.schedule[dayIndex].length > 0) return false; // already assigned
+            if (r.exemptFromCall) return false; // Exempt from clinical duties
             if (r.type === 'non-neuro' && r.onService) return true; // non-neuro rotators are eligible
             if (r.type === 'neuro' && r.onService && r.level < 4) return true; // junior neuro residents are eligible
             return false;
@@ -274,6 +275,44 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
             junior.schedule[dayIndex] = ['OR'];
             junior.orDays++;
         }
+    }
+  }
+
+  // --- Pager Holder Assignment Pass ---
+  for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+    const getTotalActivities = (res: Resident) => {
+        let count = 0;
+        res.schedule.forEach(dailyActivities => {
+            if (!dailyActivities.includes('Float') && dailyActivities.length > 0) {
+                count++;
+            }
+        });
+        return count;
+    };
+
+    const getPagerPriorityScore = (res: Resident) => {
+        let score = 0;
+        // Prioritize residents with fewer activities
+        score -= getTotalActivities(res) * 10;
+        // Prioritize junior residents
+        score += (7 - res.level) * 5;
+        return score;
+    };
+    
+    const candidates = processedResidents
+      .filter(r => 
+        r.schedule[dayIndex].length === 0 && // Must be unassigned for the day
+        !r.exemptFromCall && // Must not be exempt from duties
+        (
+          (r.type === 'neuro' && r.level <= 3) || // Junior neuro resident
+          r.type === 'non-neuro' // Or a non-neuro resident
+        )
+      )
+      .sort((a, b) => getPagerPriorityScore(b) - getPagerPriorityScore(a));
+
+    if (candidates.length > 0) {
+        const pagerHolder = candidates[0];
+        pagerHolder.schedule[dayIndex] = ['Pager Holder'];
     }
   }
 

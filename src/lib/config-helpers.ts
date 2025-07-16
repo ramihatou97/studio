@@ -155,6 +155,7 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     orDays: 0,
     holidayGroup: 'neither',
     allowSoloPgy1Call: false,
+    canBeBackup: false,
   };
   setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
 };
@@ -178,6 +179,7 @@ export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAc
       callDays: [],
       orDays: 0,
       allowSoloPgy1Call: false,
+      canBeBackup: false,
     };
     setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
 };
