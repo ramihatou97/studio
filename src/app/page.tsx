@@ -17,10 +17,11 @@ import { StaffConfig } from '@/components/config-sections/staff-config';
 import { OrClinicConfig } from '@/components/config-sections/or-clinic-config';
 import { ActionButtons } from '@/components/action-buttons';
 import { ScheduleDisplay } from '@/components/schedule-display';
-import { initialAppState } from '@/lib/config-helpers';
+import { getInitialAppState } from '@/lib/config-helpers';
+import { AboutSection } from '@/components/about-section';
 
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>(initialAppState);
+  const [appState, setAppState] = useState<AppState>(getInitialAppState());
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
@@ -83,7 +84,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            <AiPrepopulation setAppState={setAppState} />
+            <AiPrepopulation setAppState={setAppState} appState={appState} />
             <Separator />
             <div className="grid md:grid-cols-2 gap-8">
               <GeneralSettings appState={appState} setAppState={setAppState} />
@@ -122,6 +123,7 @@ export default function Home() {
             </div>
           )
         )}
+        <AboutSection />
       </main>
     </div>
   );

@@ -4,16 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { prepopulateDataAction } from "@/lib/actions";
+import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident } from "@/lib/types";
 import { Sparkles } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AiPrepopulationProps {
+  appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
 }
 
-export function AiPrepopulation({ setAppState }: AiPrepopulationProps) {
+export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps) {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,29 +53,44 @@ export function AiPrepopulation({ setAppState }: AiPrepopulationProps) {
     const result = await prepopulateDataAction(sourceType, sourceData);
 
     if (result.success && result.data) {
-      const newResidents: Resident[] = result.data.residents.map(r => ({
-        id: uuidv4(),
-        type: 'neuro',
-        name: r.name,
-        level: r.level,
-        onService: r.onService,
-        vacationDays: r.vacationDays,
-        isChief: false,
-        chiefOrDays: [],
-        maxOnServiceCalls: 0,
-        offServiceMaxCall: 4,
-        schedule: [],
-        weekendCalls: 0,
-        callDays: [],
-        holidayGroup: 'neither'
-      }));
+      const existingResidentNames = new Set(appState.residents.map(r => r.name.toLowerCase()));
+      const newResidents: Resident[] = [];
+      
+      result.data.residents.forEach(r => {
+        if (!existingResidentNames.has(r.name.toLowerCase())) {
+           newResidents.push({
+            id: uuidv4(),
+            type: 'neuro',
+            name: r.name,
+            level: r.level,
+            onService: r.onService,
+            vacationDays: r.vacationDays,
+            isChief: false,
+            chiefOrDays: [],
+            maxOnServiceCalls: 0,
+            offServiceMaxCall: 4,
+            schedule: [],
+            weekendCalls: 0,
+            callDays: [],
+            holidayGroup: 'neither',
+            canBeBackup: false,
+            allowSoloPgy1Call: false,
+            doubleCallDays: 0,
+            orDays: 0,
+          });
+        }
+      });
 
-      setAppState(prev => ({
-        ...prev,
-        residents: [...prev.residents, ...newResidents]
-      }));
+      if (newResidents.length > 0) {
+        setAppState(prev => ({
+          ...prev,
+          residents: [...prev.residents, ...newResidents]
+        }));
+        toast({ title: 'Success', description: `${newResidents.length} new residents have been populated from the source.` });
+      } else {
+        toast({ title: 'No new residents added', description: 'All residents from the source already exist in the configuration.' });
+      }
 
-      toast({ title: 'Success', description: `${newResidents.length} residents have been populated from the source.` });
     } else {
       toast({ variant: 'destructive', title: 'Parsing Failed', description: result.error });
     }
@@ -88,7 +104,7 @@ export function AiPrepopulation({ setAppState }: AiPrepopulationProps) {
         AI-Powered Pre-population
       </h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Upload an image or paste the text of an existing schedule to have the AI extract and populate resident data.
+        Upload an image or paste the text of an existing schedule to have the AI extract and populate resident data. Duplicates will be ignored.
       </p>
       <div className="grid md:grid-cols-2 gap-4">
         <div>

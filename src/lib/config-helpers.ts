@@ -91,48 +91,50 @@ const orCasesData = {
 };
 
 
-export const initialAppState: AppState = {
-  general: {
-    startDate: '2024-12-01',
-    endDate: '2024-12-31',
-    statHolidays: '25, 26',
-    usePredefinedCall: false,
-    christmasStart: '2024-12-22',
-    christmasEnd: '2024-12-28',
-    newYearStart: '2024-12-29',
-    newYearEnd: '2025-01-04',
-  },
-  residents: [...neuroResidents, ...nonNeuroResidents],
-  medicalStudents: [
-    {
-      id: uuidv4(), type: 'student', name: 'Sarah Jenkins', level: 'MS3', preceptor: 'Dr. Andrews', weeks: [1, 2],
-      calls: [4, 11, 18], vacationDays: [], schedule: []
-    }
-  ],
-  otherLearners: [],
-  staff: staffMembers,
-  staffCall: [
-    { day: 24, callType: 'cranial', staffName: 'Dr. Chen'},
-    { day: 24, callType: 'spine', staffName: 'Dr. Kim'},
-    { day: 25, callType: 'cranial', staffName: 'Dr. Chen'},
-    { day: 25, callType: 'spine', staffName: 'Dr. Kim'},
-    { day: 30, callType: 'cranial', staffName: 'Dr. Andrews'},
-    { day: 30, callType: 'spine', staffName: 'Dr. Garcia'},
-  ],
-  orCases: orCasesData,
-  clinicAssignments: [
-      { day: 1, staffName: 'Dr. Garcia', clinicType: 'spine' },
-      { day: 2, staffName: 'Dr. Andrews', clinicType: 'cranial' },
-      { day: 2, staffName: 'Dr. Williams', clinicType: 'general' },
-  ],
-  residentCall: [],
-  onServiceCallRules: [
-    { minDays: 19, maxDays: 22, calls: 5 },
-    { minDays: 23, maxDays: 26, calls: 6 },
-    { minDays: 27, maxDays: 29, calls: 7 },
-    { minDays: 30, maxDays: 31, calls: 8 },
-  ],
-};
+export function getInitialAppState(): AppState {
+  return {
+    general: {
+      startDate: '2024-12-01',
+      endDate: '2024-12-31',
+      statHolidays: '25, 26',
+      usePredefinedCall: false,
+      christmasStart: '2024-12-22',
+      christmasEnd: '2024-12-28',
+      newYearStart: '2024-12-29',
+      newYearEnd: '2025-01-04',
+    },
+    residents: [...neuroResidents, ...nonNeuroResidents],
+    medicalStudents: [
+      {
+        id: uuidv4(), type: 'student', name: 'Sarah Jenkins', level: 'MS3', preceptor: 'Dr. Andrews', weeks: [1, 2],
+        calls: [4, 11, 18], vacationDays: [], schedule: []
+      }
+    ],
+    otherLearners: [],
+    staff: staffMembers,
+    staffCall: [
+      { day: 24, callType: 'cranial', staffName: 'Dr. Chen'},
+      { day: 24, callType: 'spine', staffName: 'Dr. Kim'},
+      { day: 25, callType: 'cranial', staffName: 'Dr. Chen'},
+      { day: 25, callType: 'spine', staffName: 'Dr. Kim'},
+      { day: 30, callType: 'cranial', staffName: 'Dr. Andrews'},
+      { day: 30, callType: 'spine', staffName: 'Dr. Garcia'},
+    ],
+    orCases: orCasesData,
+    clinicAssignments: [
+        { day: 1, staffName: 'Dr. Garcia', clinicType: 'spine' },
+        { day: 2, staffName: 'Dr. Andrews', clinicType: 'cranial' },
+        { day: 2, staffName: 'Dr. Williams', clinicType: 'general' },
+    ],
+    residentCall: [],
+    onServiceCallRules: [
+      { minDays: 19, maxDays: 22, calls: 5 },
+      { minDays: 23, maxDays: 26, calls: 6 },
+      { minDays: 27, maxDays: 29, calls: 7 },
+      { minDays: 30, maxDays: 31, calls: 8 },
+    ],
+  };
+}
 
 export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateAction<AppState>>) => {
   const newResident: Resident = {
