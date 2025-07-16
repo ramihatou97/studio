@@ -1,9 +1,10 @@
-import type { AppState } from '@/lib/types';
+import type { AppState, Resident } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleSummaryTable } from './schedule-summary-table';
 import { EditableScheduleCell } from './editable-schedule-cell';
+import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 
 interface ScheduleDisplayProps {
   appState: AppState;
@@ -13,6 +14,44 @@ interface ScheduleDisplayProps {
 export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps) {
   const { residents, medicalStudents, otherLearners, errors } = appState;
   const numberOfDays = residents[0]?.schedule.length || 0;
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const activeData = active.data.current;
+      const overData = over.data.current;
+
+      if (!activeData || !overData) return;
+      if (activeData.dayIndex !== overData.dayIndex) return; // Only allow swaps on the same day
+
+      setAppState(prev => {
+        const sourceResidentIndex = prev.residents.findIndex(r => r.id === activeData.residentId);
+        const targetResidentIndex = prev.residents.findIndex(r => r.id === overData.residentId);
+
+        if (sourceResidentIndex === -1 || targetResidentIndex === -1) return prev;
+
+        const newResidents = [...prev.residents];
+        const dayIndex = activeData.dayIndex;
+        
+        const sourceSchedule = newResidents[sourceResidentIndex].schedule[dayIndex];
+        const targetSchedule = newResidents[targetResidentIndex].schedule[dayIndex];
+
+        // Perform the swap
+        newResidents[sourceResidentIndex] = {
+            ...newResidents[sourceResidentIndex],
+            schedule: newResidents[sourceResidentIndex].schedule.map((s, i) => i === dayIndex ? targetSchedule : s),
+        };
+        newResidents[targetResidentIndex] = {
+            ...newResidents[targetResidentIndex],
+            schedule: newResidents[targetResidentIndex].schedule.map((s, i) => i === dayIndex ? sourceSchedule : s),
+        };
+
+        return { ...prev, residents: newResidents };
+      });
+    }
+  };
+
 
   return (
     <Card className="mt-8 shadow-lg">
@@ -27,32 +66,34 @@ export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps)
             <TabsTrigger value="others">Other Learners</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="residents" className="overflow-x-auto">
-             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-card z-10 w-[150px]">Resident</TableHead>
-                    {[...Array(numberOfDays)].map((_, i) => <TableHead key={i} className="text-center">{i + 1}</TableHead>)}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {residents.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="sticky left-0 bg-card z-10 font-medium">{r.name}</TableCell>
-                      {r.schedule.map((activities, dayIndex) => (
-                        <TableCell key={`${r.id}-${dayIndex}`} className="text-center p-1">
-                          <EditableScheduleCell
-                            resident={r}
-                            dayIndex={dayIndex}
-                            setAppState={setAppState}
-                          />
-                        </TableCell>
-                      ))}
+          <DndContext onDragEnd={handleDragEnd}>
+            <TabsContent value="residents" className="overflow-x-auto">
+              <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="sticky left-0 bg-card z-10 w-[150px]">Resident</TableHead>
+                      {[...Array(numberOfDays)].map((_, i) => <TableHead key={i} className="text-center">{i + 1}</TableHead>)}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-          </TabsContent>
+                  </TableHeader>
+                  <TableBody>
+                    {residents.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="sticky left-0 bg-card z-10 font-medium">{r.name}</TableCell>
+                        {r.schedule.map((_, dayIndex) => (
+                          <TableCell key={`${r.id}-${dayIndex}`} className="text-center p-1">
+                            <EditableScheduleCell
+                              resident={r}
+                              dayIndex={dayIndex}
+                              setAppState={setAppState}
+                            />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+            </TabsContent>
+          </DndContext>
 
           <TabsContent value="students">
              <Table>
