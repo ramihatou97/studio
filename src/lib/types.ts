@@ -121,6 +121,22 @@ export interface ResidentCall {
   call: 'D' | 'N' | 'W';
 }
 
+export interface HistoricalCase {
+    date: string; // YYYY-MM-DD
+    procedure: string;
+    diagnosis: string;
+    surgeon: string;
+    caseType: 'cranial' | 'spine' | 'other';
+}
+
+export interface HistoricalData {
+    residentName: string;
+    pgyLevel: number;
+    cases: HistoricalCase[];
+    clinicDays: number;
+    callDays: number;
+}
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];

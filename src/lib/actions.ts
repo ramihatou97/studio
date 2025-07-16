@@ -7,6 +7,8 @@ import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/g
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
 import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-populate-or-cases';
 import { chatWithSchedule as chatWithScheduleFlow, type ChatWithScheduleInput } from '@/ai/flows/chat-with-schedule';
+import { generateHistoricalData as generateHistoricalDataFlow, type GenerateHistoricalDataInput } from '@/ai/flows/generate-historical-data';
+import { analyzeResidentPerformance as analyzeResidentPerformanceFlow, type AnalyzeResidentPerformanceInput } from '@/ai/flows/analyze-resident-performance';
 import type { AppState, StaffCall, Resident } from './types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
@@ -133,5 +135,25 @@ export async function chatWithScheduleAction(input: ChatWithScheduleInput) {
       console.error('Error in chatWithScheduleAction:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return { success: false, error: errorMessage };
+    }
+}
+
+export async function generateHistoricalDataAction(input: GenerateHistoricalDataInput) {
+  try {
+    const result = await generateHistoricalDataFlow(input);
+    return { success: true, data: result.historicalData };
+  } catch (error) {
+    console.error('Error in generateHistoricalDataAction:', error);
+    return { success: false, error: 'Failed to generate historical data.' };
+  }
+}
+
+export async function analyzeResidentPerformanceAction(input: AnalyzeResidentPerformanceInput) {
+    try {
+        const result = await analyzeResidentPerformanceFlow(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Error in analyzeResidentPerformanceAction:', error);
+        return { success: false, error: 'Failed to analyze resident performance.' };
     }
 }

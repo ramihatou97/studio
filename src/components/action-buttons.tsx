@@ -5,7 +5,8 @@ import { AnalysisModal } from './modals/analysis-modal';
 import { HandoverModal } from './modals/handover-modal';
 import { OptimizerModal } from './modals/optimizer-modal';
 import { ChatModal } from './modals/chat-modal';
-import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle } from 'lucide-react';
+import { LongTermAnalysisModal } from './modals/long-term-analysis-modal';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
@@ -21,6 +22,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isOptimizerModalOpen, setOptimizerModalOpen] = useState(false);
   const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
   const [isChatModalOpen, setChatModalOpen] = useState(false);
+  const [isLongTermAnalysisModalOpen, setLongTermAnalysisModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -109,8 +111,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20">
               <FileText className="mr-2 h-4 w-4" /> Handover Email
             </Button>
-            <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20 col-span-1 md:col-span-2">
-                <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI Assistant
+            <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">
+              <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
+            </Button>
+            <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
+                <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
             </Button>
           </div>
         )}
@@ -137,6 +142,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
           <ChatModal
             isOpen={isChatModalOpen}
             onOpenChange={setChatModalOpen}
+            appState={appState}
+          />
+          <LongTermAnalysisModal
+            isOpen={isLongTermAnalysisModalOpen}
+            onOpenChange={setLongTermAnalysisModalOpen}
             appState={appState}
           />
         </>
