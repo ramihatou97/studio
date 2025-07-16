@@ -19,8 +19,12 @@ const OptimizeOnCallScheduleInputSchema = z.object({
 export type OptimizeOnCallScheduleInput = z.infer<typeof OptimizeOnCallScheduleInputSchema>;
 
 const OptimizeOnCallScheduleOutputSchema = z.object({
-  suggestedSwaps: z.string().describe('A list of suggested swaps among residents to resolve conflicts and optimize the schedule. This should be a clear, actionable list. For example: "Swap Dr. Smith (Day 5) with Dr. Jones (Day 7)".'),
-  rationale: z.string().describe('A step-by-step explanation for why the suggested swaps are optimal, considering the conflicts and resident preferences.'),
+    suggestedSwaps: z.array(z.object({
+        day: z.number().describe('The 1-indexed day of the month for the swap.'),
+        resident1: z.string().describe('The name of the first resident to swap.'),
+        resident2: z.string().describe('The name of the second resident to swap.'),
+    })).describe('A list of suggested swaps among residents to resolve conflicts and optimize the schedule. This should be a clear, actionable list.'),
+    rationale: z.string().describe('A step-by-step explanation for why the suggested swaps are optimal, considering the conflicts and resident preferences.'),
 });
 export type OptimizeOnCallScheduleOutput = z.infer<typeof OptimizeOnCallScheduleOutputSchema>;
 
@@ -41,7 +45,7 @@ Analyze the following information:
 2.  **Resident Preferences & Constraints:** Vacation days and holiday group assignments for each resident.
 3.  **Conflict Details:** The specific problems in the schedule that need fixing.
 
-Based on this information, generate a clear list of "suggestedSwaps" to resolve the issues. Then, provide a "rationale" explaining why these swaps are the best solution, referencing the conflicts and resident constraints.
+Based on this information, generate a structured list of "suggestedSwaps" to resolve the issues. Each swap must include the day (1-indexed) and the names of the two residents to swap. Then, provide a "rationale" explaining why these swaps are the best solution, referencing the conflicts and resident constraints.
 
 **Current Schedule:**
 {{{currentSchedule}}}

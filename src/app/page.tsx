@@ -99,6 +99,7 @@ export default function Home() {
         <ActionButtons
           onGenerate={handleGenerateClick}
           appState={appState}
+          setAppState={setAppState}
           isLoading={isLoading}
           hasGenerated={hasGenerated}
         />

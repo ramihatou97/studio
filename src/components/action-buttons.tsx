@@ -9,11 +9,12 @@ import { Bot, FileText, Sparkles, Wand2 } from 'lucide-react';
 interface ActionButtonsProps {
   onGenerate: () => void;
   appState: AppState;
+  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
   isLoading: boolean;
   hasGenerated: boolean;
 }
 
-export function ActionButtons({ onGenerate, appState, isLoading, hasGenerated }: ActionButtonsProps) {
+export function ActionButtons({ onGenerate, appState, setAppState, isLoading, hasGenerated }: ActionButtonsProps) {
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
   const [isOptimizerModalOpen, setOptimizerModalOpen] = useState(false);
   const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
@@ -65,6 +66,7 @@ export function ActionButtons({ onGenerate, appState, isLoading, hasGenerated }:
             isOpen={isOptimizerModalOpen}
             onOpenChange={setOptimizerModalOpen}
             appState={appState}
+            setAppState={setAppState}
           />
         </>
       )}
