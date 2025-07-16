@@ -1,4 +1,4 @@
-import type { ScheduleOutput, Resident, MedicalStudent, OtherLearner } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,11 +6,12 @@ import { Badge } from './ui/badge';
 import { ScheduleSummaryTable } from './schedule-summary-table';
 
 interface ScheduleDisplayProps {
-  output: ScheduleOutput;
+  appState: AppState;
+  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
 }
 
-export function ScheduleDisplay({ output }: ScheduleDisplayProps) {
-  const { residents, medicalStudents, otherLearners, errors } = output;
+export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps) {
+  const { residents, medicalStudents, otherLearners, errors } = appState;
   const numberOfDays = residents[0]?.schedule.length || 0;
 
   const renderScheduleCell = (activities: string[] | any[][]) => {
@@ -106,7 +107,7 @@ export function ScheduleDisplay({ output }: ScheduleDisplayProps) {
 
         </Tabs>
 
-        <ScheduleSummaryTable output={output} />
+        <ScheduleSummaryTable appState={appState} />
       </CardContent>
     </Card>
   );

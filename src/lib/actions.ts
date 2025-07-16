@@ -21,6 +21,8 @@ export async function prepopulateDataAction(sourceType: 'text' | 'image', source
 export async function prepopulateStaffCallAction(scheduleText: string, staffList: string[]) {
     try {
       const result = await prepopulateStaffCallFlow({ scheduleText, staffList });
+      // The flow returns 1-indexed days, but our logic needs to handle them carefully.
+      // We will pass them as-is and let the consumer handle indexing.
       return { success: true, data: result.staffCall };
     } catch (error)
     {
@@ -39,10 +41,10 @@ export async function prepopulateOrCasesAction(orScheduleText: string, staffList
   }
 }
 
-export async function analyzeScheduleConflictsAction(appState: AppState, scheduleOutput: any) {
+export async function analyzeScheduleConflictsAction(appState: AppState) {
   try {
     const scheduleData = {
-      residents: scheduleOutput.residents.map((r: any) => ({
+      residents: appState.residents.map((r: any) => ({
         name: r.name,
         level: r.level,
         schedule: r.schedule,
@@ -54,8 +56,9 @@ export async function analyzeScheduleConflictsAction(appState: AppState, schedul
     const rules = `
       - Check for any day with fewer than required number of on-call residents.
       - Verify that residents do not exceed their maximum allowed calls.
-      - Ensure PGY-1 residents are not assigned solo calls.
+      - Ensure PGY-1 residents are not assigned solo calls unless specified.
       - Flag any potential violations of ACGME work-hour rules (e.g., less than 10 hours between shifts).
+      - Check for post-call violations.
     `;
     
     const result = await analyzeScheduleConflictsFlow({ scheduleData: JSON.stringify(scheduleData, null, 2), rules });
@@ -66,11 +69,11 @@ export async function analyzeScheduleConflictsAction(appState: AppState, schedul
   }
 }
 
-export async function generateHandoverEmailAction(appState: AppState, scheduleOutput: any) {
+export async function generateHandoverEmailAction(appState: AppState) {
   try {
     const { residents, staff } = appState;
     const scheduleString = JSON.stringify(
-      scheduleOutput.residents.map((r: any) => ({ name: r.name, schedule: r.schedule })),
+      appState.residents.map((r: any) => ({ name: r.name, schedule: r.schedule })),
       null, 2
     );
     const residentsString = JSON.stringify(
@@ -92,16 +95,16 @@ export async function generateHandoverEmailAction(appState: AppState, scheduleOu
   }
 }
 
-export async function optimizeScheduleAction(appState: AppState, scheduleOutput: any, conflictDetails: string) {
+export async function optimizeScheduleAction(appState: AppState, conflictDetails: string) {
   try {
-    const scheduleString = scheduleOutput.residents.map((r: Resident) => 
+    const scheduleString = appState.residents.map((r: Resident) => 
         `${r.name} (PGY-${r.level}): Call on days ${r.callDays.map(d => d + 1).join(', ')}`
     ).join('\n');
     
     const residentPreferences = appState.residents.map((r: Resident) => {
         let preferences = `${r.name}: PGY-${r.level}, On Service: ${r.onService}`;
         if (r.vacationDays.length > 0) {
-            preferences += `, Vacation on days: ${r.vacationDays.join(', ')}`;
+            preferences += `, Vacation on days: ${r.vacationDays.map(d => d+1).join(', ')}`;
         }
         if (r.holidayGroup && r.holidayGroup !== 'neither') {
             preferences += `, Holiday Group: ${r.holidayGroup}`;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { generateHandoverEmailAction } from '@/lib/actions';
-import type { AppState, ScheduleOutput } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Textarea } from '../ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, ClipboardCopy } from 'lucide-react';
@@ -11,10 +11,9 @@ interface HandoverModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
-  scheduleOutput: ScheduleOutput;
 }
 
-export function HandoverModal({ isOpen, onOpenChange, appState, scheduleOutput }: HandoverModalProps) {
+export function HandoverModal({ isOpen, onOpenChange, appState }: HandoverModalProps) {
   const [emailContent, setEmailContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -24,7 +23,7 @@ export function HandoverModal({ isOpen, onOpenChange, appState, scheduleOutput }
       const fetchEmail = async () => {
         setIsLoading(true);
         setEmailContent(null);
-        const result = await generateHandoverEmailAction(appState, scheduleOutput);
+        const result = await generateHandoverEmailAction(appState);
         if (result.success) {
           setEmailContent(result.data);
         } else {
@@ -34,7 +33,7 @@ export function HandoverModal({ isOpen, onOpenChange, appState, scheduleOutput }
       };
       fetchEmail();
     }
-  }, [isOpen, appState, scheduleOutput]);
+  }, [isOpen, appState]);
   
   const handleCopy = () => {
     if (emailContent) {

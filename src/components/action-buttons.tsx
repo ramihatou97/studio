@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppState, ScheduleOutput } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { AnalysisModal } from './modals/analysis-modal';
 import { HandoverModal } from './modals/handover-modal';
@@ -8,12 +8,12 @@ import { Bot, FileText, Sparkles, Wand2 } from 'lucide-react';
 
 interface ActionButtonsProps {
   onGenerate: () => void;
-  scheduleOutput: ScheduleOutput | null;
   appState: AppState;
   isLoading: boolean;
+  hasGenerated: boolean;
 }
 
-export function ActionButtons({ onGenerate, scheduleOutput, appState, isLoading }: ActionButtonsProps) {
+export function ActionButtons({ onGenerate, appState, isLoading, hasGenerated }: ActionButtonsProps) {
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
   const [isOptimizerModalOpen, setOptimizerModalOpen] = useState(false);
   const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
@@ -29,12 +29,12 @@ export function ActionButtons({ onGenerate, scheduleOutput, appState, isLoading 
           {isLoading ? (
             <><Bot className="mr-2 h-5 w-5 animate-spin" /> Generating...</>
           ) : (
-            <><Wand2 className="mr-2 h-5 w-5" /> Generate Schedules</>
+            <><Wand2 className="mr-2 h-5 w-5" /> {hasGenerated ? 'Re-generate Schedules' : 'Generate Schedules'}</>
           )}
         </Button>
-        {scheduleOutput && (
+        {hasGenerated && (
           <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-3 gap-2">
-            {scheduleOutput.errors.length > 0 && (
+            {appState.errors && appState.errors.length > 0 && (
                 <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
                 </Button>
@@ -49,25 +49,22 @@ export function ActionButtons({ onGenerate, scheduleOutput, appState, isLoading 
         )}
       </div>
 
-      {scheduleOutput && (
+      {hasGenerated && (
         <>
           <AnalysisModal
             isOpen={isAnalysisModalOpen}
             onOpenChange={setAnalysisModalOpen}
             appState={appState}
-            scheduleOutput={scheduleOutput}
           />
           <HandoverModal
             isOpen={isHandoverModalOpen}
             onOpenChange={setHandoverModalOpen}
             appState={appState}
-            scheduleOutput={scheduleOutput}
           />
           <OptimizerModal
             isOpen={isOptimizerModalOpen}
             onOpenChange={setOptimizerModalOpen}
             appState={appState}
-            scheduleOutput={scheduleOutput}
           />
         </>
       )}

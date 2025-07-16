@@ -1,8 +1,8 @@
-import type { ScheduleOutput, Resident } from '@/lib/types';
+import type { AppState, Resident } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface ScheduleSummaryTableProps {
-  output: ScheduleOutput;
+  appState: AppState;
 }
 
 interface ActivityCounts {
@@ -18,8 +18,8 @@ interface ActivityCounts {
   'Backup': number;
 }
 
-export function ScheduleSummaryTable({ output }: ScheduleSummaryTableProps) {
-  const { residents } = output;
+export function ScheduleSummaryTable({ appState }: ScheduleSummaryTableProps) {
+  const { residents } = appState;
 
   const calculateCounts = (resident: Resident): ActivityCounts => {
     const counts: ActivityCounts = {
@@ -34,6 +34,8 @@ export function ScheduleSummaryTable({ output }: ScheduleSummaryTableProps) {
       'Pager Holder': 0,
       'Backup': 0,
     };
+    
+    if (!resident.schedule) return counts;
 
     resident.schedule.forEach(dayActivities => {
       dayActivities.forEach(activity => {

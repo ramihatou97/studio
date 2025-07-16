@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { optimizeScheduleAction } from '@/lib/actions';
-import type { AppState, ScheduleOutput } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Bot, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '../ui/card';
 
@@ -10,7 +10,6 @@ interface OptimizerModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
-  scheduleOutput: ScheduleOutput;
 }
 
 interface SwapSuggestion {
@@ -18,7 +17,7 @@ interface SwapSuggestion {
     rationale: string;
 }
 
-export function OptimizerModal({ isOpen, onOpenChange, appState, scheduleOutput }: OptimizerModalProps) {
+export function OptimizerModal({ isOpen, onOpenChange, appState }: OptimizerModalProps) {
   const [suggestion, setSuggestion] = useState<SwapSuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,8 +26,8 @@ export function OptimizerModal({ isOpen, onOpenChange, appState, scheduleOutput 
       const fetchSuggestion = async () => {
         setIsLoading(true);
         setSuggestion(null);
-        const conflictDetails = scheduleOutput.errors.join('\n');
-        const result = await optimizeScheduleAction(appState, scheduleOutput, conflictDetails);
+        const conflictDetails = (appState.errors || []).join('\n');
+        const result = await optimizeScheduleAction(appState, conflictDetails);
         if (result.success) {
           setSuggestion(result.data);
         } else {
@@ -38,7 +37,7 @@ export function OptimizerModal({ isOpen, onOpenChange, appState, scheduleOutput 
       };
       fetchSuggestion();
     }
-  }, [isOpen, appState, scheduleOutput]);
+  }, [isOpen, appState]);
   
   const handleApply = () => {
     // In a real application, you would parse `suggestion.suggestedSwaps`

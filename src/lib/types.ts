@@ -113,4 +113,5 @@ export interface AppState {
   clinicSlots: ClinicSlots;
   residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
+  errors?: string[];
 }

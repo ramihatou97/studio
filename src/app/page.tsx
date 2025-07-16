@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { Resident, Staff, MedicalStudent, OtherLearner, OrCase, ScheduleOutput, AppState, OnServiceCallRule } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -20,19 +20,27 @@ import { initialAppState } from '@/lib/config-helpers';
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>(initialAppState);
-  const [scheduleOutput, setScheduleOutput] = useState<ScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
 
   const handleGenerateClick = () => {
     setIsLoading(true);
-    setScheduleOutput(null);
+    setHasGenerated(false);
 
     // Simulate generation delay
     setTimeout(() => {
       try {
         const output = generateSchedules(appState);
-        setScheduleOutput(output);
+        setAppState(prev => ({
+          ...prev,
+          residents: output.residents,
+          medicalStudents: output.medicalStudents,
+          otherLearners: output.otherLearners,
+          errors: output.errors,
+        }));
+        setHasGenerated(true);
+
         if (output.errors.length > 0) {
           toast({
             variant: "destructive",
@@ -89,9 +97,9 @@ export default function Home() {
 
         <ActionButtons
           onGenerate={handleGenerateClick}
-          scheduleOutput={scheduleOutput}
           appState={appState}
           isLoading={isLoading}
+          hasGenerated={hasGenerated}
         />
 
         {isLoading && (
@@ -103,8 +111,8 @@ export default function Home() {
           </div>
         )}
         
-        {scheduleOutput ? (
-          <ScheduleDisplay output={scheduleOutput} />
+        {hasGenerated ? (
+          <ScheduleDisplay appState={appState} setAppState={setAppState} />
         ) : (
           !isLoading && (
             <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8">

@@ -53,9 +53,15 @@ function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppStat
     const result = await prepopulateStaffCallAction(text, staffList);
 
     if (result.success && result.data) {
+      // The flow returns 1-indexed days, so we need to convert to 0-indexed for state
+      const newStaffCall: StaffCall[] = result.data.map(call => ({
+        ...call,
+        day: call.day, // Keep it 1-indexed for the UI display/editing components
+      }));
+
       setAppState(prev => ({
         ...prev,
-        staffCall: result.data as StaffCall[]
+        staffCall: newStaffCall
       }));
       toast({ title: 'Success', description: `Populated ${result.data.length} staff call assignments.` });
       setText('');
@@ -107,6 +113,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   })();
 
   const handleStaffCallChange = (day: number, callType: 'cranial' | 'spine', staffName: string) => {
+    const dayIndex = day - 1; // Convert 1-based day to 0-based index
     setAppState(prev => {
         const otherCalls = prev.staffCall.filter(c => !(c.day === day && c.callType === callType));
         if (staffName && staffName !== 'none') {
@@ -116,16 +123,16 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
     });
   };
 
-  const DayButton = ({ i }: { i: number }) => {
+  const DayButton = ({ dayNumber }: { dayNumber: number }) => {
     const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
+    d.setDate(d.getDate() + dayNumber -1);
     const dayOfMonth = d.getDate();
-    const cranialCall = staffCall.find(c => c.day === i && c.callType === 'cranial');
-    const spineCall = staffCall.find(c => c.day === i && c.callType === 'spine');
+    const cranialCall = staffCall.find(c => c.day === dayNumber && c.callType === 'cranial');
+    const spineCall = staffCall.find(c => c.day === dayNumber && c.callType === 'spine');
     
     return (
         <DialogTrigger asChild>
-          <Button variant="outline" className="h-24 flex-col relative text-left items-start p-2" onClick={() => setCurrentEditingDay(i)}>
+          <Button variant="outline" className="h-24 flex-col relative text-left items-start p-2" onClick={() => setCurrentEditingDay(dayNumber)}>
             <div className="font-bold text-md">{dayOfMonth}</div>
             <div className="text-xs text-muted-foreground">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
             <div className="mt-1 space-y-1 text-xs w-full overflow-hidden">
@@ -146,13 +153,13 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
         <div className="mt-6 border-t pt-6">
             <h3 className="text-lg font-medium mb-3">Staff On-Call Schedule</h3>
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} i={i} />)}
+                {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
             </div>
         </div>
 
         <DialogContent className="max-w-md">
             <DialogHeader>
-                <DialogTitle>Manage Staff Call for Day {currentEditingDay !== null ? currentEditingDay + 1 : ''}</DialogTitle>
+                <DialogTitle>Manage Staff Call for Day {currentEditingDay}</DialogTitle>
             </DialogHeader>
             {currentEditingDay !== null && (
                 <div className="space-y-4 pt-4">

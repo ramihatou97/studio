@@ -1,4 +1,4 @@
-import type { AppState, ScheduleOutput, Resident, ScheduleActivity } from './types';
+import type { AppState, ScheduleOutput, Resident, MedicalStudent, OtherLearner, ScheduleActivity } from './types';
 
 // Main function to generate all schedules
 export function generateSchedules(appState: AppState): ScheduleOutput {
@@ -36,10 +36,12 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   // --- Pre-computation for Double Call Days ---
   const dailyStaffCallMap = new Map<number, Set<string>>();
   staffCall.forEach(call => {
-    if (!dailyStaffCallMap.has(call.day)) {
-      dailyStaffCallMap.set(call.day, new Set());
+    //The day in staffCall is 1-indexed from the UI, so convert to 0-indexed for logic
+    const dayIndex = call.day - 1;
+    if (!dailyStaffCallMap.has(dayIndex)) {
+      dailyStaffCallMap.set(dayIndex, new Set());
     }
-    dailyStaffCallMap.get(call.day)!.add(call.callType);
+    dailyStaffCallMap.get(dayIndex)!.add(call.callType);
   });
 
   const doubleCallDays = new Set<number>();
@@ -204,7 +206,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
     const currentDate = new Date(start);
     currentDate.setDate(currentDate.getDate() + dayIndex);
-    const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase().substring(0, 3);
+    const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase().substring(0, 3) as keyof typeof clinicSlots;
     const dailyOrCases = orCases[dayIndex] || [];
 
     // Assign Chief OR days first
@@ -349,11 +351,13 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     });
   });
 
+  const updatedMedicalStudents = medicalStudents.map(student => ({ ...student }));
+  const updatedOtherLearners = otherLearners.map(learner => ({ ...learner }));
 
   return {
     residents: processedResidents,
-    medicalStudents,
-    otherLearners,
+    medicalStudents: updatedMedicalStudents,
+    otherLearners: updatedOtherLearners,
     errors,
   };
 }

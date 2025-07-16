@@ -2,17 +2,16 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { analyzeScheduleConflictsAction } from '@/lib/actions';
-import type { AppState, ScheduleOutput } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Bot } from 'lucide-react';
 
 interface AnalysisModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
-  scheduleOutput: ScheduleOutput;
 }
 
-export function AnalysisModal({ isOpen, onOpenChange, appState, scheduleOutput }: AnalysisModalProps) {
+export function AnalysisModal({ isOpen, onOpenChange, appState }: AnalysisModalProps) {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,7 +20,7 @@ export function AnalysisModal({ isOpen, onOpenChange, appState, scheduleOutput }
       const fetchAnalysis = async () => {
         setIsLoading(true);
         setAnalysisResult(null);
-        const result = await analyzeScheduleConflictsAction(appState, scheduleOutput);
+        const result = await analyzeScheduleConflictsAction(appState);
         if (result.success) {
           setAnalysisResult(result.data);
         } else {
@@ -31,7 +30,7 @@ export function AnalysisModal({ isOpen, onOpenChange, appState, scheduleOutput }
       };
       fetchAnalysis();
     }
-  }, [isOpen, appState, scheduleOutput]);
+  }, [isOpen, appState]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
