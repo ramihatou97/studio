@@ -15,6 +15,21 @@ export interface Activity {
   team: 'red' | 'blue';
 }
 
+export const POSSIBLE_ACTIVITIES = [
+  'Day Call',
+  'Night Call',
+  'Weekend Call',
+  'Post-Call',
+  'Vacation',
+  'Clinic',
+  'OR',
+  'Float',
+  'Pager Holder',
+  'Backup',
+] as const;
+
+export type PossibleActivity = typeof POSSIBLE_ACTIVITIES[number];
+
 export type ScheduleActivity = string | Activity;
 
 export interface OnServiceCallRule {
