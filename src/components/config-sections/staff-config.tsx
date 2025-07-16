@@ -16,7 +16,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Brain, Bone, Sparkles, Wand2 } from "lucide-react";
+import { PlusCircle, Trash2, Brain, Bone, Sparkles, Wand2, UserMd } from "lucide-react";
 import { useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
@@ -30,13 +30,14 @@ interface StaffConfigProps {
 interface StaffInputState {
   name: string;
   subspecialty: string;
+  specialtyType: 'cranial' | 'spine' | 'other';
 }
 
 function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState>> }) {
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const allStaff = [...appState.staff.redTeam, ...appState.staff.blueTeam];
+  const allStaff = appState.staff;
 
   const handleParse = async () => {
     if (!text.trim()) {
@@ -53,10 +54,9 @@ function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppStat
     const result = await prepopulateStaffCallAction(text, staffList);
 
     if (result.success && result.data) {
-      // The flow returns 1-indexed days, so we need to convert to 0-indexed for state
       const newStaffCall: StaffCall[] = result.data.map(call => ({
         ...call,
-        day: call.day, // Keep it 1-indexed for the UI display/editing components
+        day: call.day, 
       }));
 
       setAppState(prev => ({
@@ -102,7 +102,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
   
-  const allStaff = [...staff.redTeam, ...staff.blueTeam];
+  const allStaff = staff;
 
   const { numberOfDays } = (() => {
     if (!startDate || !endDate) return { numberOfDays: 0 };
@@ -113,7 +113,6 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   })();
 
   const handleStaffCallChange = (day: number, callType: 'cranial' | 'spine', staffName: string) => {
-    const dayIndex = day - 1; // Convert 1-based day to 0-based index
     setAppState(prev => {
         const otherCalls = prev.staffCall.filter(c => !(c.day === day && c.callType === callType));
         if (staffName && staffName !== 'none') {
@@ -172,7 +171,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
                             <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="none">None</SelectItem>
-                                {allStaff.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                                {allStaff.filter(s => s.specialtyType === 'cranial' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -185,7 +184,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
                             <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="none">None</SelectItem>
-                                {allStaff.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                                {allStaff.filter(s => s.specialtyType === 'spine' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -200,80 +199,77 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
 }
 
 export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
-  const [redStaffInput, setRedStaffInput] = useState<StaffInputState>({ name: '', subspecialty: '' });
-  const [blueStaffInput, setBlueStaffInput] = useState<StaffInputState>({ name: '', subspecialty: '' });
+  const [staffInput, setStaffInput] = useState<StaffInputState>({ name: '', subspecialty: '', specialtyType: 'other' });
   const { staff } = appState;
 
-  const addStaffMember = (team: 'red' | 'blue') => {
-    const inputState = team === 'red' ? redStaffInput : blueStaffInput;
-    const setInputState = team === 'red' ? setRedStaffInput : setBlueStaffInput;
-    if (!inputState.name) return;
+  const addStaffMember = () => {
+    if (!staffInput.name) return;
     
-    const newStaff: Staff = { id: uuidv4(), name: inputState.name, subspecialty: inputState.subspecialty || 'N/A' };
+    const newStaff: Staff = { 
+        id: uuidv4(), 
+        name: staffInput.name, 
+        subspecialty: staffInput.subspecialty || 'N/A',
+        specialtyType: staffInput.specialtyType
+    };
     
     setAppState(prev => ({
       ...prev,
-      staff: {
-        ...prev.staff,
-        [team === 'red' ? 'redTeam' : 'blueTeam']: [...prev.staff[team === 'red' ? 'redTeam' : 'blueTeam'], newStaff]
-      }
+      staff: [...prev.staff, newStaff]
     }));
-    setInputState({ name: '', subspecialty: '' });
+    setStaffInput({ name: '', subspecialty: '', specialtyType: 'other' });
   };
   
-  const removeStaffMember = (team: 'red' | 'blue', id: string) => {
+  const removeStaffMember = (id: string) => {
     setAppState(prev => ({
       ...prev,
-      staff: {
-        ...prev.staff,
-        [team === 'red' ? 'redTeam' : 'blueTeam']: prev.staff[team === 'red' ? 'redTeam' : 'blueTeam'].filter(s => s.id !== id)
-      }
+      staff: prev.staff.filter(s => s.id !== id)
     }));
   };
+  
+  const getSpecialtyBadgeClass = (type: 'cranial' | 'spine' | 'other') => {
+      switch(type) {
+          case 'cranial': return 'border-red-400 text-red-700 bg-red-100 dark:border-red-600 dark:text-red-300 dark:bg-red-900/50';
+          case 'spine': return 'border-blue-400 text-blue-700 bg-blue-100 dark:border-blue-600 dark:text-blue-300 dark:bg-blue-900/50';
+          default: return 'border-gray-400 text-gray-700 bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:bg-gray-900/50';
+      }
+  }
 
   return (
     <AccordionItem value="staff-config">
       <AccordionTrigger className="text-lg font-medium">Staffing & On-Call Configuration</AccordionTrigger>
       <AccordionContent>
-        <div className="grid md:grid-cols-2 gap-8">
-          <Card className="bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
-            <CardHeader><CardTitle className="text-red-800 dark:text-red-300">Red Team Staff</CardTitle></CardHeader>
+        <Card>
+            <CardHeader><CardTitle>Manage Staff Members</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Input placeholder="Staff Name" value={redStaffInput.name} onChange={e => setRedStaffInput(s => ({...s, name: e.target.value}))} />
-                <Input placeholder="Subspecialty" value={redStaffInput.subspecialty} onChange={e => setRedStaffInput(s => ({...s, subspecialty: e.target.value}))} />
-                <Button size="icon" onClick={() => addStaffMember('red')} className="bg-red-500 hover:bg-red-600"><PlusCircle/></Button>
+              <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 p-2 bg-muted/50 rounded-lg">
+                <Input placeholder="Staff Name" value={staffInput.name} onChange={e => setStaffInput(s => ({...s, name: e.target.value}))} />
+                <Input placeholder="Subspecialty" value={staffInput.subspecialty} onChange={e => setStaffInput(s => ({...s, subspecialty: e.target.value}))} />
+                <Select value={staffInput.specialtyType} onValueChange={(val: 'cranial' | 'spine' | 'other') => setStaffInput(s => ({...s, specialtyType: val}))}>
+                    <SelectTrigger className="w-full md:w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="cranial">Cranial</SelectItem>
+                        <SelectItem value="spine">Spine</SelectItem>
+                        <SelectItem value="other">Other/General</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button size="icon" onClick={addStaffMember}><PlusCircle/></Button>
               </div>
               <div className="space-y-2">
-                {staff.redTeam.map(s => (
-                  <Badge key={s.id} variant="secondary" className="flex justify-between items-center p-2 text-base">
-                    {s.name} <span className="text-xs text-muted-foreground ml-2">({s.subspecialty})</span>
-                    <Button variant="ghost" size="icon" onClick={() => removeStaffMember('red', s.id)} className="h-5 w-5 ml-2 hover:bg-red-200 dark:hover:bg-red-800"><Trash2 className="h-3 w-3"/></Button>
-                  </Badge>
+                {staff.map(s => (
+                  <div key={s.id} className="flex justify-between items-center p-2 border rounded-lg bg-background">
+                    <div>
+                        <p className="font-semibold">{s.name}</p>
+                        <p className="text-sm text-muted-foreground">{s.subspecialty}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={getSpecialtyBadgeClass(s.specialtyType)}>{s.specialtyType}</Badge>
+                        <Button variant="ghost" size="icon" onClick={() => removeStaffMember(s.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
-            <CardHeader><CardTitle className="text-blue-800 dark:text-blue-300">Blue Team Staff</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Input placeholder="Staff Name" value={blueStaffInput.name} onChange={e => setBlueStaffInput(s => ({...s, name: e.target.value}))} />
-                <Input placeholder="Subspecialty" value={blueStaffInput.subspecialty} onChange={e => setBlueStaffInput(s => ({...s, subspecialty: e.target.value}))} />
-                <Button size="icon" onClick={() => addStaffMember('blue')} className="bg-blue-500 hover:bg-blue-600"><PlusCircle/></Button>
-              </div>
-              <div className="space-y-2">
-                {staff.blueTeam.map(s => (
-                   <Badge key={s.id} variant="secondary" className="flex justify-between items-center p-2 text-base">
-                    {s.name} <span className="text-xs text-muted-foreground ml-2">({s.subspecialty})</span>
-                    <Button variant="ghost" size="icon" onClick={() => removeStaffMember('blue', s.id)} className="h-5 w-5 ml-2 hover:bg-blue-200 dark:hover:bg-blue-800"><Trash2 className="h-3 w-3"/></Button>
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
         
         <AiStaffCallPrepopulation appState={appState} setAppState={setAppState} />
         <StaffCallScheduler appState={appState} setAppState={setAppState} />

@@ -2,6 +2,7 @@ export interface Staff {
   id: string;
   name: string;
   subspecialty: string;
+  specialtyType: 'cranial' | 'spine' | 'other';
 }
 
 export interface OrCase {
@@ -10,9 +11,10 @@ export interface OrCase {
   procedure: string;
 }
 
-export interface Activity {
-  type: 'OR' | 'Clinic';
-  team: 'red' | 'blue';
+export interface ClinicAssignment {
+  day: number; // 1-indexed
+  staffName: string;
+  clinicType: 'cranial' | 'spine' | 'general';
 }
 
 export const POSSIBLE_ACTIVITIES = [
@@ -30,7 +32,7 @@ export const POSSIBLE_ACTIVITIES = [
 
 export type PossibleActivity = typeof POSSIBLE_ACTIVITIES[number];
 
-export type ScheduleActivity = string | Activity;
+export type ScheduleActivity = string;
 
 export interface OnServiceCallRule {
   minDays: number;
@@ -105,10 +107,6 @@ export interface GeneralSettings {
   newYearEnd: string;
 }
 
-export interface ClinicSlots {
-  [day: string]: { red: number; blue: number };
-}
-
 export interface StaffCall {
   day: number;
   callType: 'cranial' | 'spine';
@@ -142,13 +140,10 @@ export interface AppState {
   residents: Resident[];
   medicalStudents: MedicalStudent[];
   otherLearners: OtherLearner[];
-  staff: {
-    redTeam: Staff[];
-    blueTeam: Staff[];
-  };
+  staff: Staff[];
   staffCall: StaffCall[];
   orCases: { [dayIndex: number]: OrCase[] };
-  clinicSlots: ClinicSlots;
+  clinicAssignments: ClinicAssignment[];
   residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
   errors?: ScheduleError[];

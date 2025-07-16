@@ -1,4 +1,3 @@
-
 import type { AppState, ScheduleOutput, Resident, MedicalStudent, OtherLearner, ScheduleActivity, ScheduleError } from './types';
 
 
@@ -73,7 +72,7 @@ export function validateSchedule(appState: AppState): ScheduleError[] {
 
 // Main function to generate all schedules
 export function generateSchedules(appState: AppState): ScheduleOutput {
-  const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicSlots, staff, staffCall } = appState;
+  const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicAssignments, staffCall } = appState;
   const { startDate, endDate, statHolidays, usePredefinedCall } = general;
   let generationErrors: ScheduleError[] = [];
 
@@ -285,10 +284,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   const chief = processedResidents.find(r => r.isChief);
 
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
-    const currentDate = new Date(start);
-    currentDate.setDate(currentDate.getDate() + dayIndex);
-    const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase().substring(0, 3) as keyof typeof clinicSlots;
     const dailyOrCases = orCases[dayIndex] || [];
+    const dailyClinics = clinicAssignments.filter(c => c.day === dayIndex + 1);
 
     // Assign Chief OR days first
     if (chief && chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
@@ -297,8 +294,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     }
 
     // Assign Clinics
-    if (clinicSlots[dayName]) {
-        let availableSlots = clinicSlots[dayName].red + clinicSlots[dayName].blue;
+    if (dailyClinics.length > 0) {
+        let availableSlots = dailyClinics.length;
         
         // 1. Identify clinic candidates
         let clinicCandidates = processedResidents.filter(r => {
@@ -307,30 +304,9 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
             if (r.type === 'non-neuro' && r.onService) return true; // non-neuro rotators are eligible
             if (r.type === 'neuro' && r.onService && r.level < 4) return true; // junior neuro residents are eligible
             return false;
-        });
-
-        // 2. Prioritize candidates
-        clinicCandidates.sort((a, b) => {
-            // Non-neuro first
-            if (a.type === 'non-neuro' && b.type !== 'non-neuro') return -1;
-            if (b.type === 'non-neuro' && a.type !== 'non-neuro') return 1;
-            // Then most junior PGY level
-            return a.level - b.level;
-        });
+        }).sort((a, b) => a.level - b.level); // Prioritize most junior
         
-        // Soft rule: balance clinic vs OR for juniors
-        const pgy1s = clinicCandidates.filter(r => r.level === 1);
-        const pgy1_avg_or_days = pgy1s.length > 0 ? pgy1s.reduce((sum, r) => sum + r.orDays, 0) / pgy1s.length : 0;
-        
-        // This is a simple form of balancing. A more complex system could be used.
-        // It moves PGY1s with low OR counts to the end of the clinic priority list.
-        clinicCandidates = clinicCandidates.sort((a, b) => {
-            if (a.level === 1 && a.orDays < pgy1_avg_or_days) return 1; // Move to end
-            if (b.level === 1 && b.orDays < pgy1_avg_or_days) return -1;
-            return 0; // Keep original order otherwise
-        });
-        
-        // 3. Assign to clinic
+        // 2. Assign to clinic
         let assignedCount = 0;
         while(assignedCount < availableSlots && clinicCandidates.length > 0) {
             const residentToAssign = clinicCandidates.shift();
@@ -369,13 +345,10 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
     for (const junior of juniorsFloating) {
         const seniorsOperatingAlone = seniorsInOR.filter(s => {
-            // Count how many people are already in the OR with this senior
             const orPartners = processedResidents.filter(p => p.schedule[dayIndex].includes('OR') && p.id !== s.id);
-            // This is a simplification; a better approach would be to track pairs explicitly
             return orPartners.length < (orCases[dayIndex]?.length || 1);
         });
 
-        // Find a senior with a sufficient PGY gap who has space
         const bestSeniorMatch = seniorsOperatingAlone.find(s => (s.level - junior.level) >= 2);
 
         if (bestSeniorMatch) {
@@ -399,20 +372,18 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
     const getPagerPriorityScore = (res: Resident) => {
         let score = 0;
-        // Prioritize residents with fewer activities
         score -= getTotalActivities(res) * 10;
-        // Prioritize junior residents
         score += (7 - res.level) * 5;
         return score;
     };
     
     const candidates = processedResidents
       .filter(r => 
-        r.schedule[dayIndex].length === 0 && // Must be unassigned for the day
-        !r.exemptFromCall && // Must not be exempt from duties
+        r.schedule[dayIndex].length === 0 &&
+        !r.exemptFromCall &&
         (
-          (r.type === 'neuro' && r.level <= 3) || // Junior neuro resident
-          r.type === 'non-neuro' // Or a non-neuro resident
+          (r.type === 'neuro' && r.level <= 3) ||
+          r.type === 'non-neuro'
         )
       )
       .sort((a, b) => getPagerPriorityScore(b) - getPagerPriorityScore(a));
@@ -435,7 +406,6 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   const updatedMedicalStudents = medicalStudents.map(student => ({ ...student }));
   const updatedOtherLearners = otherLearners.map(learner => ({ ...learner }));
 
-  // Final validation pass on the generated schedule
   const finalErrors = validateSchedule({ ...appState, residents: processedResidents });
 
   return {

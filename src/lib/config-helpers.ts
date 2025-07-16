@@ -1,16 +1,13 @@
 import { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
-const redTeamStaff = [
-    { id: uuidv4(), name: 'Dr. Andrews', subspecialty: 'Tumor' },
-    { id: uuidv4(), name: 'Dr. Chen', subspecialty: 'Vascular' },
-    { id: uuidv4(), name: 'Dr. Patel', subspecialty: 'Functional' },
-];
-
-const blueTeamStaff = [
-    { id: uuidv4(), name: 'Dr. Garcia', subspecialty: 'Spine' },
-    { id: uuidv4(), name: 'Dr. Williams', subspecialty: 'Pediatrics' },
-    { id: uuidv4(), name: 'Dr. Kim', subspecialty: 'Trauma' },
+const staffMembers: Staff[] = [
+    { id: uuidv4(), name: 'Dr. Andrews', subspecialty: 'Tumor', specialtyType: 'cranial' },
+    { id: uuidv4(), name: 'Dr. Chen', subspecialty: 'Vascular', specialtyType: 'cranial' },
+    { id: uuidv4(), name: 'Dr. Patel', subspecialty: 'Functional', specialtyType: 'other' },
+    { id: uuidv4(), name: 'Dr. Garcia', subspecialty: 'Spine', specialtyType: 'spine' },
+    { id: uuidv4(), name: 'Dr. Williams', subspecialty: 'Pediatrics', specialtyType: 'other' },
+    { id: uuidv4(), name: 'Dr. Kim', subspecialty: 'Trauma', specialtyType: 'spine' },
 ];
 
 const neuroResidents: Resident[] = [
@@ -113,10 +110,7 @@ export const initialAppState: AppState = {
     }
   ],
   otherLearners: [],
-  staff: {
-    redTeam: redTeamStaff,
-    blueTeam: blueTeamStaff,
-  },
+  staff: staffMembers,
   staffCall: [
     { day: 24, callType: 'cranial', staffName: 'Dr. Chen'},
     { day: 24, callType: 'spine', staffName: 'Dr. Kim'},
@@ -126,13 +120,11 @@ export const initialAppState: AppState = {
     { day: 30, callType: 'spine', staffName: 'Dr. Garcia'},
   ],
   orCases: orCasesData,
-  clinicSlots: {
-    mon: { red: 2, blue: 1 },
-    tue: { red: 1, blue: 2 },
-    wed: { red: 2, blue: 1 },
-    thu: { red: 1, blue: 2 },
-    fri: { red: 1, blue: 1 },
-  },
+  clinicAssignments: [
+      { day: 1, staffName: 'Dr. Garcia', clinicType: 'spine' },
+      { day: 2, staffName: 'Dr. Andrews', clinicType: 'cranial' },
+      { day: 2, staffName: 'Dr. Williams', clinicType: 'general' },
+  ],
   residentCall: [],
   onServiceCallRules: [
     { minDays: 19, maxDays: 22, calls: 5 },
