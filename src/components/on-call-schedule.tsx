@@ -1,7 +1,7 @@
 
-import type { AppState, Resident, PossibleActivity } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Brain, Bone, UserCheck } from 'lucide-react';
+import { Brain, Bone, UserCheck, Sun, Moon } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 interface OnCallScheduleProps {
@@ -21,9 +21,12 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
     const dayDate = new Date(start);
     dayDate.setDate(dayDate.getDate() + dayIndex);
 
-    const onCallResidents = residents.filter(r => 
-        r.schedule[dayIndex]?.some(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string))
-    );
+    const onCallAssignments = residents
+      .map(r => {
+        const callActivities = r.schedule[dayIndex]?.filter(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string));
+        return { resident: r, calls: callActivities };
+      })
+      .filter(assignment => assignment.calls && assignment.calls.length > 0);
 
     const backupResidents = residents.filter(r => 
         r.schedule[dayIndex]?.includes('Backup')
@@ -34,12 +37,28 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
 
     return {
       date: dayDate,
-      onCallResidents,
+      onCallAssignments,
       backupResidents,
       cranialCallStaff,
       spineCallStaff
     };
   });
+  
+  const renderCallType = (calls: string[]) => {
+    if (calls.includes('Weekend Call')) {
+      return <Badge variant="destructive" className="ml-2">Weekend</Badge>;
+    }
+    if (calls.includes('Day Call') && calls.includes('Night Call')) {
+        return <Badge variant="destructive" className="ml-2">24h Call</Badge>;
+    }
+    if (calls.includes('Day Call')) {
+        return <span className="flex items-center text-sm ml-2 text-amber-600"><Sun className="w-4 h-4 mr-1"/> Day</span>;
+    }
+    if (calls.includes('Night Call')) {
+        return <span className="flex items-center text-sm ml-2 text-indigo-600"><Moon className="w-4 h-4 mr-1"/> Night</span>;
+    }
+    return null;
+  }
 
   return (
     <div className="mt-6">
@@ -76,9 +95,12 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                    <div className="flex flex-col gap-1">
-                        {day.onCallResidents.length > 0 ? day.onCallResidents.map(r => (
-                           <span key={r.id}>{r.name} <span className="text-muted-foreground text-xs">(PGY-{r.level})</span></span>
+                    <div className="flex flex-col gap-2">
+                        {day.onCallAssignments.length > 0 ? day.onCallAssignments.map(assignment => (
+                           <div key={assignment.resident.id} className="flex items-center">
+                                <span>{assignment.resident.name} <span className="text-muted-foreground text-xs">(PGY-{assignment.resident.level})</span></span>
+                                {renderCallType(assignment.calls)}
+                           </div>
                         )) : <span className="text-muted-foreground italic text-xs">None</span>}
                     </div>
                 </TableCell>
