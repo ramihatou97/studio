@@ -80,11 +80,18 @@ export interface OtherLearner extends BasePersonnel {
 
 export type Personnel = Resident | MedicalStudent | OtherLearner;
 
+export interface ScheduleError {
+  type: 'MAX_CALLS' | 'POST_CALL_VIOLATION' | 'NO_BACKUP' | 'NO_ELIGIBLE_RESIDENT' | 'INSUFFICIENT_BACKUP' | 'POST_CALL_CONFLICT';
+  message: string;
+  residentId?: string;
+  dayIndex?: number;
+}
+
 export interface ScheduleOutput {
   residents: Resident[];
   medicalStudents: MedicalStudent[];
   otherLearners: OtherLearner[];
-  errors: string[];
+  errors: ScheduleError[];
 }
 
 export interface GeneralSettings {
@@ -128,5 +135,5 @@ export interface AppState {
   clinicSlots: ClinicSlots;
   residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
-  errors?: string[];
+  errors?: ScheduleError[];
 }

@@ -48,7 +48,7 @@ export default function Home() {
             title: "Schedule Generated with Issues",
             description: (
               <ul className="list-disc list-inside">
-                {output.errors.map((error, i) => <li key={i}>{error}</li>)}
+                {output.errors.map((error, i) => <li key={i}>{error.message}</li>)}
               </ul>
             ),
           });

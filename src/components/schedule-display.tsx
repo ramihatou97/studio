@@ -68,7 +68,7 @@ export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps)
               title: "Manual Swap Created Conflicts",
               description: (
                 <ul className="list-disc list-inside">
-                  {validationErrors.map((error, i) => <li key={i}>{error}</li>)}
+                  {validationErrors.map((error, i) => <li key={i}>{error.message}</li>)}
                 </ul>
               ),
             });
@@ -109,15 +109,19 @@ export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps)
                     {residents.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="sticky left-0 bg-card z-10 font-medium">{r.name}</TableCell>
-                        {r.schedule.map((_, dayIndex) => (
-                          <TableCell key={`${r.id}-${dayIndex}`} className="text-center p-1">
-                            <EditableScheduleCell
-                              resident={r}
-                              dayIndex={dayIndex}
-                              setAppState={setAppState}
-                            />
-                          </TableCell>
-                        ))}
+                        {r.schedule.map((_, dayIndex) => {
+                          const hasError = !!errors?.some(e => e.residentId === r.id && e.dayIndex === dayIndex);
+                          return (
+                            <TableCell key={`${r.id}-${dayIndex}`} className="text-center p-1">
+                              <EditableScheduleCell
+                                resident={r}
+                                dayIndex={dayIndex}
+                                setAppState={setAppState}
+                                hasError={hasError}
+                              />
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))}
                   </TableBody>

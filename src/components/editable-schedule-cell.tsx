@@ -9,9 +9,10 @@ interface EditableScheduleCellProps {
   resident: Resident;
   dayIndex: number;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  hasError: boolean;
 }
 
-export function EditableScheduleCell({ resident, dayIndex, setAppState }: EditableScheduleCellProps) {
+export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError }: EditableScheduleCellProps) {
   const activities = resident.schedule[dayIndex];
   // For simplicity, we'll only show and edit the first activity in a cell.
   const primaryActivity = (Array.isArray(activities) && activities.length > 0) ? activities.join(', ') : 'Float';
@@ -63,7 +64,7 @@ export function EditableScheduleCell({ resident, dayIndex, setAppState }: Editab
     <div ref={setDroppableNodeRef} className="h-full w-full">
       <div ref={setDraggableNodeRef} style={style} {...listeners} {...attributes}>
         <Select value={primaryActivity} onValueChange={handleActivityChange}>
-          <SelectTrigger className={cn("w-[120px] h-auto p-1.5 text-xs border-0 focus:ring-0 focus:ring-offset-0", getCellClass(primaryActivity), isOver && "ring-2 ring-offset-2 ring-ring")}>
+          <SelectTrigger className={cn("w-[120px] h-auto p-1.5 text-xs border-0 focus:ring-0 focus:ring-offset-0", getCellClass(primaryActivity), isOver && "ring-2 ring-offset-2 ring-ring", hasError && "ring-2 ring-offset-1 ring-destructive")}>
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
