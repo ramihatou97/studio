@@ -1,3 +1,4 @@
+
 import type { AppState, Resident } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -5,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleSummaryTable } from './schedule-summary-table';
 import { EditableScheduleCell } from './editable-schedule-cell';
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import { validateSchedule } from '@/lib/schedule-generator';
+import { useToast } from '@/hooks/use-toast';
 
 interface ScheduleDisplayProps {
   appState: AppState;
@@ -14,6 +17,7 @@ interface ScheduleDisplayProps {
 export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps) {
   const { residents, medicalStudents, otherLearners, errors } = appState;
   const numberOfDays = residents[0]?.schedule.length || 0;
+  const { toast } = useToast();
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -25,6 +29,8 @@ export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps)
       if (!activeData || !overData) return;
       if (activeData.dayIndex !== overData.dayIndex) return; // Only allow swaps on the same day
 
+      let newAppState: AppState | null = null;
+      
       setAppState(prev => {
         const sourceResidentIndex = prev.residents.findIndex(r => r.id === activeData.residentId);
         const targetResidentIndex = prev.residents.findIndex(r => r.id === overData.residentId);
@@ -46,9 +52,33 @@ export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps)
             ...newResidents[targetResidentIndex],
             schedule: newResidents[targetResidentIndex].schedule.map((s, i) => i === dayIndex ? sourceSchedule : s),
         };
-
-        return { ...prev, residents: newResidents };
+        
+        newAppState = { ...prev, residents: newResidents };
+        return newAppState;
       });
+
+      // Post-update validation
+      if (newAppState) {
+          const validationErrors = validateSchedule(newAppState);
+          setAppState(prev => ({...prev, errors: validationErrors}));
+          
+          if (validationErrors.length > 0) {
+            toast({
+              variant: "destructive",
+              title: "Manual Swap Created Conflicts",
+              description: (
+                <ul className="list-disc list-inside">
+                  {validationErrors.map((error, i) => <li key={i}>{error}</li>)}
+                </ul>
+              ),
+            });
+          } else {
+             toast({
+              title: "Swap Successful",
+              description: "The schedule has been updated without new conflicts.",
+            });
+          }
+      }
     }
   };
 

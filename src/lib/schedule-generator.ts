@@ -1,15 +1,72 @@
+
 import type { AppState, ScheduleOutput, Resident, MedicalStudent, OtherLearner, ScheduleActivity } from './types';
+
+
+// Validation function to check for rule violations
+export function validateSchedule(appState: AppState): string[] {
+  const { residents, general, onServiceCallRules } = appState;
+  const { startDate, endDate } = general;
+  const errors: string[] = [];
+  
+  if (!startDate || !endDate) return ["Start and End dates must be set."];
+  const numberOfDays = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+  // Recalculate call stats from the schedule
+  const validatedResidents = residents.map(r => {
+      const callDays: number[] = [];
+      let weekendCalls = 0;
+      r.schedule.forEach((activities, dayIndex) => {
+          if (activities.some(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string))) {
+              callDays.push(dayIndex);
+              const currentDate = new Date(startDate);
+              currentDate.setDate(currentDate.getDate() + dayIndex);
+              const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+              if (isWeekend) weekendCalls++;
+          }
+      });
+      return {...r, callDays, weekendCalls};
+  });
+  
+  validatedResidents.forEach(res => {
+    // Rule: Max calls
+    const maxCalls = res.onService ? (onServiceCallRules.find(rule => (numberOfDays - res.vacationDays.length) >= rule.minDays && (numberOfDays - res.vacationDays.length) <= rule.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
+    if (res.callDays.length > maxCalls && maxCalls > 0) {
+        errors.push(`${res.name} exceeds max calls (${res.callDays.length}/${maxCalls}).`);
+    }
+
+    // Rule: Post-call violations
+    for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
+        const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
+        if (hasNightOrWeekendCall && !res.schedule[dayIndex + 1].includes('Post-Call') && !res.schedule[dayIndex + 1].includes('Vacation')) {
+            errors.push(`${res.name} has a post-call violation on day ${dayIndex + 2}.`);
+        }
+    }
+    
+    // Rule: PGY-1 solo call
+    if (res.type === 'neuro' && res.level === 1 && !res.allowSoloPgy1Call) {
+        res.callDays.forEach(dayIndex => {
+            const backupPresent = validatedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
+            if (!backupPresent) {
+                errors.push(`PGY-1 ${res.name} is on call without backup on day ${dayIndex + 1}.`);
+            }
+        });
+    }
+  });
+
+  return errors;
+}
+
 
 // Main function to generate all schedules
 export function generateSchedules(appState: AppState): ScheduleOutput {
   const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicSlots, staff, staffCall } = appState;
   const { startDate, endDate, statHolidays, usePredefinedCall } = general;
-  const errors: string[] = [];
+  let generationErrors: string[] = [];
 
   // --- Basic Validations ---
   if (!startDate || !endDate) {
-    errors.push("Start and End dates must be set.");
-    return { residents: [], medicalStudents: [], otherLearners: [], errors };
+    generationErrors.push("Start and End dates must be set.");
+    return { residents: [], medicalStudents: [], otherLearners: [], errors: generationErrors };
   }
   
   const start = new Date(startDate);
@@ -17,8 +74,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   const numberOfDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   
   if (numberOfDays <= 0) {
-    errors.push("End date must be after start date.");
-    return { residents: [], medicalStudents: [], otherLearners: [], errors };
+    generationErrors.push("End date must be after start date.");
+    return { residents: [], medicalStudents: [], otherLearners: [], errors: generationErrors };
   }
 
   const statHolidayNumbers = statHolidays.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
@@ -137,7 +194,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
               if (backup) {
                   assignCall(backup, 'Backup');
               } else {
-                  errors.push(`Could not find eligible backup for ${primaryResident.name} on day ${dayIndex + 1}`);
+                  generationErrors.push(`Could not find eligible backup for ${primaryResident.name} on day ${dayIndex + 1}`);
               }
           }
       };
@@ -150,7 +207,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
               assignCall(primary, 'Weekend Call');
               findAndAssignBackup(primary, candidates.slice(1));
           } else {
-            errors.push(`No eligible resident for Weekend Call on day ${dayIndex + 1}`);
+            generationErrors.push(`No eligible resident for Weekend Call on day ${dayIndex + 1}`);
           }
       } else {
           // Weekday Call Logic
@@ -168,7 +225,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
                   assignCall(dayResident, 'Day Call');
                   findAndAssignBackup(dayResident, dayCandidates.slice(1));
               } else {
-                  errors.push(`No eligible resident for Day Call on day ${dayIndex + 1}`);
+                  generationErrors.push(`No eligible resident for Day Call on day ${dayIndex + 1}`);
               }
           } else {
               // 24-Hour Call Contingency
@@ -179,7 +236,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
                   assignCall(resident24hr, 'Night Call');
                   findAndAssignBackup(resident24hr, dayCandidates.slice(1));
               } else {
-                errors.push(`No eligible residents for any call on weekday ${dayIndex + 1}`);
+                generationErrors.push(`No eligible residents for any call on weekday ${dayIndex + 1}`);
               }
           }
       }
@@ -194,7 +251,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
             if (res.schedule[dayIndex + 1].length === 0) {
                 res.schedule[dayIndex + 1] = ['Post-Call'];
             } else if (!res.schedule[dayIndex + 1].includes('Vacation')) {
-                errors.push(`Could not assign Post-Call for ${res.name} on day ${dayIndex + 2} due to a conflict.`);
+                generationErrors.push(`Could not assign Post-Call for ${res.name} on day ${dayIndex + 2} due to a conflict.`);
             }
         }
     }
@@ -354,10 +411,13 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   const updatedMedicalStudents = medicalStudents.map(student => ({ ...student }));
   const updatedOtherLearners = otherLearners.map(learner => ({ ...learner }));
 
+  // Final validation pass on the generated schedule
+  const finalErrors = validateSchedule({ ...appState, residents: processedResidents });
+
   return {
     residents: processedResidents,
     medicalStudents: updatedMedicalStudents,
     otherLearners: updatedOtherLearners,
-    errors,
+    errors: [...generationErrors, ...finalErrors],
   };
 }
