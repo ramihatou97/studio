@@ -16,15 +16,19 @@ const ScheduleQuerySchema = z.object({
       'daily_call_schedule',
       'activity_count',
       'list_residents',
+      'staff_call_schedule',
+      'or_cases',
+      'daily_assignments',
     ])
     .describe('The type of information to retrieve.'),
   day: z.number().optional().describe('The 1-indexed day of the month for the query.'),
   residentName: z.string().optional().describe("The name of the resident for the query."),
+  staffName: z.string().optional().describe("The name of the staff surgeon for the query."),
   activityType: z
     .string()
     .optional()
     .describe(
-      'The type of activity to count (e.g., "Vacation", "Day Call").'
+      'The type of activity to count (e.g., "Vacation", "Day Call", "Clinic", "OR").'
     ),
   filter: z.object({
       level: z.number().optional().describe('Filter residents by PGY level.'),
@@ -40,7 +44,7 @@ const ScheduleInfoSchema = z.object({
 export const getScheduleInformationTool = ai.defineTool(
   {
     name: 'getScheduleInformation',
-    description: 'Looks up information about the resident schedule, including daily call assignments, individual resident schedules, and activity counts.',
+    description: 'Looks up information about the overall schedule, including resident assignments, staff on-call, OR cases, and clinic duties.',
     inputSchema: ScheduleQuerySchema,
     outputSchema: ScheduleInfoSchema,
   },
@@ -49,8 +53,8 @@ export const getScheduleInformationTool = ai.defineTool(
       return {result: 'Error: Application state not provided.'};
     }
 
-    const {residents, general} = context;
-    const {queryType, day, residentName, activityType, filter} = query;
+    const {residents, general, staffCall, orCases} = context;
+    const {queryType, day, residentName, staffName, activityType, filter} = query;
 
     switch (queryType) {
       case 'resident_schedule': {
@@ -80,8 +84,51 @@ export const getScheduleInformationTool = ai.defineTool(
               `${r.name} (${r.schedule[dayIndex].join(', ')})`
           );
         return onCall.length > 0
-          ? {result: `On call on day ${day}: ${onCall.join('; ')}`}
-          : {result: `No one is on call on day ${day}.`};
+          ? {result: `Residents on call on day ${day}: ${onCall.join('; ')}`}
+          : {result: `No residents are on call on day ${day}.`};
+      }
+      
+      case 'staff_call_schedule': {
+        if (!day) return {result: 'Please specify a day.'};
+        if (day < 1 || day > (general.endDate ? new Date(general.endDate).getDate() : 31)) {
+            return { result: 'Invalid day specified.' };
+        }
+        const callsForDay = staffCall.filter(c => c.day === day);
+        if (callsForDay.length === 0) return { result: `No staff are on call on day ${day}.` };
+        
+        const scheduleString = callsForDay.map(c => `${c.callType.charAt(0).toUpperCase() + c.callType.slice(1)}: ${c.staffName}`).join(', ');
+        return { result: `Staff on call on day ${day}: ${scheduleString}` };
+      }
+
+      case 'or_cases': {
+        if (!day) return {result: 'Please specify a day.'};
+        const dayIndex = day - 1;
+        if (dayIndex < 0 || dayIndex >= (residents[0]?.schedule.length || 0)) {
+            return { result: 'Invalid day specified.' };
+        }
+        let cases = orCases[dayIndex] || [];
+        if (staffName) {
+            cases = cases.filter(c => c.surgeon.toLowerCase().includes(staffName.toLowerCase()));
+        }
+
+        if (cases.length === 0) return { result: `No OR cases scheduled for day ${day}${staffName ? ` with Dr. ${staffName}` : ''}.` };
+
+        const casesString = cases.map(c => `${c.procedure} (${c.diagnosis}) with ${c.surgeon}`).join('\n- ');
+        return { result: `OR cases for day ${day}:\n- ${casesString}` };
+      }
+
+      case 'daily_assignments': {
+        if (!day) return {result: 'Please specify a day.'};
+        if (!activityType) return {result: 'Please specify an activity type (e.g., "Clinic", "OR").'};
+        const dayIndex = day - 1;
+        if (dayIndex < 0 || dayIndex >= (residents[0]?.schedule.length || 0)) {
+            return { result: 'Invalid day specified.' };
+        }
+        const assignedResidents = residents.filter(r => r.schedule[dayIndex]?.includes(activityType as any));
+        if (assignedResidents.length === 0) return { result: `No residents are assigned to ${activityType} on day ${day}.` };
+        
+        const names = assignedResidents.map(r => r.name).join(', ');
+        return { result: `Residents assigned to ${activityType} on day ${day}: ${names}.` };
       }
 
       case 'activity_count': {

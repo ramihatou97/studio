@@ -76,7 +76,7 @@ export function ChatModal({ isOpen, onOpenChange, appState }: ChatModalProps) {
         <DialogHeader>
           <DialogTitle>Chat with AI Assistant</DialogTitle>
           <DialogDescription>
-            Ask questions about the current schedule. Try "Who is on call tomorrow?" or "Show me Dr. Reed's schedule."
+            Ask questions about the schedule. Try "Who is on spine call tomorrow?" or "What are Dr. Andrew's cases on day 3?"
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden">
