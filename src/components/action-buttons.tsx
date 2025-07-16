@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { AppState } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { AnalysisModal } from './modals/analysis-modal';
 import { HandoverModal } from './modals/handover-modal';
 import { OptimizerModal } from './modals/optimizer-modal';
-import { Bot, FileText, Sparkles, Wand2 } from 'lucide-react';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
   onGenerate: () => void;
@@ -18,6 +19,57 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
   const [isOptimizerModalOpen, setOptimizerModalOpen] = useState(false);
   const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleSave = () => {
+    try {
+      const stateString = JSON.stringify(appState, null, 2);
+      const blob = new Blob([stateString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'medishift-config.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Configuration Saved", description: "Your settings have been saved to medishift-config.json." });
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Save Failed", description: "Could not save the configuration file." });
+    }
+  };
+
+  const handleLoadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text === 'string') {
+          const loadedState = JSON.parse(text);
+          // Basic validation to ensure it's a valid state file
+          if (loadedState.general && loadedState.residents) {
+            setAppState(loadedState);
+            toast({ title: "Configuration Loaded", description: "Your settings have been successfully restored." });
+          } else {
+            throw new Error("Invalid configuration file format.");
+          }
+        }
+      } catch (error) {
+        toast({ variant: 'destructive', title: "Load Failed", description: "The selected file is not a valid configuration." });
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input value to allow loading the same file again
+    event.target.value = '';
+  };
   
   return (
     <>
@@ -33,6 +85,15 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             <><Wand2 className="mr-2 h-5 w-5" /> {hasGenerated ? 'Re-generate Schedules' : 'Generate Schedules'}</>
           )}
         </Button>
+        <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-2">
+            <Button onClick={handleSave} variant="outline">
+                <FileDown className="mr-2 h-4 w-4" /> Save Config
+            </Button>
+            <Button onClick={handleLoadClick} variant="outline">
+                <FileUp className="mr-2 h-4 w-4" /> Load Config
+            </Button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
+        </div>
         {hasGenerated && (
           <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-3 gap-2">
             {appState.errors && appState.errors.length > 0 && (
