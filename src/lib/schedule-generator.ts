@@ -2,7 +2,7 @@ import type { AppState, ScheduleOutput, Resident, ScheduleActivity } from './typ
 
 // Main function to generate all schedules
 export function generateSchedules(appState: AppState): ScheduleOutput {
-  const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicSlots, staff } = appState;
+  const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicSlots, staff, staffCall } = appState;
   const { startDate, endDate, statHolidays, usePredefinedCall } = general;
   const errors: string[] = [];
 
@@ -29,8 +29,26 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     schedule: Array.from({ length: numberOfDays }, () => []),
     callDays: [],
     weekendCalls: 0,
+    doubleCallDays: 0,
     orDays: 0,
   }));
+  
+  // --- Pre-computation for Double Call Days ---
+  const dailyStaffCallMap = new Map<number, Set<string>>();
+  staffCall.forEach(call => {
+    if (!dailyStaffCallMap.has(call.day)) {
+      dailyStaffCallMap.set(call.day, new Set());
+    }
+    dailyStaffCallMap.get(call.day)!.add(call.callType);
+  });
+
+  const doubleCallDays = new Set<number>();
+  dailyStaffCallMap.forEach((callTypes, day) => {
+    if (callTypes.has('cranial') && callTypes.has('spine')) {
+      doubleCallDays.add(day);
+    }
+  });
+
 
   // --- Pre-assignment Stage (Vacation, Holidays) ---
   processedResidents.forEach(res => {
@@ -59,6 +77,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
       currentDate.setDate(currentDate.getDate() + dayIndex);
       const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
       const isHoliday = statHolidayNumbers.includes(dayIndex + 1);
+      const isDoubleCallDay = doubleCallDays.has(dayIndex);
       
       const getPriorityScore = (res: Resident) => {
         let score = 0;
@@ -73,6 +92,10 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
         const lastCall = res.callDays.length > 0 ? Math.max(...res.callDays) : -Infinity;
         if (dayIndex - lastCall <= 3) {
             score -= 5000;
+        }
+        // Double Call Fairness (Soft Rule)
+        if (isDoubleCallDay) {
+          score -= res.doubleCallDays * 20;
         }
         return score;
       };
@@ -101,6 +124,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
           resident.schedule[dayIndex].push(call);
           resident.callDays.push(dayIndex);
           if (isWeekend || isHoliday) resident.weekendCalls++;
+          if (isDoubleCallDay) resident.doubleCallDays++;
       }
 
       const findAndAssignBackup = (primaryResident: Resident, availableCandidates: Resident[]) => {

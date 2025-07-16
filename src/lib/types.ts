@@ -24,7 +24,7 @@ export interface OnServiceCallRule {
 }
 
 interface BasePersonnel {
-  id: string;
+  id:string;
   name: string;
   vacationDays: number[];
   schedule: ScheduleActivity[][];
@@ -44,6 +44,7 @@ export interface Resident extends BasePersonnel {
   specialty?: string;
   weekendCalls: number;
   callDays: number[];
+  doubleCallDays: number;
   orDays: number;
   holidayGroup?: 'christmas' | 'new_year' | 'neither';
 }

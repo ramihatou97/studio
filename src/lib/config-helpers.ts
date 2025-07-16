@@ -17,37 +17,42 @@ const neuroResidents: Resident[] = [
     {
         id: 'chief-resident', type: 'neuro', name: 'Dr. Evelyn Reed', level: 6, onService: true, isChief: true,
         vacationDays: [], chiefOrDays: [3, 10, 17, 24], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true
     },
     {
         id: 'pgy5-resident', type: 'neuro', name: 'Dr. Ben Carter', level: 5, onService: true, isChief: false,
         vacationDays: [1, 2], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true
     },
     {
         id: 'pgy4-resident', type: 'neuro', name: 'Dr. Olivia Martinez', level: 4, onService: true, isChief: false,
         vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true
     },
     {
         id: 'pgy3-off-service', type: 'neuro', name: 'Dr. Sam Taylor', level: 3, onService: false, isChief: false,
         vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false
+    },
+    {
+        id: 'pgy3-can-backup', type: 'neuro', name: 'Dr. Isaac Brown', level: 3, onService: true, isChief: false,
+        vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true
     },
     {
         id: 'pgy2-resident', type: 'neuro', name: 'Dr. Chloe Davis', level: 2, onService: true, isChief: false,
         vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'new_year', allowSoloPgy1Call: false,
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'new_year', allowSoloPgy1Call: false,
     },
     {
         id: 'pgy1-no-solo', type: 'neuro', name: 'Dr. Alex Johnson', level: 1, onService: true, isChief: false,
         vacationDays: [29, 30, 31], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false,
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'christmas', allowSoloPgy1Call: false,
     },
     {
         id: 'pgy1-can-solo', type: 'neuro', name: 'Dr. Maya Singh', level: 1, onService: true, isChief: false,
         vacationDays: [], chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [],
-        weekendCalls: 0, callDays: [], orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: true,
+        weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, holidayGroup: 'neither', allowSoloPgy1Call: true,
     },
 ];
 
@@ -55,12 +60,12 @@ const nonNeuroResidents: Resident[] = [
     {
         id: 'ortho-resident', type: 'non-neuro', name: 'Dr. James Wilson (Ortho)', specialty: 'Orthopedics', level: 3, onService: true,
         vacationDays: [], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 0, exemptFromCall: false,
-        schedule: [], weekendCalls: 0, callDays: [], orDays: 0, allowSoloPgy1Call: false
+        schedule: [], weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, allowSoloPgy1Call: false
     },
     {
         id: 'ent-resident', type: 'non-neuro', name: 'Dr. Laura Brown (ENT)', specialty: 'ENT', level: 2, onService: true,
         vacationDays: [15, 16, 17], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 0, exemptFromCall: true,
-        schedule: [], weekendCalls: 0, callDays: [], orDays: 0, allowSoloPgy1Call: false
+        schedule: [], weekendCalls: 0, callDays: [], doubleCallDays: 0, orDays: 0, allowSoloPgy1Call: false
     },
 ];
 
@@ -152,6 +157,7 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     schedule: [],
     weekendCalls: 0,
     callDays: [],
+    doubleCallDays: 0,
     orDays: 0,
     holidayGroup: 'neither',
     allowSoloPgy1Call: false,
@@ -177,6 +183,7 @@ export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAc
       schedule: [],
       weekendCalls: 0,
       callDays: [],
+      doubleCallDays: 0,
       orDays: 0,
       allowSoloPgy1Call: false,
       canBeBackup: false,
