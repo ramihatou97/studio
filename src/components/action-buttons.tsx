@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { AnalysisModal } from './modals/analysis-modal';
 import { HandoverModal } from './modals/handover-modal';
 import { OptimizerModal } from './modals/optimizer-modal';
-import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp } from 'lucide-react';
+import { ChatModal } from './modals/chat-modal';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
@@ -19,6 +20,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
   const [isOptimizerModalOpen, setOptimizerModalOpen] = useState(false);
   const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [isChatModalOpen, setChatModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -95,7 +97,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
         </div>
         {hasGenerated && (
-          <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-2">
             {appState.errors && appState.errors.length > 0 && (
                 <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
@@ -104,8 +106,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-500/20">
               <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
             </Button>
-            <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20 col-span-1 md:col-span-2">
-              <FileText className="mr-2 h-4 w-4" /> Generate Handover Email
+            <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20">
+              <FileText className="mr-2 h-4 w-4" /> Handover Email
+            </Button>
+            <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20 col-span-1 md:col-span-2">
+                <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI Assistant
             </Button>
           </div>
         )}
@@ -128,6 +133,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             onOpenChange={setOptimizerModalOpen}
             appState={appState}
             setAppState={setAppState}
+          />
+          <ChatModal
+            isOpen={isChatModalOpen}
+            onOpenChange={setChatModalOpen}
+            appState={appState}
           />
         </>
       )}

@@ -6,6 +6,7 @@ import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/f
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
 import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-populate-or-cases';
+import { chatWithSchedule as chatWithScheduleFlow, type ChatWithScheduleInput } from '@/ai/flows/chat-with-schedule';
 import type { AppState, StaffCall, Resident } from './types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
@@ -122,4 +123,15 @@ export async function optimizeScheduleAction(appState: AppState, conflictDetails
     console.error('Error in optimizeScheduleAction:', error);
     return { success: false, error: 'Failed to optimize schedule.' };
   }
+}
+
+export async function chatWithScheduleAction(input: ChatWithScheduleInput) {
+    try {
+      const result = await chatWithScheduleFlow(input);
+      return { success: true, data: result.answer };
+    } catch (error) {
+      console.error('Error in chatWithScheduleAction:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      return { success: false, error: errorMessage };
+    }
 }
