@@ -1,3 +1,4 @@
+
 import type { AppState, Resident } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -51,9 +52,8 @@ export function ScheduleSummaryTable({ appState }: ScheduleSummaryTableProps) {
   const headers: (keyof ActivityCounts)[] = ['Day Call', 'Night Call', 'Weekend Call', 'Post-Call', 'Vacation', 'Clinic', 'OR', 'Float', 'Pager Holder', 'Backup'];
 
   return (
-    <div className="mt-8 border-t pt-6">
-      <h3 className="text-xl font-semibold mb-4">Monthly Summary</h3>
-      <div className="overflow-x-auto">
+    <div className="mt-6">
+      <div className="overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
