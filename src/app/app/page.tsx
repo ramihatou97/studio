@@ -22,7 +22,7 @@ import { ActionButtons } from '@/components/action-buttons';
 import { ScheduleDisplay } from '@/components/schedule-display';
 import { getInitialAppState } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
-import { UserCheck, UserX, GraduationCap, BookUser, CalendarDays, ScrollText } from 'lucide-react';
+import { UserCheck, UserX, GraduationCap, BookUser, CalendarDays, ScrollText, Users } from 'lucide-react';
 import { EpaModal } from '@/components/modals/epa-modal';
 import { ProcedureLogModal } from '@/components/modals/procedure-log-modal';
 import { AnalysisModal } from '@/components/modals/analysis-modal';
@@ -203,9 +203,34 @@ export default function AppPage() {
   
   const renderResidentMobileDashboard = () => (
     <div className="space-y-4">
-        <Button onClick={() => setEpaModalOpen(true)} className="w-full h-24 flex-col text-lg" variant="outline"><GraduationCap className="h-8 w-8 mb-2" /> EPA Evaluations</Button>
-        <Button onClick={() => setProcedureLogModalOpen(true)} className="w-full h-24 flex-col text-lg" variant="outline"><BookUser className="h-8 w-8 mb-2" /> Procedure Log</Button>
-        <Button onClick={() => setShowMobileSchedule(!showMobileSchedule)} className="w-full h-24 flex-col text-lg" variant="outline"><CalendarDays className="h-8 w-8 mb-2" /> {showMobileSchedule ? 'Hide My Schedule' : 'View My Schedule'}</Button>
+        <Card onClick={() => setEpaModalOpen(true)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <GraduationCap className="h-10 w-10 text-primary" />
+                <div>
+                    <CardTitle>EPA Evaluations</CardTitle>
+                    <CardDescription>Complete or request evaluations.</CardDescription>
+                </div>
+            </CardHeader>
+        </Card>
+        <Card onClick={() => setProcedureLogModalOpen(true)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <BookUser className="h-10 w-10 text-accent" />
+                <div>
+                    <CardTitle>Procedure Log</CardTitle>
+                    <CardDescription>View and manage your case log.</CardDescription>
+                </div>
+            </CardHeader>
+        </Card>
+        <Card onClick={() => setShowMobileSchedule(!showMobileSchedule)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <CalendarDays className="h-10 w-10 text-orange-500" />
+                <div>
+                    <CardTitle>{showMobileSchedule ? 'Hide My Schedule' : 'View My Schedule'}</CardTitle>
+                    <CardDescription>Check your daily assignments.</CardDescription>
+                </div>
+            </CardHeader>
+        </Card>
+
         {showMobileSchedule && (hasGenerated ? <ScheduleDisplay appState={appState} setAppState={setAppState} /> : (
             <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8"><p>Your schedule has not been generated yet.</p></div>
         ))}
@@ -214,15 +239,39 @@ export default function AppPage() {
 
   const renderStaffMobileDashboard = () => (
     <div className="space-y-4">
-        <Button onClick={() => setEpaModalOpen(true)} className="w-full h-24 flex-col text-lg" variant="outline"><GraduationCap className="h-8 w-8 mb-2" /> EPA Evaluations</Button>
-        <Button onClick={() => setShowMobileStaffConfig(!showMobileStaffConfig)} className="w-full h-24 flex-col text-lg" variant="outline"><ScrollText className="h-8 w-8 mb-2" /> {showMobileStaffConfig ? 'Hide My Config' : 'Edit My Schedule'}</Button>
+        <Card onClick={() => setEpaModalOpen(true)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <GraduationCap className="h-10 w-10 text-primary" />
+                <div>
+                    <CardTitle>EPA Evaluations</CardTitle>
+                    <CardDescription>Assess resident performance.</CardDescription>
+                </div>
+            </CardHeader>
+        </Card>
+        <Card onClick={() => setShowMobileStaffConfig(!showMobileStaffConfig)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <ScrollText className="h-10 w-10 text-purple-500" />
+                <div>
+                    <CardTitle>{showMobileStaffConfig ? 'Hide My Config' : 'Edit My Schedule'}</CardTitle>
+                    <CardDescription>Set on-call, OR, and clinic duties.</CardDescription>
+                </div>
+            </CardHeader>
+        </Card>
         {showMobileStaffConfig && (
             <Card className="shadow-lg">
                 <CardHeader><CardTitle>Staff Configuration</CardTitle><CardDescription>Configure your on-call, OR, and clinic assignments.</CardDescription></CardHeader>
                 <CardContent><Accordion type="single" collapsible defaultValue="staff-config" className="w-full space-y-4"><StaffConfig appState={appState} setAppState={setAppState} /><OrClinicConfig appState={appState} setAppState={setAppState} /></Accordion></CardContent>
             </Card>
         )}
-        <Button onClick={() => setShowMobileSchedule(!showMobileSchedule)} className="w-full h-24 flex-col text-lg" variant="outline"><CalendarDays className="h-8 w-8 mb-2" /> {showMobileSchedule ? 'Hide Full Schedule' : 'View Full Schedule'}</Button>
+        <Card onClick={() => setShowMobileSchedule(!showMobileSchedule)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
+             <CardHeader className="flex flex-row items-center gap-4">
+                <Users className="h-10 w-10 text-green-500" />
+                <div>
+                    <CardTitle>{showMobileSchedule ? 'Hide Full Schedule' : 'View Full Schedule'}</CardTitle>
+                    <CardDescription>See the complete team roster.</CardDescription>
+                </div>
+            </CardHeader>
+        </Card>
         {showMobileSchedule && (hasGenerated ? <ScheduleDisplay appState={appState} setAppState={setAppState} /> : (
              <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8"><p>Generate schedules to view them here.</p></div>
         ))}
@@ -272,11 +321,14 @@ export default function AppPage() {
           return renderResidentMobileDashboard();
         case 'staff':
           return renderStaffMobileDashboard();
+        case 'program-director':
+            return renderFullDashboard(); 
         default:
-          return renderFullDashboard(); // Program Director sees full dashboard on mobile too
+          return renderFullDashboard();
       }
     }
-    return renderFullDashboard(); // All roles see full dashboard on desktop
+    // All roles see full dashboard on desktop
+    return renderFullDashboard(); 
   };
 
   return (
