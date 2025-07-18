@@ -185,12 +185,12 @@ export default function AppPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {appState.pendingUsers.map(user => (
-                        <div key={user.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div key={user.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-muted/50 rounded-lg gap-2">
                             <div>
                                 <p className="font-semibold">{user.firstName} {user.lastName} <span className="text-sm text-muted-foreground">({user.email})</span></p>
                                 <p className="text-sm capitalize text-primary font-medium">{user.role} {user.role === 'resident' && `(PGY-${user.pgyLevel})`}</p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 self-end sm:self-center">
                                 <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleApproval(user, true)}><UserCheck className="mr-2 h-4 w-4" /> Approve</Button>
                                 <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleApproval(user, false)}><UserX className="mr-2 h-4 w-4" /> Deny</Button>
                             </div>

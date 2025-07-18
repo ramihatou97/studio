@@ -215,6 +215,7 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
     const newStaff: Staff = { 
         id: uuidv4(), 
         name: staffInput.name, 
+        email: `${staffInput.name.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
         subspecialty: staffInput.subspecialty || 'N/A',
         specialtyType: staffInput.specialtyType
     };

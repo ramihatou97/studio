@@ -122,7 +122,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
         {hasGenerated && (
           <Card className="w-full mt-6">
             <CardHeader><CardTitle>Schedule-Dependent AI Tools</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {currentUserRole === 'program-director' && appState.errors && appState.errors.length > 0 && (
                   <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="border-amber-500/20 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700">
                       <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
