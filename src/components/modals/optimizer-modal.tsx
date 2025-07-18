@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { optimizeScheduleAction } from '@/lib/actions';
+import { optimizeScheduleAction } from '@/ai/actions';
 import type { AppState, Resident } from '@/lib/types';
 import { Bot, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '../ui/card';

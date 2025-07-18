@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import type { AppState } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { AnalysisModal } from './modals/analysis-modal';
@@ -34,6 +34,10 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const { toast } = useToast();
 
   const currentUserRole = appState.currentUser.role;
+  
+  const hasOrCases = useMemo(() => {
+    return Object.values(appState.orCases).some(dayCases => dayCases.length > 0);
+  }, [appState.orCases]);
 
   const handleSave = () => {
     try {
@@ -119,7 +123,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
                 </Button>
             )}
-             <Button onClick={() => setSurgicalBriefingModalOpen(true)} variant="outline" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-indigo-500/20">
+             <Button onClick={() => setSurgicalBriefingModalOpen(true)} variant="outline" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-indigo-500/20" disabled={!hasOrCases}>
                 <BrainCircuit className="mr-2 h-4 w-4" /> Surgical Briefing
             </Button>
             {currentUserRole === 'program-director' && (
@@ -132,7 +136,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
                 <FileText className="mr-2 h-4 w-4" /> Handover Email
                 </Button>
             )}
-            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20">
+            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20" disabled={!hasOrCases}>
               <BookUser className="mr-2 h-4 w-4" /> Procedure Log
             </Button>
             {currentUserRole === 'program-director' && (

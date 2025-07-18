@@ -1,3 +1,4 @@
+
 import type { AppState, Staff, StaffCall } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +17,11 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Brain, Bone, Sparkles, Wand2, UserMd } from "lucide-react";
+import { PlusCircle, Trash2, Brain, Bone, Sparkles, Wand2, User } from "lucide-react";
 import { useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
-import { prepopulateStaffCallAction } from "@/lib/actions";
+import { prepopulateStaffCallAction } from "@/ai/actions";
 
 interface StaffConfigProps {
   appState: AppState;
@@ -135,8 +136,14 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
             <div className="font-bold text-md">{dayOfMonth}</div>
             <div className="text-xs text-muted-foreground">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
             <div className="mt-1 space-y-1 text-xs w-full overflow-hidden">
-                {cranialCall && <div className="flex items-center gap-1"><Brain className="w-3 h-3 text-red-500 shrink-0"/> <span className="truncate">{cranialCall.staffName}</span></div>}
-                {spineCall && <div className="flex items-center gap-1"><Bone className="w-3 h-3 text-blue-500 shrink-0"/> <span className="truncate">{spineCall.staffName}</span></div>}
+                {cranialCall && <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
+                        <Brain className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium truncate" title={cranialCall.staffName}>{cranialCall.staffName}</span>
+                    </div>}
+                {spineCall && <div className="flex items-center gap-1.5 text-blue-500 dark:text-blue-400">
+                        <Bone className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium truncate" title={spineCall.staffName}>{spineCall.staffName}</span>
+                    </div>}
             </div>
           </Button>
         </DialogTrigger>
@@ -236,7 +243,7 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
 
   return (
     <AccordionItem value="staff-config">
-      <AccordionTrigger className="text-lg font-medium">Staffing & On-Call Configuration</AccordionTrigger>
+      <AccordionTrigger className="text-lg font-medium flex items-center gap-2"><User />Staffing & On-Call Configuration</AccordionTrigger>
       <AccordionContent>
         <Card>
             <CardHeader><CardTitle>Manage Staff Members</CardTitle></CardHeader>

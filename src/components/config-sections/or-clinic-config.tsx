@@ -1,3 +1,4 @@
+
 import type { AppState, OrCase, ClinicAssignment } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -122,7 +123,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   if (numberOfDays === 0) {
     return (
         <AccordionItem value="or-clinic-config">
-            <AccordionTrigger className="text-lg font-medium">OR & Clinic Configuration</AccordionTrigger>
+            <AccordionTrigger className="text-lg font-medium flex items-center gap-2"><BriefcaseMedical />OR & Clinic Configuration</AccordionTrigger>
             <AccordionContent>
                 <p className="text-muted-foreground italic text-center">Please set a valid date range to configure OR and Clinic assignments.</p>
             </AccordionContent>
@@ -204,7 +205,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
 
   return (
     <AccordionItem value="or-clinic-config">
-      <AccordionTrigger className="text-lg font-medium">OR & Clinic Configuration</AccordionTrigger>
+      <AccordionTrigger className="text-lg font-medium flex items-center gap-2"><BriefcaseMedical />OR & Clinic Configuration</AccordionTrigger>
       <AccordionContent>
         <div className="mt-6 border-t pt-6">
             <h3 className="text-lg font-medium mb-3">Daily Clinic Assignments</h3>

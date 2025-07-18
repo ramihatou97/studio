@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { analyzeScheduleConflictsAction } from '@/lib/actions';
+import { analyzeScheduleConflictsAction } from '@/ai/actions';
 import type { AppState } from '@/lib/types';
 import { Bot } from 'lucide-react';
 
