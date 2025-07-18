@@ -25,9 +25,12 @@ export function AboutSection() {
             <h4 className="font-semibold">Key Features:</h4>
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
                 <li><span className="font-medium text-foreground">Intelligent Schedule Generation:</span> Creates balanced call schedules based on customizable rules, resident levels, and vacations.</li>
-                <li><span className="font-medium text-foreground">AI-Powered Data Entry:</span> Populates resident, staff call, and OR data by parsing text or images.</li>
+                <li><span className="font-medium text-foreground">AI-Powered Data Entry:</span> Populates resident, staff call, and OR data by parsing text, PDF, or DOCX files.</li>
                 <li><span className="font-medium text-foreground">Interactive Editing:</span> Manually adjust schedules with drag-and-drop, with real-time conflict validation.</li>
                 <li><span className="font-medium text-foreground">AI-Driven Analysis:</span> Includes a conflict analyzer, a schedule optimizer, a long-term performance analyst, and a natural language chat assistant.</li>
+                <li><span className="font-medium text-foreground">On-Demand Surgical Briefings:</span> Generates detailed, reference-based surgical plans for any scheduled OR case to aid resident preparation.</li>
+                <li><span className="font-medium text-foreground">Personal Procedure Logs:</span> Allows residents to view all their assigned OR cases and export them to a CSV file for personal logging and tracking.</li>
+                <li><span className="font-medium text-foreground">EPA Evaluation Management:</span> Provides a comprehensive system to browse all Neurosurgery EPAs, generate interactive evaluation forms for any activity, and export the completed evaluations as PDFs.</li>
             </ul>
         </div>
         
