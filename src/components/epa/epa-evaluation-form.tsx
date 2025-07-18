@@ -23,6 +23,7 @@ interface EpaEvaluationFormProps {
 
 export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
   const [selectedResidentId, setSelectedResidentId] = useState('');
+  const [selectedStaffId, setSelectedStaffId] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('');
   const [milestoneRatings, setMilestoneRatings] = useState<Record<number, number>>({});
   const [overallRating, setOverallRating] = useState(0);
@@ -31,7 +32,7 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
   
   const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { currentUser } = appState;
+  const { currentUser, staff } = appState;
 
   // Pre-select resident if the current user is a resident
   useEffect(() => {
@@ -114,8 +115,8 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
         setIsDownloading(false);
     }
   };
-
-  const isFormDisabled = currentUser.role === 'resident';
+  
+  const isResidentRequesting = currentUser.role === 'resident';
 
   return (
     <div className="flex flex-col h-full">
@@ -123,8 +124,8 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
         <CardContent className="pt-6">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <Label>Select Resident</Label>
-              <Select value={selectedResidentId} onValueChange={setSelectedResidentId} disabled={isFormDisabled}>
+              <Label>{isResidentRequesting ? 'Resident (You)' : 'Select Resident'}</Label>
+              <Select value={selectedResidentId} onValueChange={setSelectedResidentId} disabled={isResidentRequesting}>
                 <SelectTrigger><SelectValue placeholder="Choose a resident..." /></SelectTrigger>
                 <SelectContent>
                   {appState.residents.filter(r => r.type === 'neuro').map(r => (
@@ -133,16 +134,27 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Select Activity for Evaluation</Label>
-              <Select value={selectedActivity} onValueChange={setSelectedActivity} disabled={!selectedResidentId}>
-                <SelectTrigger><SelectValue placeholder="Choose an activity..." /></SelectTrigger>
-                <SelectContent>
-                  {residentActivities.map(act => (
-                    <SelectItem key={act.value} value={act.value}>{act.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+             <div>
+              <Label>{isResidentRequesting ? 'Select Supervising Staff' : 'Select Activity for Evaluation'}</Label>
+              {isResidentRequesting ? (
+                 <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                    <SelectTrigger><SelectValue placeholder="Choose staff for this request..." /></SelectTrigger>
+                    <SelectContent>
+                      {staff.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+              ) : (
+                <Select value={selectedActivity} onValueChange={setSelectedActivity} disabled={!selectedResidentId}>
+                    <SelectTrigger><SelectValue placeholder="Choose an activity..." /></SelectTrigger>
+                    <SelectContent>
+                    {residentActivities.map(act => (
+                        <SelectItem key={act.value} value={act.value}>{act.label}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </CardContent>
@@ -173,7 +185,7 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
                 {epa.milestones.map((milestone, index) => (
                   <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                     <p className="flex-1 text-sm">{milestone.text}</p>
-                    <StarRating rating={milestoneRatings[index] || 0} onRatingChange={(rating) => handleRatingChange(index, rating)} disabled={isFormDisabled} />
+                    <StarRating rating={milestoneRatings[index] || 0} onRatingChange={(rating) => handleRatingChange(index, rating)} />
                   </div>
                 ))}
               </div>
@@ -188,17 +200,17 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
                 <div>
                     <Label className="font-semibold">Overall Entrustment Score</Label>
                     <p className="text-xs text-muted-foreground mb-2">How much supervision was required for this activity?</p>
-                    <StarRating rating={overallRating} onRatingChange={setOverallRating} disabled={isFormDisabled}/>
+                    <StarRating rating={overallRating} onRatingChange={setOverallRating} />
                 </div>
                 <div>
                     <Label className="font-semibold">Narrative Feedback</Label>
                     <p className="text-xs text-muted-foreground mb-2">Provide specific comments on strengths and areas for improvement.</p>
-                    <Textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Feedback..." disabled={isFormDisabled}/>
+                    <Textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Feedback..." />
                 </div>
             </CardContent>
             <CardFooter>
                  <Button className="w-full" onClick={handleDownloadPdf} disabled={isDownloading}>
-                    {isDownloading ? 'Generating...' : <><Download className="mr-2 h-4 w-4" /> Export Evaluation as PDF</>}
+                    {isDownloading ? 'Generating...' : <><Download className="mr-2 h-4 w-4" /> {isResidentRequesting ? 'Generate & Export PDF Request' : 'Export Evaluation as PDF'}</>}
                 </Button>
             </CardFooter>
           </Card>
