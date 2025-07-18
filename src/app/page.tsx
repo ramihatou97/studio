@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AppState, UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,8 +20,33 @@ import { ScheduleDisplay } from '@/components/schedule-display';
 import { getInitialAppState } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
 
+// Return a minimal, empty state for server-side rendering to prevent hydration mismatches
+const getSsrState = (): AppState => ({
+  general: { startDate: '', endDate: '', statHolidays: '', usePredefinedCall: false, christmasStart: '', christmasEnd: '', newYearStart: '', newYearEnd: '' },
+  residents: [],
+  medicalStudents: [],
+  otherLearners: [],
+  staff: [],
+  staffCall: [],
+  orCases: {},
+  clinicAssignments: [],
+  residentCall: [],
+  onServiceCallRules: [],
+  currentUser: { id: 'program-director', role: 'program-director', name: 'Program Director' }
+});
+
+
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>(() => getInitialAppState());
+  const [appState, setAppState] = useState<AppState>(getSsrState);
+  const [isClient, setIsClient] = useState(false);
+
+  // This effect runs only on the client, after initial render
+  useEffect(() => {
+    // Load the full initial state with sample data on the client side
+    setAppState(getInitialAppState());
+    setIsClient(true);
+  }, []);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
@@ -74,6 +99,11 @@ export default function Home() {
     }, 500);
   };
   
+  // Don't render the main content until the client-side state is loaded
+  if (!isClient) {
+    return null; 
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader appState={appState} setAppState={setAppState}/>

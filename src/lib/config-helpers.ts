@@ -18,10 +18,22 @@ export function getInitialAppState(): AppState {
       newYearStart: '',
       newYearEnd: '',
     },
-    residents: [],
+    residents: [
+      { id: uuidv4(), type: 'neuro', name: 'Dr. Evelyn Reed', level: 6, onService: true, isChief: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: uuidv4(), type: 'neuro', name: 'Dr. Ben Carter', level: 4, onService: true, isChief: false, chiefOrDays: [], vacationDays: [8, 9, 10, 11, 12], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: uuidv4(), type: 'neuro', name: 'Dr. Olivia Chen', level: 3, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: uuidv4(), type: 'neuro', name: 'Dr. Leo Martinez', level: 2, onService: false, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
+      { id: uuidv4(), type: 'neuro', name: 'Dr. Sofia Khan', level: 1, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
+      { id: uuidv4(), type: 'non-neuro', name: 'Dr. Sam Jones', specialty: 'Plastics', level: 2, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 3, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 }
+    ],
     medicalStudents: [],
     otherLearners: [],
-    staff: [],
+    staff: [
+        { id: uuidv4(), name: 'Dr. Sterling Archer', subspecialty: 'Vascular', specialtyType: 'cranial' },
+        { id: uuidv4(), name: 'Dr. Lana Kane', subspecialty: 'Tumor', specialtyType: 'cranial' },
+        { id: uuidv4(), name: 'Dr. Cyril Figgis', subspecialty: 'Complex Spine', specialtyType: 'spine' },
+        { id: uuidv4(), name: 'Dr. Pam Poovey', subspecialty: 'General', specialtyType: 'other' }
+    ],
     staffCall: [],
     orCases: {},
     clinicAssignments: [],
