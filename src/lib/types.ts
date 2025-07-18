@@ -1,3 +1,4 @@
+
 export interface Staff {
   id: string;
   name: string;
@@ -146,6 +147,16 @@ export interface HistoricalData {
     callDays: number;
 }
 
+export interface Evaluation {
+  epaId: string;
+  residentId: string;
+  activityValue: string;
+  milestoneRatings: Record<number, number>;
+  overallRating: number;
+  feedback: string;
+  evaluationDate: string;
+}
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];
@@ -158,4 +169,5 @@ export interface AppState {
   residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
   errors?: ScheduleError[];
+  evaluations?: Evaluation[];
 }

@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import type { AppState } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,8 @@ import { ChatModal } from './modals/chat-modal';
 import { LongTermAnalysisModal } from './modals/long-term-analysis-modal';
 import { ProcedureLogModal } from './modals/procedure-log-modal';
 import { SurgicalBriefingModal } from './modals/surgical-briefing-modal';
-import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit } from 'lucide-react';
+import { EpaModal } from './modals/epa-modal';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit, GraduationCap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
@@ -27,6 +29,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isLongTermAnalysisModalOpen, setLongTermAnalysisModalOpen] = useState(false);
   const [isProcedureLogModalOpen, setProcedureLogModalOpen] = useState(false);
   const [isSurgicalBriefingModalOpen, setSurgicalBriefingModalOpen] = useState(false);
+  const [isEpaModalOpen, setEpaModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -103,7 +106,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
         </div>
         {hasGenerated && (
-          <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {appState.errors && appState.errors.length > 0 && (
                 <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
@@ -126,6 +129,9 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             </Button>
             <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
                 <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
+            </Button>
+            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="col-span-1 md:col-span-2 lg:col-span-3 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
+                <GraduationCap className="mr-2 h-4 w-4" /> EPA Evaluations
             </Button>
           </div>
         )}
@@ -167,6 +173,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
           <SurgicalBriefingModal
             isOpen={isSurgicalBriefingModalOpen}
             onOpenChange={setSurgicalBriefingModalOpen}
+            appState={appState}
+          />
+          <EpaModal
+            isOpen={isEpaModalOpen}
+            onOpenChange={setEpaModalOpen}
             appState={appState}
           />
         </>
