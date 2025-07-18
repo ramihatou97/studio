@@ -234,6 +234,23 @@ export const GenerateYearlyRotationScheduleOutputSchema = z.object({
 });
 export type GenerateYearlyRotationScheduleOutput = z.infer<typeof GenerateYearlyRotationScheduleOutputSchema>;
 
+export interface GenerateHistoricalDataInput {
+  residentName: string;
+  pgyLevel: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface AnalyzeResidentPerformanceInput {
+  historicalData: any;
+  analysisPrompt: string;
+}
+
+export interface GenerateSurgicalBriefingInput {
+  diagnosis: string;
+  procedure: string;
+  patientDetails: string;
+}
 
 export interface AppState {
   general: GeneralSettings;
