@@ -1,10 +1,16 @@
-import { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule } from './types';
+
+import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 export function getInitialAppState(): AppState {
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  const sampleResidentId1 = uuidv4();
+  const sampleResidentId2 = uuidv4();
+  const sampleStaffId1 = uuidv4();
+  const sampleStaffId2 = uuidv4();
 
   return {
     general: {
@@ -17,10 +23,53 @@ export function getInitialAppState(): AppState {
       newYearStart: '',
       newYearEnd: '',
     },
-    residents: [],
+    residents: [
+      {
+        id: sampleResidentId1,
+        type: 'neuro',
+        name: 'Dr. Emily Carter',
+        level: 4,
+        onService: true,
+        vacationDays: [],
+        isChief: false,
+        chiefOrDays: [],
+        maxOnServiceCalls: 0,
+        offServiceMaxCall: 4,
+        schedule: [],
+        weekendCalls: 0,
+        callDays: [],
+        holidayGroup: 'neither',
+        canBeBackup: true,
+        allowSoloPgy1Call: false,
+        doubleCallDays: 0,
+        orDays: 0,
+      },
+      {
+        id: sampleResidentId2,
+        type: 'neuro',
+        name: 'Dr. Ben Zhao',
+        level: 1,
+        onService: true,
+        vacationDays: [],
+        isChief: false,
+        chiefOrDays: [],
+        maxOnServiceCalls: 0,
+        offServiceMaxCall: 4,
+        schedule: [],
+        weekendCalls: 0,
+        callDays: [],
+        holidayGroup: 'neither',
+        allowSoloPgy1Call: false,
+        doubleCallDays: 0,
+        orDays: 0,
+      }
+    ],
     medicalStudents: [],
     otherLearners: [],
-    staff: [],
+    staff: [
+        { id: sampleStaffId1, name: 'Dr. Anya Sharma', subspecialty: 'Tumor/Skull Base', specialtyType: 'cranial' },
+        { id: sampleStaffId2, name: 'Dr. Marcus Thorne', subspecialty: 'Complex Spine', specialtyType: 'spine' },
+    ],
     staffCall: [],
     orCases: {},
     clinicAssignments: [],
