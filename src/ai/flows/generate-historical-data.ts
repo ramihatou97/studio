@@ -24,6 +24,8 @@ const GenerateHistoricalDataOutputSchema = z.object({
       pgyLevel: z.number(),
       cases: z.array(z.object({
           date: z.string().describe("The date of the case (YYYY-MM-DD)."),
+          patientMrn: z.string().describe("The patient's Medical Record Number (MRN)."),
+          patientSex: z.enum(['male', 'female', 'other']).describe("The patient's sex."),
           procedure: z.string().describe("The surgical procedure performed."),
           procedureCode: z.string().describe("The CPT code for the procedure."),
           diagnosis: z.string().describe("The diagnosis for the case."),
@@ -58,7 +60,7 @@ const prompt = ai.definePrompt({
   - Senior residents (PGY-4 to PGY-6) will have more complex cases, fewer clinic days, and more specialized procedures.
   - The Chief resident (PGY-6) will have a high volume of complex OR cases.
 
-  Make up plausible surgeon names, diagnoses, procedures, and associated CPT procedure codes appropriate for neurosurgery.
+  Make up plausible surgeon names, diagnoses, procedures, associated CPT procedure codes, patient MRNs (e.g., "MRN123456"), and patient sex.
   The number of cases should be reasonable for the time period. A resident might do 5-15 cases per month.
   Simulate a reasonable number of clinic and on-call days per month (e.g., 4-8 clinic days, 4-8 call days).
 

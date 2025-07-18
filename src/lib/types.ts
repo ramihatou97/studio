@@ -10,6 +10,8 @@ export interface OrCase {
   diagnosis: string;
   procedure: string;
   procedureCode: string;
+  patientMrn: string;
+  patientSex: 'male' | 'female' | 'other';
 }
 
 export interface ClinicAssignment {
@@ -127,6 +129,8 @@ export interface HistoricalCase {
     diagnosis: string;
     surgeon: string;
     caseType: 'cranial' | 'spine' | 'other';
+    patientMrn: string;
+    patientSex: 'male' | 'female' | 'other';
 }
 
 export interface HistoricalData {
