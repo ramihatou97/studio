@@ -26,9 +26,10 @@ import { UserCheck, UserX } from 'lucide-react';
 const MOCK_STATE_KEY = 'mock_app_state';
 
 // Helper to get the full app state from localStorage
-const getAppStateFromMockDb = (): AppState | null => {
-    if (typeof window === 'undefined') return null;
+const getAppStateFromMockDb = (): AppState => {
+    if (typeof window === 'undefined') return getInitialAppState();
     const storedStateJSON = localStorage.getItem(MOCK_STATE_KEY);
+    // If state exists, parse it, otherwise return initial state
     return storedStateJSON ? JSON.parse(storedStateJSON) : getInitialAppState();
 }
 
@@ -43,7 +44,10 @@ const getCurrentUserFromMockDb = (): AppState['currentUser'] | null => {
 const saveAppStateToMockDb = (state: AppState) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(MOCK_STATE_KEY, JSON.stringify(state));
-    localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+    // Also keep the currentUser in sync for the login page
+    if (state.currentUser) {
+        localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+    }
 }
 
 export default function AppPage() {
@@ -59,11 +63,9 @@ export default function AppPage() {
       router.replace('/login');
     } else {
       const fullState = getAppStateFromMockDb();
-      if (fullState) {
-        // Ensure the loggedInUser is correctly set in the full state
-        fullState.currentUser = loggedInUser;
-        setAppState(fullState);
-      }
+      // Ensure the loggedInUser from session is correctly set in the full state
+      fullState.currentUser = loggedInUser;
+      setAppState(fullState);
     }
   }, [router]);
   

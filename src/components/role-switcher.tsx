@@ -1,6 +1,8 @@
 
+import { useRouter } from 'next/navigation';
 import type { AppState, UserRole } from "@/lib/types";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "./ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, SelectSeparator } from "./ui/select";
+import { LogOut } from 'lucide-react';
 
 interface RoleSwitcherProps {
     appState: AppState;
@@ -9,8 +11,18 @@ interface RoleSwitcherProps {
 
 export function RoleSwitcher({ appState, setAppState }: RoleSwitcherProps) {
     const { residents, staff, currentUser } = appState;
+    const router = useRouter();
 
     const handleRoleChange = (value: string) => {
+        if (value === 'logout') {
+            // Handle logout
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('currentUser');
+            }
+            router.push('/login');
+            return;
+        }
+        
         const [role, id] = value.split(':');
         
         let name = '';
@@ -60,6 +72,13 @@ export function RoleSwitcher({ appState, setAppState }: RoleSwitcherProps) {
                             ))}
                         </SelectGroup>
                     )}
+                    <SelectSeparator />
+                     <SelectItem value="logout" className="text-destructive">
+                        <div className="flex items-center gap-2">
+                           <LogOut className="w-4 h-4" />
+                            <span>Logout</span>
+                        </div>
+                    </SelectItem>
                 </SelectContent>
             </Select>
         </div>
