@@ -1,4 +1,3 @@
-
 import { MediShiftLogo } from '@/components/icons';
 
 export default function AuthLayout({

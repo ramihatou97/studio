@@ -98,6 +98,7 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
                 id: uuidv4(),
                 type: 'neuro',
                 name: r.name,
+                email: `${r.name.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
                 level: r.level,
                 onService: r.onService,
                 vacationDays: r.vacationDays,
