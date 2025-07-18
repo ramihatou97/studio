@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +9,6 @@ import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident } from "@/lib/types";
 import { Sparkles } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import * as pdfjs from 'pdfjs-dist/build/pdf';
-import * as mammoth from 'mammoth';
-
-// Required for pdfjs-dist
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface AiPrepopulationProps {
   appState: AppState;
@@ -32,6 +28,10 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
   };
 
   const parsePdf = async (file: File): Promise<string> => {
+    const pdfjs = await import('pdfjs-dist/build/pdf');
+    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
@@ -44,6 +44,7 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
   };
   
   const parseDocx = async (file: File): Promise<string> => {
+    const mammoth = await import('mammoth');
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
