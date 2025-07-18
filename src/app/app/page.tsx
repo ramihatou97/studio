@@ -25,13 +25,13 @@ import { AboutSection } from '@/components/about-section';
 import { UserCheck, UserX, GraduationCap, BookUser, CalendarDays, ScrollText } from 'lucide-react';
 import { EpaModal } from '@/components/modals/epa-modal';
 import { ProcedureLogModal } from '@/components/modals/procedure-log-modal';
-import { AnalysisModal } from '../modals/analysis-modal';
-import { HandoverModal } from '../modals/handover-modal';
-import { OptimizerModal } from '../modals/optimizer-modal';
-import { ChatModal } from '../modals/chat-modal';
-import { LongTermAnalysisModal } from '../modals/long-term-analysis-modal';
-import { SurgicalBriefingModal } from '../modals/surgical-briefing-modal';
-import { YearlyRotationModal } from '../modals/yearly-rotation-modal';
+import { AnalysisModal } from '@/components/modals/analysis-modal';
+import { HandoverModal } from '@/components/modals/handover-modal';
+import { OptimizerModal } from '@/components/modals/optimizer-modal';
+import { ChatModal } from '@/components/modals/chat-modal';
+import { LongTermAnalysisModal } from '@/components/modals/long-term-analysis-modal';
+import { SurgicalBriefingModal } from '@/components/modals/surgical-briefing-modal';
+import { YearlyRotationModal } from '@/components/modals/yearly-rotation-modal';
 
 const MOCK_STATE_KEY = 'mock_app_state';
 
@@ -159,7 +159,7 @@ export default function AppPage() {
         if (approve) {
             if (userToApprove.role === 'resident') {
                 const newResident: Resident = {
-                    id: userToApprove.id, type: 'neuro', name: `${userToApprove.firstName} ${userToApprove.lastName}`, email: userToApprove.email, level: userToApprove.pgyLevel || 1, onService: true, vacationDays: [], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0
+                    id: userToApprove.id, type: 'neuro', name: `${userToApprove.firstName} ${userToApprove.lastName}`, email: userToApprove.email, level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0
                 };
                 newState.residents = [...newState.residents, newResident];
             } else if (userToApprove.role === 'staff') {
@@ -265,5 +265,3 @@ export default function AppPage() {
     </div>
   );
 }
-
-    
