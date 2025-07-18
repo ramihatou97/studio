@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from 'react';
 import type { AppState } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -35,27 +36,6 @@ export function HolidayCoverage({ appState, setAppState }: HolidayCoverageProps)
     }));
   };
   
-  const isHolidayCoverageNeeded = useMemo(() => {
-    if (!general.startDate || !general.endDate) return false;
-    const start = new Date(general.startDate);
-    const end = new Date(general.endDate);
-    const startYear = start.getFullYear();
-    const endYear = end.getFullYear();
-
-    for (let year = startYear; year <= endYear; year++) {
-      const christmasStart = new Date(year, 11, 20);
-      const christmasEnd = new Date(year, 11, 28);
-      const newYearStart = new Date(year, 11, 29);
-      const newYearEnd = new Date(year + 1, 0, 5);
-      if ((start <= christmasEnd && end >= christmasStart) || (start <= newYearEnd && end >= newYearStart)) {
-        return true;
-      }
-    }
-    return false;
-  }, [general.startDate, general.endDate]);
-
-  if (!isHolidayCoverageNeeded) return null;
-
   const eligibleResidents = residents.filter(r => r.type === 'neuro' && r.onService && r.level >= 2);
   
   const christmasCount = eligibleResidents.filter(r => r.holidayGroup === 'christmas').length;
@@ -102,6 +82,10 @@ export function HolidayCoverage({ appState, setAppState }: HolidayCoverageProps)
                               <li><span className="font-semibold">Reciprocal Call Coverage:</span> During the Christmas Block, only residents from the New Year&apos;s Group (and &quot;Neither&quot; group) are eligible for call. Conversely, during the New Year&apos;s Block, only residents from the Christmas Group (and &quot;Neither&quot;) are eligible for call.</li>
                               <li><span className="font-semibold">Statutory Holidays:</span> Call shifts on specific statutory holidays (e.g., Dec 25, Jan 1) are treated like weekend calls, requiring appropriate junior/senior backup from within the same on-duty holiday group.</li>
                           </ul>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-foreground font-semibold">Note:</p>
+                        <p>This configuration will only be applied by the scheduling algorithm if your selected rotation dates overlap with the December/January holiday period.</p>
                       </div>
                   </div>
                 </DialogContent>
