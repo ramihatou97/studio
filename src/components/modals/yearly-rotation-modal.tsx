@@ -3,18 +3,19 @@
 
 import { useState, useMemo } from 'react';
 import type { AppState, OffServiceRotation, OffServiceRequest } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, Trash2, CalendarDays, Bot, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarDays, Bot, AlertTriangle, CheckSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateYearlyRotationScheduleAction } from '@/ai/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
+import { Switch } from '../ui/switch';
 
 interface YearlyRotationModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
   const [newRequest, setNewRequest] = useState<Partial<OffServiceRequest>>({});
   const [generatedSchedule, setGeneratedSchedule] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedBlockToApply, setSelectedBlockToApply] = useState<number | null>(null);
   const { toast } = useToast();
 
   const neuroResidents = useMemo(() => appState.residents.filter(r => r.type === 'neuro'), [appState.residents]);
@@ -39,12 +41,20 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
     const newRotation: OffServiceRotation = {
       id: uuidv4(),
       name: newRotationName.trim(),
+      canTakeCall: false, // Default to not taking call
     };
     setAppState(prev => ({
       ...prev,
       offServiceRotations: [...(prev.offServiceRotations || []), newRotation],
     }));
     setNewRotationName('');
+  };
+
+  const handleToggleRotationCall = (id: string, canTakeCall: boolean) => {
+    setAppState(prev => ({
+        ...prev,
+        offServiceRotations: (prev.offServiceRotations || []).map(r => r.id === id ? { ...r, canTakeCall } : r),
+    }));
   };
 
   const handleRemoveRotationType = (id: string) => {
@@ -90,6 +100,7 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
                 rotationName: rotation?.name || 'Unknown Rotation',
                 durationInBlocks: req.durationInBlocks,
                 timingPreference: req.timingPreference,
+                canTakeCall: rotation?.canTakeCall || false,
             };
         });
 
@@ -106,6 +117,64 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
     } finally {
         setIsLoading(false);
     }
+  };
+
+  const handleApplyBlock = () => {
+    if (selectedBlockToApply === null || !generatedSchedule) return;
+
+    const blockIndex = selectedBlockToApply - 1;
+
+    // Calculate start and end dates for the selected block
+    const yearStart = new Date(new Date().getFullYear(), 6, 1); // July 1st
+    let blockStartDate: Date;
+    let blockEndDate: Date;
+
+    if (blockIndex === 0) {
+        blockStartDate = yearStart;
+        blockEndDate = new Date(yearStart.getFullYear(), 6, 31);
+    } else {
+        const firstBlockEnd = new Date(yearStart.getFullYear(), 6, 31);
+        blockStartDate = new Date(firstBlockEnd);
+        blockStartDate.setDate(firstBlockEnd.getDate() + 1 + (blockIndex - 1) * 28);
+        blockEndDate = new Date(blockStartDate);
+        blockEndDate.setDate(blockStartDate.getDate() + 27);
+    }
+
+    setAppState(prev => {
+        const newResidents = prev.residents.map(res => {
+            const yearlyScheduleEntry = generatedSchedule.yearlySchedule.find((s: any) => s.residentId === res.id);
+            if (yearlyScheduleEntry) {
+                const rotationForBlock = yearlyScheduleEntry.schedule[blockIndex];
+                const offServiceRotation = offServiceRotations.find(r => r.name === rotationForBlock);
+
+                const isOnService = rotationForBlock === 'Neurosurgery';
+                const isOffServiceCallTaker = !isOnService && offServiceRotation?.canTakeCall === true;
+                
+                // Off-service residents are exempt from DAY call but can do weekend/night fly-ins
+                // We mark them as onService=false, but the scheduler logic will know if they can take call.
+                const exemptFromCall = !isOnService && !isOffServiceCallTaker;
+
+                return { ...res, onService: isOnService, exemptFromCall };
+            }
+            return res;
+        });
+
+        return {
+            ...prev,
+            general: {
+                ...prev.general,
+                startDate: blockStartDate.toISOString().split('T')[0],
+                endDate: blockEndDate.toISOString().split('T')[0],
+            },
+            residents: newResidents
+        };
+    });
+
+    toast({
+        title: `Block ${selectedBlockToApply} Applied`,
+        description: `Monthly scheduler is now set up for Block ${selectedBlockToApply}. You can now generate the call schedule.`,
+    });
+    onOpenChange(false); // Close the modal after applying
   };
   
   const getRotationName = (rotationId: string) => offServiceRotations.find(r => r.id === rotationId)?.name || '...';
@@ -134,8 +203,14 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
                 <div className="space-y-1 pr-4">
                     {offServiceRotations.map(rot => (
                         <div key={rot.id} className="flex justify-between items-center text-sm p-1 bg-muted/50 rounded">
-                        <span>{rot.name}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveRotationType(rot.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                            <div className="flex items-center gap-2">
+                                <Switch id={`call-switch-${rot.id}`} checked={rot.canTakeCall} onCheckedChange={(checked) => handleToggleRotationCall(rot.id, checked)} />
+                                <Label htmlFor={`call-switch-${rot.id}`} className="cursor-pointer">{rot.name}</Label>
+                            </div>
+                            <div className="flex items-center">
+                                <span className="text-xs text-muted-foreground mr-2">{rot.canTakeCall ? "Can Take Call" : "No Call"}</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveRotationType(rot.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -178,6 +253,22 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
                 </div>
              ) : generatedSchedule ? (
                 <>
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg mb-4 flex items-center gap-4">
+                      <div className="flex-1">
+                        <Label>Apply Schedule to Monthly Planner</Label>
+                        <Select onValueChange={(v) => setSelectedBlockToApply(parseInt(v))}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a block to apply..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[...Array(13)].map((_, i) => <SelectItem key={i} value={String(i + 1)}>Block {i + 1}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={handleApplyBlock} disabled={selectedBlockToApply === null}>
+                        <CheckSquare className="mr-2 h-4 w-4"/> Apply Block
+                      </Button>
+                  </div>
                   {generatedSchedule.violations && generatedSchedule.violations.length > 0 && (
                     <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
                       <h3 className="font-semibold text-destructive flex items-center gap-2"><AlertTriangle/>Constraint Violations</h3>

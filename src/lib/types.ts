@@ -178,6 +178,7 @@ export interface CurrentUser {
 export interface OffServiceRotation {
     id: string;
     name: string;
+    canTakeCall: boolean;
 }
 
 export interface OffServiceRequest {
@@ -195,16 +196,17 @@ const ResidentInfoSchema = z.object({
   pgyLevel: z.number(),
 });
 
-const OffServiceRequestSchema = z.object({
+const OffServiceRequestSchemaForAI = z.object({
   residentId: z.string(),
   rotationName: z.string(),
   durationInBlocks: z.number(),
   timingPreference: z.enum(['early', 'mid', 'late', 'any']).describe('Soft preference for when the rotation should occur in the academic year.'),
+  canTakeCall: z.boolean().describe('Whether a resident on this rotation is eligible to take neurosurgery call.'),
 });
 
 export const GenerateYearlyRotationScheduleInputSchema = z.object({
   residents: z.array(ResidentInfoSchema).describe('A list of all neurosurgery residents to be scheduled.'),
-  offServiceRequests: z.array(OffServiceRequestSchema).describe('A list of mandatory off-service rotations for residents.'),
+  offServiceRequests: z.array(OffServiceRequestSchemaForAI).describe('A list of mandatory off-service rotations for residents.'),
 });
 export type GenerateYearlyRotationScheduleInput = z.infer<typeof GenerateYearlyRotationScheduleInputSchema>;
 
@@ -239,3 +241,4 @@ export interface AppState {
   manualProcedures?: ManualProcedure[];
   currentUser: CurrentUser;
 }
+
