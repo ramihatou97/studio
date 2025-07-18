@@ -90,7 +90,7 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
                 <ResidentCard key={resident.id} resident={resident} updateResident={updateResident} removeResident={removeResident} appState={appState} setAppState={setAppState}/>
               ))}
             </div>
-            <Button onClick={() => addNonNeuroResident(setAppState)} className="w-full bg-teal-600 hover:bg-teal-700 text-white"><PlusCircle className="mr-2 h-4 w-4" /> Add Non-Neurosurgical Resident</Button>
+            <Button onClick={() => addNonNeuroResident(setAppState)} className="w-full" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Non-Neurosurgical Resident</Button>
           </TabsContent>
           
           <TabsContent value="students" className="pt-4">
@@ -99,7 +99,7 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
                 <MedicalStudentCard key={student.id} student={student} updateStudent={updateStudent} removeStudent={removeStudent} />
               ))}
             </div>
-            <Button onClick={() => addMedicalStudent(setAppState)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"><PlusCircle className="mr-2 h-4 w-4" /> Add Medical Student</Button>
+            <Button onClick={() => addMedicalStudent(setAppState)} className="w-full" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Medical Student</Button>
           </TabsContent>
 
           <TabsContent value="other" className="pt-4">
@@ -108,7 +108,7 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
                 <OtherLearnerCard key={learner.id} learner={learner} updateLearner={updateLearner} removeLearner={removeLearner} />
               ))}
             </div>
-            <Button onClick={() => addOtherLearner(setAppState)} className="w-full bg-slate-600 hover:bg-slate-700 text-white"><PlusCircle className="mr-2 h-4 w-4" /> Add Other Learner</Button>
+            <Button onClick={() => addOtherLearner(setAppState)} className="w-full" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Other Learner</Button>
           </TabsContent>
         </Tabs>
       </CardContent>

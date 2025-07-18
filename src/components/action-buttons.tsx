@@ -13,7 +13,7 @@ import { EpaModal } from './modals/epa-modal';
 import { YearlyRotationModal } from './modals/yearly-rotation-modal';
 import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit, GraduationCap, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from './ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface ActionButtonsProps {
   onGenerate: () => void;
@@ -120,61 +120,61 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
         )}
         
         {hasGenerated && (
-          <div className="w-full md:w-3/4 lg:w-2/3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-4 pt-4 border-t">
-            <h3 className="col-span-full text-center font-semibold text-lg mb-2">Schedule-Dependent AI Tools</h3>
-            {currentUserRole === 'program-director' && appState.errors && appState.errors.length > 0 && (
-                <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
-                    <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
-                </Button>
-            )}
-             <Button onClick={() => setSurgicalBriefingModalOpen(true)} variant="outline" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-indigo-500/20" disabled={!hasOrCases}>
-                <BrainCircuit className="mr-2 h-4 w-4" /> Surgical Briefing
-            </Button>
-            {currentUserRole === 'program-director' && (
-                <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-500/20">
-                <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
-                </Button>
-            )}
-            {currentUserRole === 'program-director' && (
-                <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20">
-                <FileText className="mr-2 h-4 w-4" /> Handover Email
-                </Button>
-            )}
-            {currentUserRole === 'program-director' && (
-                <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">
-                <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
-                </Button>
-            )}
-            {currentUserRole === 'program-director' && (
-                <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
-                    <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
-                </Button>
-            )}
-          </div>
+          <Card className="w-full mt-6">
+            <CardHeader><CardTitle>Schedule-Dependent AI Tools</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {currentUserRole === 'program-director' && appState.errors && appState.errors.length > 0 && (
+                  <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="border-amber-500/20 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700">
+                      <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
+                  </Button>
+              )}
+               <Button onClick={() => setSurgicalBriefingModalOpen(true)} variant="outline" className="border-indigo-500/20 text-indigo-600 hover:bg-indigo-500/10 hover:text-indigo-700" disabled={!hasOrCases}>
+                  <BrainCircuit className="mr-2 h-4 w-4" /> Surgical Briefing
+              </Button>
+              {currentUserRole === 'program-director' && (
+                  <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="border-purple-500/20 text-purple-600 hover:bg-purple-500/10 hover:text-purple-700">
+                  <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
+                  </Button>
+              )}
+              {currentUserRole === 'program-director' && (
+                  <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="border-sky-500/20 text-sky-600 hover:bg-sky-500/10 hover:text-sky-700">
+                  <FileText className="mr-2 h-4 w-4" /> Handover Email
+                  </Button>
+              )}
+              {currentUserRole === 'program-director' && (
+                  <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="border-blue-500/20 text-blue-600 hover:bg-blue-500/10 hover:text-blue-700">
+                  <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
+                  </Button>
+              )}
+              {currentUserRole === 'program-director' && (
+                  <Button onClick={() => setChatModalOpen(true)} variant="outline" className="border-green-500/20 text-green-600 hover:bg-green-500/10 hover:text-green-700">
+                      <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
+                  </Button>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      <Separator className="my-8" />
-      
-      <div className="flex flex-col items-center space-y-4">
-        <h3 className="text-center font-semibold text-lg mb-2">Strategic & Educational Tools</h3>
-        <div className="w-full md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card className="w-full mt-6">
+        <CardHeader><CardTitle>Strategic & Educational Tools</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {currentUserRole === 'program-director' && (
-              <Button onClick={() => setYearlyRotationModalOpen(true)} variant="outline" className="h-20 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 flex-col">
+              <Button onClick={() => setYearlyRotationModalOpen(true)} variant="outline" className="h-24 border-orange-500/20 text-orange-600 hover:bg-orange-500/10 hover:text-orange-700 flex-col">
                   <CalendarDays className="h-6 w-6 mb-1"/>
-                  <span className="font-semibold">Yearly Rotation Planner</span>
+                  <span className="font-semibold text-base">Yearly Rotation Planner</span>
               </Button>
             )}
-            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="h-20 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20 flex-col">
+            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="h-24 border-rose-500/20 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 flex-col">
               <BookUser className="h-6 w-6 mb-1" />
-              <span className="font-semibold">Procedure Log</span>
+              <span className="font-semibold text-base">Procedure Log</span>
             </Button>
-            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="h-20 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20 flex-col">
+            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="h-24 border-teal-500/20 text-teal-600 hover:bg-teal-500/10 hover:text-teal-700 flex-col">
                 <GraduationCap className="h-6 w-6 mb-1" />
-                <span className="font-semibold">Manage EPA Evaluations</span>
+                <span className="font-semibold text-base">Manage EPA Evaluations</span>
             </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       
       <YearlyRotationModal
         isOpen={isYearlyRotationModalOpen}

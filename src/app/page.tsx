@@ -100,7 +100,7 @@ export default function Home() {
         {currentUserRole === 'program-director' && (
           <Card className="mb-8 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-2xl font-bold">Configuration</CardTitle>
+              <CardTitle>Configuration</CardTitle>
               <CardDescription>
                 Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.
               </CardDescription>
@@ -124,7 +124,7 @@ export default function Home() {
         {currentUserRole === 'staff' && (
              <Card className="mb-8 shadow-lg">
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold">Staff Configuration</CardTitle>
+                    <CardTitle>Staff Configuration</CardTitle>
                     <CardDescription>
                         As a staff surgeon, you can configure your on-call, OR, and clinic assignments.
                     </CardDescription>

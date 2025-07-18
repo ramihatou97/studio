@@ -338,7 +338,22 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   const updatedOtherLearners = otherLearners.map(learner => ({ ...learner }));
 
   // --- Final Validation Pass ---
-  processedResidents.forEach(res => {
+  const validatedResidents = processedResidents.map(r => {
+    const callDays: number[] = [];
+    let weekendCalls = 0;
+    r.schedule.forEach((activities, dayIndex) => {
+        if (activities.some(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string))) {
+            callDays.push(dayIndex);
+            const currentDate = new Date(startDate);
+            currentDate.setDate(currentDate.getDate() + dayIndex);
+            const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+            if (isWeekend) weekendCalls++;
+        }
+    });
+    return {...r, callDays, weekendCalls};
+  });
+
+  validatedResidents.forEach(res => {
     // Rule: Max calls
     const maxCalls = res.onService ? (onServiceCallRules.find(rule => (numberOfDays - res.vacationDays.length) >= rule.minDays && (numberOfDays - res.vacationDays.length) <= rule.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
     if (res.callDays.length > maxCalls && maxCalls > 0) {
@@ -365,7 +380,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     // Rule: PGY-1 solo call
     if (res.type === 'neuro' && res.level === 1 && !res.allowSoloPgy1Call) {
         res.callDays.forEach(dayIndex => {
-            const backupPresent = processedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
+            const backupPresent = validatedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
             if (!backupPresent) {
                 generationErrors.push({
                     type: 'NO_BACKUP',
@@ -380,7 +395,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
 
   return {
-    residents: processedResidents,
+    residents: validatedResidents,
     medicalStudents: updatedMedicalStudents,
     otherLearners: updatedOtherLearners,
     errors: generationErrors,

@@ -5,80 +5,12 @@ import { EditableScheduleCell } from './editable-schedule-cell';
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { getMonth, getYear } from 'date-fns';
+import { generateSchedules } from '@/lib/schedule-generator';
 
 interface WeeklyScheduleViewProps {
   appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
 }
-
-// Validation function to check for rule violations
-function validateSchedule(appState: AppState): ScheduleError[] {
-  const { residents, general, onServiceCallRules } = appState;
-  const { startDate, endDate } = general;
-  const errors: ScheduleError[] = [];
-  
-  if (!startDate || !endDate) return [{ type: 'NO_ELIGIBLE_RESIDENT', message: "Start and End dates must be set." }];
-  const numberOfDays = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-  // Recalculate call stats from the schedule
-  const validatedResidents = residents.map(r => {
-      const callDays: number[] = [];
-      let weekendCalls = 0;
-      r.schedule.forEach((activities, dayIndex) => {
-          if (activities.some(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string))) {
-              callDays.push(dayIndex);
-              const currentDate = new Date(startDate);
-              currentDate.setDate(currentDate.getDate() + dayIndex);
-              const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-              if (isWeekend) weekendCalls++;
-          }
-      });
-      return {...r, callDays, weekendCalls};
-  });
-  
-  validatedResidents.forEach(res => {
-    // Rule: Max calls
-    const maxCalls = res.onService ? (onServiceCallRules.find(rule => (numberOfDays - res.vacationDays.length) >= rule.minDays && (numberOfDays - res.vacationDays.length) <= rule.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
-    if (res.callDays.length > maxCalls && maxCalls > 0) {
-        errors.push({
-            type: 'MAX_CALLS',
-            message: `${res.name} exceeds max calls (${res.callDays.length}/${maxCalls}).`,
-            residentId: res.id,
-        });
-    }
-
-    // Rule: Post-call violations
-    for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
-        const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
-        if (hasNightOrWeekendCall && !res.schedule[dayIndex + 1].includes('Post-Call') && !res.schedule[dayIndex + 1].includes('Vacation')) {
-            errors.push({
-                type: 'POST_CALL_VIOLATION',
-                message: `${res.name} has a post-call violation on day ${dayIndex + 2}.`,
-                residentId: res.id,
-                dayIndex: dayIndex + 1
-            });
-        }
-    }
-    
-    // Rule: PGY-1 solo call
-    if (res.type === 'neuro' && res.level === 1 && !res.allowSoloPgy1Call) {
-        res.callDays.forEach(dayIndex => {
-            const backupPresent = validatedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
-            if (!backupPresent) {
-                errors.push({
-                    type: 'NO_BACKUP',
-                    message: `PGY-1 ${res.name} is on call without backup on day ${dayIndex + 1}.`,
-                    residentId: res.id,
-                    dayIndex: dayIndex
-                });
-            }
-        });
-    }
-  });
-
-  return errors;
-}
-
 
 function WeekTable({ weekNumber, appState, setAppState, weekStartDate, daysInWeek }: { weekNumber: number, appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState | null>>, weekStartDate: Date, daysInWeek: number }) {
   const { residents, errors } = appState;
@@ -158,47 +90,53 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
 
         if (sourceResidentIndex === -1 || targetResidentIndex === -1) return prev;
 
-        const newResidents = [...prev.residents];
         const dayIndex = activeData.dayIndex;
+        let tempResidents = [...prev.residents];
         
-        const sourceSchedule = newResidents[sourceResidentIndex].schedule[dayIndex];
-        const targetSchedule = newResidents[targetResidentIndex].schedule[dayIndex];
+        const sourceSchedule = tempResidents[sourceResidentIndex].schedule[dayIndex];
+        const targetSchedule = tempResidents[targetResidentIndex].schedule[dayIndex];
 
         // Perform the swap
-        newResidents[sourceResidentIndex] = {
-            ...newResidents[sourceResidentIndex],
-            schedule: newResidents[sourceResidentIndex].schedule.map((s, i) => i === dayIndex ? targetSchedule : s),
+        tempResidents[sourceResidentIndex] = {
+            ...tempResidents[sourceResidentIndex],
+            schedule: tempResidents[sourceResidentIndex].schedule.map((s, i) => i === dayIndex ? targetSchedule : s),
         };
-        newResidents[targetResidentIndex] = {
-            ...newResidents[targetResidentIndex],
-            schedule: newResidents[targetResidentIndex].schedule.map((s, i) => i === dayIndex ? sourceSchedule : s),
+        tempResidents[targetResidentIndex] = {
+            ...tempResidents[targetResidentIndex],
+            schedule: tempResidents[targetResidentIndex].schedule.map((s, i) => i === dayIndex ? sourceSchedule : s),
         };
         
-        newAppState = { ...prev, residents: newResidents };
-        
-        // Post-swap validation
-        if (newAppState) {
-            const validationErrors = validateSchedule(newAppState);
-            newAppState = {...newAppState, errors: validationErrors};
+        // Re-generate the schedule with the swapped residents to re-validate everything
+        // This is not a full re-generation, but re-calculation of stats and errors
+        const updatedStateWithSwaps = { ...prev, residents: tempResidents };
+        const finalOutput = generateSchedules(updatedStateWithSwaps);
+        newAppState = { ...prev, residents: finalOutput.residents, errors: finalOutput.errors };
 
-            if (validationErrors.length > 0) {
-                toast({
-                  variant: "destructive",
-                  title: "Manual Swap Created Conflicts",
-                  description: (
-                    <ul className="list-disc list-inside">
-                      {validationErrors.map((error, i) => <li key={i}>{error.message}</li>)}
-                    </ul>
-                  ),
-                });
-              } else {
-                 toast({
-                  title: "Swap Successful",
-                  description: "The schedule has been updated without new conflicts.",
-                });
-              }
+        if (finalOutput.errors.length > (prev.errors?.length || 0)) {
+            const newErrors = finalOutput.errors.filter(e => !(prev.errors || []).some(pe => pe.message === e.message));
+            if (newErrors.length > 0) {
+              toast({
+                variant: "destructive",
+                title: "Manual Swap Created Conflicts",
+                description: (
+                  <ul className="list-disc list-inside">
+                    {newErrors.map((error, i) => <li key={i}>{error.message}</li>)}
+                  </ul>
+                ),
+              });
+            } else {
+               toast({
+                title: "Swap Successful",
+                description: "The schedule has been updated.",
+              });
+            }
+        } else {
+            toast({
+              title: "Swap Successful",
+              description: "The schedule has been updated without new conflicts.",
+            });
         }
-
+        
         return newAppState;
       });
     }
