@@ -7,11 +7,6 @@ export function getInitialAppState(): AppState {
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-  const sampleResidentId1 = uuidv4();
-  const sampleResidentId2 = uuidv4();
-  const sampleStaffId1 = uuidv4();
-  const sampleStaffId2 = uuidv4();
-
   return {
     general: {
       startDate: firstDayOfMonth.toISOString().split('T')[0],
@@ -23,53 +18,10 @@ export function getInitialAppState(): AppState {
       newYearStart: '',
       newYearEnd: '',
     },
-    residents: [
-      {
-        id: sampleResidentId1,
-        type: 'neuro',
-        name: 'Dr. Emily Carter',
-        level: 4,
-        onService: true,
-        vacationDays: [],
-        isChief: false,
-        chiefOrDays: [],
-        maxOnServiceCalls: 0,
-        offServiceMaxCall: 4,
-        schedule: [],
-        weekendCalls: 0,
-        callDays: [],
-        holidayGroup: 'neither',
-        canBeBackup: true,
-        allowSoloPgy1Call: false,
-        doubleCallDays: 0,
-        orDays: 0,
-      },
-      {
-        id: sampleResidentId2,
-        type: 'neuro',
-        name: 'Dr. Ben Zhao',
-        level: 1,
-        onService: true,
-        vacationDays: [],
-        isChief: false,
-        chiefOrDays: [],
-        maxOnServiceCalls: 0,
-        offServiceMaxCall: 4,
-        schedule: [],
-        weekendCalls: 0,
-        callDays: [],
-        holidayGroup: 'neither',
-        allowSoloPgy1Call: false,
-        doubleCallDays: 0,
-        orDays: 0,
-      }
-    ],
+    residents: [],
     medicalStudents: [],
     otherLearners: [],
-    staff: [
-        { id: sampleStaffId1, name: 'Dr. Anya Sharma', subspecialty: 'Tumor/Skull Base', specialtyType: 'cranial' },
-        { id: sampleStaffId2, name: 'Dr. Marcus Thorne', subspecialty: 'Complex Spine', specialtyType: 'spine' },
-    ],
+    staff: [],
     staffCall: [],
     orCases: {},
     clinicAssignments: [],

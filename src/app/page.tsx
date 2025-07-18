@@ -21,7 +21,7 @@ import { getInitialAppState } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
 
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>(getInitialAppState());
+  const [appState, setAppState] = useState<AppState>(() => getInitialAppState());
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
