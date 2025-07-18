@@ -56,6 +56,7 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
                 procedureCode: caseItem.procedureCode,
                 patientMrn: caseItem.patientMrn,
                 patientSex: caseItem.patientSex,
+                age: caseItem.age,
             });
         }
       });
@@ -77,12 +78,12 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
         </h4>
         <p className="text-sm text-muted-foreground mb-4">
             Paste the text of an existing OR schedule to have the AI extract and populate the assignments.
-            Include day numbers, surgeon names, case details, patient info, and procedure codes.
+            Include day numbers, surgeon names, case details, patient info (MRN, sex, age), and procedure codes.
         </p>
         <Textarea
             rows={4}
             className="mt-1"
-            placeholder="e.g., 'July 1: Dr. Smith - Craniotomy for tumor (61510) on patient MRN12345 (male)...'"
+            placeholder="e.g., 'July 1: Dr. Smith - Craniotomy for tumor (61510) on patient MRN12345 (35yo male)...'"
             value={text}
             onChange={(e) => setText(e.target.value)}
         />
@@ -104,7 +105,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const { general, orCases, staff, clinicAssignments } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
-  const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '', procedureCode: '', patientMrn: '', patientSex: 'male' });
+  const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '', procedureCode: '', patientMrn: '', patientSex: 'male', age: 0 });
   const [selectedSurgeon, setSelectedSurgeon] = useState<string>('');
   
   const [newClinic, setNewClinic] = useState<Partial<ClinicAssignment>>({});
@@ -141,7 +142,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     }
     newOrCases[dayIndex].push(fullCase);
     setAppState(prev => ({ ...prev, orCases: newOrCases }));
-    setNewCase({ diagnosis: '', procedure: '', procedureCode: '', patientMrn: '', patientSex: 'male' });
+    setNewCase({ diagnosis: '', procedure: '', procedureCode: '', patientMrn: '', patientSex: 'male', age: 0 });
     setSelectedSurgeon('');
   };
   
@@ -280,7 +281,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                     <div>
                         <p className="font-semibold">{c.procedure} <span className="font-normal text-muted-foreground">({c.procedureCode})</span></p>
                         <p className="text-sm text-muted-foreground">{c.surgeon} | Dx: {c.diagnosis}</p>
-                        <p className="text-xs text-muted-foreground">Patient: {c.patientMrn} ({c.patientSex})</p>
+                        <p className="text-xs text-muted-foreground">Patient: {c.patientMrn} ({c.age}yo {c.patientSex})</p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => handleRemoveCase(currentEditingDay, i)}><Trash2 className="h-4 w-4"/></Button>
                     </div>
@@ -319,6 +320,10 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                             <div>
                                 <Label>Patient MRN</Label>
                                 <Input value={newCase.patientMrn} onChange={e => setNewCase(c => ({...c, patientMrn: e.target.value}))}/>
+                            </div>
+                             <div>
+                                <Label>Patient Age</Label>
+                                <Input type="number" value={newCase.age} onChange={e => setNewCase(c => ({...c, age: parseInt(e.target.value, 10) || 0}))}/>
                             </div>
                             <div>
                                 <Label>Patient Sex</Label>

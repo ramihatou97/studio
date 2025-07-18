@@ -12,6 +12,10 @@ export interface OrCase {
   procedureCode: string;
   patientMrn: string;
   patientSex: 'male' | 'female' | 'other';
+  age: number;
+  residentRole?: 'un-scrubbed observer' | 'scrubbed observer' | 'assistant' | 'senior' | 'lead';
+  comfortLevel?: number;
+  comments?: string;
 }
 
 export interface ClinicAssignment {
@@ -131,6 +135,7 @@ export interface HistoricalCase {
     caseType: 'cranial' | 'spine' | 'other';
     patientMrn: string;
     patientSex: 'male' | 'female' | 'other';
+    age: number;
 }
 
 export interface HistoricalData {

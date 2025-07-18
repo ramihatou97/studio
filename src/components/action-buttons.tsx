@@ -6,7 +6,8 @@ import { HandoverModal } from './modals/handover-modal';
 import { OptimizerModal } from './modals/optimizer-modal';
 import { ChatModal } from './modals/chat-modal';
 import { LongTermAnalysisModal } from './modals/long-term-analysis-modal';
-import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart } from 'lucide-react';
+import { ProcedureLogModal } from './modals/procedure-log-modal';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
@@ -23,6 +24,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isHandoverModalOpen, setHandoverModalOpen] = useState(false);
   const [isChatModalOpen, setChatModalOpen] = useState(false);
   const [isLongTermAnalysisModalOpen, setLongTermAnalysisModalOpen] = useState(false);
+  const [isProcedureLogModalOpen, setProcedureLogModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -111,6 +113,9 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20">
               <FileText className="mr-2 h-4 w-4" /> Handover Email
             </Button>
+            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20">
+              <BookUser className="mr-2 h-4 w-4" /> Procedure Log
+            </Button>
             <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">
               <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
             </Button>
@@ -138,6 +143,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             onOpenChange={setOptimizerModalOpen}
             appState={appState}
             setAppState={setAppState}
+          />
+           <ProcedureLogModal
+            isOpen={isProcedureLogModalOpen}
+            onOpenChange={setProcedureLogModalOpen}
+            appState={appState}
           />
           <ChatModal
             isOpen={isChatModalOpen}

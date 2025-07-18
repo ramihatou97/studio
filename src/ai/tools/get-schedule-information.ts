@@ -113,7 +113,7 @@ export const getScheduleInformationTool = ai.defineTool(
 
         if (cases.length === 0) return { result: `No OR cases scheduled for day ${day}${staffName ? ` with Dr. ${staffName}` : ''}.` };
 
-        const casesString = cases.map(c => `${c.procedure} (Patient: ${c.patientMrn}, ${c.patientSex}; Dx: ${c.diagnosis}) with ${c.surgeon}`).join('\n- ');
+        const casesString = cases.map(c => `${c.procedure} (Patient: ${c.patientMrn}, ${c.age}yo ${c.patientSex}; Dx: ${c.diagnosis}) with ${c.surgeon}`).join('\n- ');
         return { result: `OR cases for day ${day}:\n- ${casesString}` };
       }
 
