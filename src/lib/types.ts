@@ -1,5 +1,7 @@
 
 
+import { z } from 'zod';
+
 export interface Staff {
   id: string;
   name: string;
@@ -173,6 +175,52 @@ export interface CurrentUser {
   name: string;
 }
 
+export interface OffServiceRotation {
+    id: string;
+    name: string;
+}
+
+export interface OffServiceRequest {
+    id: string;
+    residentId: string;
+    rotationId: string;
+    durationInBlocks: number;
+    timingPreference: 'early' | 'mid' | 'late' | 'any';
+}
+
+// Schemas for Yearly Rotation Feature
+const ResidentInfoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  pgyLevel: z.number(),
+});
+
+const OffServiceRequestSchema = z.object({
+  residentId: z.string(),
+  rotationName: z.string(),
+  durationInBlocks: z.number(),
+  timingPreference: z.enum(['early', 'mid', 'late', 'any']).describe('Soft preference for when the rotation should occur in the academic year.'),
+});
+
+export const GenerateYearlyRotationScheduleInputSchema = z.object({
+  residents: z.array(ResidentInfoSchema).describe('A list of all neurosurgery residents to be scheduled.'),
+  offServiceRequests: z.array(OffServiceRequestSchema).describe('A list of mandatory off-service rotations for residents.'),
+});
+export type GenerateYearlyRotationScheduleInput = z.infer<typeof GenerateYearlyRotationScheduleInputSchema>;
+
+
+const YearlyScheduleSchema = z.object({
+    residentId: z.string(),
+    schedule: z.array(z.string()).length(13).describe("An array of 13 strings, where each string is the name of the rotation for that block (e.g., 'Neurosurgery', 'Plastics', 'Neuroradiology')."),
+});
+
+export const GenerateYearlyRotationScheduleOutputSchema = z.object({
+    yearlySchedule: z.array(YearlyScheduleSchema).describe('The generated yearly rotation schedule for all residents.'),
+    violations: z.array(z.string()).describe('A list of any hard constraints that could not be met.'),
+});
+export type GenerateYearlyRotationScheduleOutput = z.infer<typeof GenerateYearlyRotationScheduleOutputSchema>;
+
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];
@@ -184,6 +232,8 @@ export interface AppState {
   clinicAssignments: ClinicAssignment[];
   residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
+  offServiceRotations?: OffServiceRotation[];
+  offServiceRequests?: OffServiceRequest[];
   errors?: ScheduleError[];
   evaluations?: Evaluation[];
   manualProcedures?: ManualProcedure[];

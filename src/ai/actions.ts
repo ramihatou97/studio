@@ -8,10 +8,11 @@ import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/g
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
 import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-populate-or-cases';
 import { chatWithSchedule as chatWithScheduleFlow, type ChatWithScheduleInput } from '@/ai/flows/chat-with-schedule';
-import { generateHistoricalData as generateHistoricalDataFlow, type GenerateHistoricalDataInput } from '@/ai/flows/generate-historical-data';
-import { analyzeResidentPerformance as analyzeResidentPerformanceFlow, type AnalyzeResidentPerformanceInput } from '@/ai/flows/analyze-resident-performance';
-import { generateSurgicalBriefing as generateSurgicalBriefingFlow, type GenerateSurgicalBriefingInput } from '@/ai/flows/generate-surgical-briefing';
-import type { AppState, StaffCall, Resident } from '../lib/types';
+import { generateHistoricalData as generateHistoricalDataFlow } from '@/ai/flows/generate-historical-data';
+import { analyzeResidentPerformance as analyzeResidentPerformanceFlow } from '@/ai/flows/analyze-resident-performance';
+import { generateSurgicalBriefing as generateSurgicalBriefingFlow } from '@/ai/flows/generate-surgical-briefing';
+import { generateYearlyRotationSchedule as generateYearlyRotationScheduleFlow } from '@/ai/flows/generate-yearly-rotation-schedule';
+import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput } from '../lib/types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
   try {
@@ -166,4 +167,14 @@ export async function generateSurgicalBriefingAction(input: GenerateSurgicalBrie
     console.error('Error in generateSurgicalBriefingAction:', error);
     return { success: false, error: 'Failed to generate surgical briefing.' };
   }
+}
+
+export async function generateYearlyRotationScheduleAction(input: GenerateYearlyRotationScheduleInput) {
+    try {
+        const result = await generateYearlyRotationScheduleFlow(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Error in generateYearlyRotationScheduleAction:', error);
+        return { success: false, error: 'Failed to generate yearly rotation schedule.' };
+    }
 }

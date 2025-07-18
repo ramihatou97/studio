@@ -10,7 +10,8 @@ import { LongTermAnalysisModal } from './modals/long-term-analysis-modal';
 import { ProcedureLogModal } from './modals/procedure-log-modal';
 import { SurgicalBriefingModal } from './modals/surgical-briefing-modal';
 import { EpaModal } from './modals/epa-modal';
-import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit, GraduationCap } from 'lucide-react';
+import { YearlyRotationModal } from './modals/yearly-rotation-modal';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit, GraduationCap, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 
@@ -31,6 +32,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isProcedureLogModalOpen, setProcedureLogModalOpen] = useState(false);
   const [isSurgicalBriefingModalOpen, setSurgicalBriefingModalOpen] = useState(false);
   const [isEpaModalOpen, setEpaModalOpen] = useState(false);
+  const [isYearlyRotationModalOpen, setYearlyRotationModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -155,17 +157,29 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
       <Separator className="my-8" />
       
       <div className="flex flex-col items-center space-y-4">
-        <h3 className="text-center font-semibold text-lg mb-2">Logging & Evaluations</h3>
-        <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20">
-              <BookUser className="mr-2 h-4 w-4" /> Procedure Log
+        <h3 className="text-center font-semibold text-lg mb-2">Strategic & Educational Tools</h3>
+        <div className="w-full md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button onClick={() => setYearlyRotationModalOpen(true)} variant="outline" className="h-20 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 flex-col">
+                <CalendarDays className="h-6 w-6 mb-1"/>
+                <span className="font-semibold">Yearly Rotation Planner</span>
             </Button>
-            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
-                <GraduationCap className="mr-2 h-4 w-4" /> Manage EPA Evaluations
+            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="h-20 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20 flex-col">
+              <BookUser className="h-6 w-6 mb-1" />
+              <span className="font-semibold">Procedure Log</span>
+            </Button>
+            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="h-20 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20 flex-col">
+                <GraduationCap className="h-6 w-6 mb-1" />
+                <span className="font-semibold">Manage EPA Evaluations</span>
             </Button>
         </div>
       </div>
-
+      
+      <YearlyRotationModal
+        isOpen={isYearlyRotationModalOpen}
+        onOpenChange={setYearlyRotationModalOpen}
+        appState={appState}
+        setAppState={setAppState}
+       />
       <EpaModal
         isOpen={isEpaModalOpen}
         onOpenChange={setEpaModalOpen}

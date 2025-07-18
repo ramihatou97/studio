@@ -11,3 +11,4 @@ import '@/ai/flows/chat-with-schedule.ts';
 import '@/ai/flows/generate-historical-data.ts';
 import '@/ai/flows/analyze-resident-performance.ts';
 import '@/ai/flows/generate-surgical-briefing.ts';
+import '@/ai/flows/generate-yearly-rotation-schedule.ts';
