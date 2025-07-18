@@ -14,7 +14,7 @@ interface ResidentCardProps {
   updateResident: (id: string, updatedResident: Partial<Resident>) => void;
   removeResident: (id: string) => void;
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
 }
 
 export function ResidentCard({ resident, updateResident, removeResident, appState, setAppState }: ResidentCardProps) {
