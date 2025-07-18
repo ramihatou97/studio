@@ -141,11 +141,9 @@ export function ActionButtons({
                   <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
                   </Button>
               )}
-              {currentUserRole === 'program-director' && (
-                  <Button onClick={onChatClick} variant="outline" className="border-green-500/20 text-green-600 hover:bg-green-500/10 hover:text-green-700">
-                      <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
-                  </Button>
-              )}
+              <Button onClick={onChatClick} variant="outline" className="border-green-500/20 text-green-600 hover:bg-green-500/10 hover:text-green-700">
+                  <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -173,5 +171,3 @@ export function ActionButtons({
     </>
   );
 }
-
-    

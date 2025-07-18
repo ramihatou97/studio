@@ -38,20 +38,42 @@ const MOCK_STATE_KEY = 'mock_app_state';
 const getAppStateFromMockDb = (): AppState => {
     if (typeof window === 'undefined') return getInitialAppState();
     const storedStateJSON = localStorage.getItem(MOCK_STATE_KEY);
-    return storedStateJSON ? JSON.parse(storedStateJSON) : getInitialAppState();
+    try {
+        if (storedStateJSON) {
+            const parsed = JSON.parse(storedStateJSON);
+            // Basic validation
+            if (parsed.general && parsed.residents) {
+                return parsed;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to parse mock state from localStorage", e);
+    }
+    return getInitialAppState();
 }
 
 const getCurrentUserFromMockDb = (): AppState['currentUser'] | null => {
     if (typeof window === 'undefined') return null;
     const storedUser = localStorage.getItem('currentUser');
-    return storedUser ? JSON.parse(storedUser) : null;
+    try {
+        if (storedUser) {
+            return JSON.parse(storedUser);
+        }
+    } catch (e) {
+        console.error("Failed to parse current user from localStorage", e);
+    }
+    return null;
 }
 
 const saveAppStateToMockDb = (state: AppState) => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(MOCK_STATE_KEY, JSON.stringify(state));
-    if (state.currentUser) {
-        localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+    try {
+        localStorage.setItem(MOCK_STATE_KEY, JSON.stringify(state));
+        if (state.currentUser) {
+            localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+        }
+    } catch (e) {
+        console.error("Failed to save state to localStorage", e);
     }
 }
 
@@ -82,8 +104,11 @@ export default function AppPage() {
       router.replace('/login');
     } else {
       const fullState = getAppStateFromMockDb();
-      fullState.currentUser = loggedInUser;
-      setAppState(fullState);
+      // Ensure currentUser is always up-to-date from its dedicated storage
+      setAppState({ ...fullState, currentUser: loggedInUser });
+      // Check if a schedule has been generated previously
+      const scheduleExists = fullState.residents.some(r => r.schedule && r.schedule.length > 0);
+      setHasGenerated(scheduleExists);
     }
   }, [router]);
   
@@ -204,9 +229,9 @@ export default function AppPage() {
     </div>
   );
 
-  const renderProgramDirectorDashboard = () => (
+  const renderFullDashboard = () => (
     <>
-      {appState.pendingUsers && appState.pendingUsers.length > 0 && (
+      {currentUserRole === 'program-director' && appState.pendingUsers && appState.pendingUsers.length > 0 && (
           <Card className="mb-8 shadow-lg border-amber-500/50">
               <CardHeader><CardTitle>Pending User Approvals</CardTitle><CardDescription>Review and approve or deny new user sign-up requests.</CardDescription></CardHeader>
               <CardContent className="space-y-3">
@@ -220,15 +245,17 @@ export default function AppPage() {
           </Card>
       )}
 
-      <Card className="mb-8 shadow-lg">
-        <CardHeader><CardTitle>Configuration</CardTitle><CardDescription>Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.</CardDescription></CardHeader>
-        <CardContent className="space-y-8">
-          <AiPrepopulation setAppState={setAppState} appState={appState} />
-          <Separator />
-          <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={appState} setAppState={setAppState} /><ResidentsConfig appState={appState} setAppState={setAppState} /></div>
-          <Accordion type="single" collapsible className="w-full space-y-4"><StaffConfig appState={appState} setAppState={setAppState} /><OrClinicConfig appState={appState} setAppState={setAppState} /><HolidayCoverage appState={appState} setAppState={setAppState} /></Accordion>
-        </CardContent>
-      </Card>
+      {currentUserRole === 'program-director' && (
+        <Card className="mb-8 shadow-lg">
+          <CardHeader><CardTitle>Configuration</CardTitle><CardDescription>Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.</CardDescription></CardHeader>
+          <CardContent className="space-y-8">
+            <AiPrepopulation setAppState={setAppState} appState={appState} />
+            <Separator />
+            <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={appState} setAppState={setAppState} /><ResidentsConfig appState={appState} setAppState={setAppState} /></div>
+            <Accordion type="single" collapsible className="w-full space-y-4"><StaffConfig appState={appState} setAppState={setAppState} /><OrClinicConfig appState={appState} setAppState={setAppState} /><HolidayCoverage appState={appState} setAppState={setAppState} /></Accordion>
+          </CardContent>
+        </Card>
+      )}
 
       <ActionButtons onGenerate={handleGenerateClick} appState={appState} setAppState={setAppState} isLoading={isLoading} hasGenerated={hasGenerated} onEpaClick={() => setEpaModalOpen(true)} onProcedureLogClick={() => setProcedureLogModalOpen(true)} onYearlyRotationClick={() => setYearlyRotationModalOpen(true)} onAnalysisClick={() => setAnalysisModalOpen(true)} onOptimizerClick={() => setOptimizerModalOpen(true)} onHandoverClick={() => setHandoverModalOpen(true)} onChatClick={() => setChatModalOpen(true)} onLongTermAnalysisClick={() => setLongTermAnalysisModalOpen(true)} onSurgicalBriefingClick={() => setSurgicalBriefingModalOpen(true)}/>
       
@@ -238,13 +265,25 @@ export default function AppPage() {
     </>
   );
 
+  const renderContent = () => {
+    if (isMobile) {
+      switch (currentUserRole) {
+        case 'resident':
+          return renderResidentMobileDashboard();
+        case 'staff':
+          return renderStaffMobileDashboard();
+        default:
+          return renderFullDashboard(); // Program Director sees full dashboard on mobile too
+      }
+    }
+    return renderFullDashboard(); // All roles see full dashboard on desktop
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader appState={appState} setAppState={setAppState} />
       <main className="container mx-auto p-4 md:p-8">
-          {isMobile && currentUserRole === 'resident' ? renderResidentMobileDashboard()
-         : isMobile && currentUserRole === 'staff' ? renderStaffMobileDashboard()
-         : renderProgramDirectorDashboard()}
+        {renderContent()}
         <AboutSection />
       </main>
 
