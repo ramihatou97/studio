@@ -7,7 +7,8 @@ import { OptimizerModal } from './modals/optimizer-modal';
 import { ChatModal } from './modals/chat-modal';
 import { LongTermAnalysisModal } from './modals/long-term-analysis-modal';
 import { ProcedureLogModal } from './modals/procedure-log-modal';
-import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser } from 'lucide-react';
+import { SurgicalBriefingModal } from './modals/surgical-briefing-modal';
+import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
@@ -25,6 +26,7 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const [isChatModalOpen, setChatModalOpen] = useState(false);
   const [isLongTermAnalysisModalOpen, setLongTermAnalysisModalOpen] = useState(false);
   const [isProcedureLogModalOpen, setProcedureLogModalOpen] = useState(false);
+  const [isSurgicalBriefingModalOpen, setSurgicalBriefingModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -107,6 +109,9 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
                 </Button>
             )}
+             <Button onClick={() => setSurgicalBriefingModalOpen(true)} variant="outline" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-indigo-500/20">
+                <BrainCircuit className="mr-2 h-4 w-4" /> Surgical Briefing
+            </Button>
             <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-500/20">
               <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
             </Button>
@@ -157,6 +162,11 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
           <LongTermAnalysisModal
             isOpen={isLongTermAnalysisModalOpen}
             onOpenChange={setLongTermAnalysisModalOpen}
+            appState={appState}
+          />
+          <SurgicalBriefingModal
+            isOpen={isSurgicalBriefingModalOpen}
+            onOpenChange={setSurgicalBriefingModalOpen}
             appState={appState}
           />
         </>

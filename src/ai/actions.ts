@@ -9,6 +9,7 @@ import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-pop
 import { chatWithSchedule as chatWithScheduleFlow, type ChatWithScheduleInput } from '@/ai/flows/chat-with-schedule';
 import { generateHistoricalData as generateHistoricalDataFlow, type GenerateHistoricalDataInput } from '@/ai/flows/generate-historical-data';
 import { analyzeResidentPerformance as analyzeResidentPerformanceFlow, type AnalyzeResidentPerformanceInput } from '@/ai/flows/analyze-resident-performance';
+import { generateSurgicalBriefing as generateSurgicalBriefingFlow, type GenerateSurgicalBriefingInput } from '@/ai/flows/generate-surgical-briefing';
 import type { AppState, StaffCall, Resident } from '../lib/types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
@@ -154,4 +155,14 @@ export async function analyzeResidentPerformanceAction(input: AnalyzeResidentPer
         console.error('Error in analyzeResidentPerformanceAction:', error);
         return { success: false, error: 'Failed to analyze resident performance.' };
     }
+}
+
+export async function generateSurgicalBriefingAction(input: GenerateSurgicalBriefingInput) {
+  try {
+    const result = await generateSurgicalBriefingFlow(input);
+    return { success: true, data: result.briefing };
+  } catch (error) {
+    console.error('Error in generateSurgicalBriefingAction:', error);
+    return { success: false, error: 'Failed to generate surgical briefing.' };
+  }
 }

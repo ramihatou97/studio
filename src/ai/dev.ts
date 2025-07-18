@@ -10,3 +10,4 @@ import '@/ai/flows/pre-populate-or-cases.ts';
 import '@/ai/flows/chat-with-schedule.ts';
 import '@/ai/flows/generate-historical-data.ts';
 import '@/ai/flows/analyze-resident-performance.ts';
+import '@/ai/flows/generate-surgical-briefing.ts';
