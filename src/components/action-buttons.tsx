@@ -138,9 +138,6 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
                 <FileText className="mr-2 h-4 w-4" /> Handover Email
                 </Button>
             )}
-            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20" disabled={!hasOrCases}>
-              <BookUser className="mr-2 h-4 w-4" /> Procedure Log
-            </Button>
             {currentUserRole === 'program-director' && (
                 <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">
                 <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
@@ -157,18 +154,28 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
 
       <Separator className="my-8" />
       
-      <div className="flex flex-col items-center">
-        <h3 className="text-center font-semibold text-lg mb-2">Entrustable Professional Activities (EPA)</h3>
-        <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="w-full md:w-1/2 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
-            <GraduationCap className="mr-2 h-4 w-4" /> Manage EPA Evaluations
-        </Button>
+      <div className="flex flex-col items-center space-y-4">
+        <h3 className="text-center font-semibold text-lg mb-2">Logging & Evaluations</h3>
+        <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20">
+              <BookUser className="mr-2 h-4 w-4" /> Procedure Log
+            </Button>
+            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
+                <GraduationCap className="mr-2 h-4 w-4" /> Manage EPA Evaluations
+            </Button>
+        </div>
       </div>
 
       <EpaModal
         isOpen={isEpaModalOpen}
         onOpenChange={setEpaModalOpen}
         appState={appState}
-        hasGenerated={hasGenerated}
+      />
+      <ProcedureLogModal
+        isOpen={isProcedureLogModalOpen}
+        onOpenChange={setProcedureLogModalOpen}
+        appState={appState}
+        setAppState={setAppState}
       />
       
       {hasGenerated && (
@@ -188,11 +195,6 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
             onOpenChange={setOptimizerModalOpen}
             appState={appState}
             setAppState={setAppState}
-          />
-           <ProcedureLogModal
-            isOpen={isProcedureLogModalOpen}
-            onOpenChange={setProcedureLogModalOpen}
-            appState={appState}
           />
           <ChatModal
             isOpen={isChatModalOpen}

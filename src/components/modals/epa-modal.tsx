@@ -14,12 +14,12 @@ interface EpaModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
-  hasGenerated: boolean;
 }
 
-export function EpaModal({ isOpen, onOpenChange, appState, hasGenerated }: EpaModalProps) {
+export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
   const [selectedEpa, setSelectedEpa] = useState<EPA | null>(null);
   const { currentUser } = appState;
+  const hasGenerated = Object.values(appState.residents).some(r => r.schedule && r.schedule.length > 0);
 
   const handleSelectEpa = (epa: EPA) => {
     setSelectedEpa(epa);

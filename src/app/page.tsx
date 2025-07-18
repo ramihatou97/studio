@@ -32,6 +32,7 @@ const getSsrState = (): AppState => ({
   clinicAssignments: [],
   residentCall: [],
   onServiceCallRules: [],
+  manualProcedures: [],
   currentUser: { id: 'program-director', role: 'program-director', name: 'Program Director' }
 });
 

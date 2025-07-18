@@ -7,6 +7,8 @@ export interface Staff {
   specialtyType: 'cranial' | 'spine' | 'other';
 }
 
+export type ResidentRole = 'un-scrubbed observer' | 'scrubbed observer' | 'assistant' | 'senior' | 'lead';
+
 export interface OrCase {
   surgeon: string;
   diagnosis: string;
@@ -15,9 +17,14 @@ export interface OrCase {
   patientMrn: string;
   patientSex: 'male' | 'female' | 'other';
   age: number;
-  residentRole?: 'un-scrubbed observer' | 'scrubbed observer' | 'assistant' | 'senior' | 'lead';
-  comfortLevel?: number;
+  residentRole?: ResidentRole;
   comments?: string;
+}
+
+export interface ManualProcedure extends Omit<OrCase, 'diagnosis'> {
+    id: string;
+    residentId: string;
+    date: string; // YYYY-MM-DD
 }
 
 export interface ClinicAssignment {
@@ -179,5 +186,6 @@ export interface AppState {
   onServiceCallRules: OnServiceCallRule[];
   errors?: ScheduleError[];
   evaluations?: Evaluation[];
+  manualProcedures?: ManualProcedure[];
   currentUser: CurrentUser;
 }
