@@ -8,6 +8,11 @@ import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident } from "@/lib/types";
 import { Sparkles } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import * as pdfjs from 'pdfjs-dist/build/pdf';
+import * as mammoth from 'mammoth';
+
+// Required for pdfjs-dist
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface AiPrepopulationProps {
   appState: AppState;
@@ -25,76 +30,112 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
       setFile(e.target.files[0]);
     }
   };
+
+  const parsePdf = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        fullText += textContent.items.map((item: any) => item.str).join(' ');
+    }
+    return fullText;
+  };
+  
+  const parseDocx = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
   
   const handleParse = async () => {
     setIsLoading(true);
     let sourceType: 'text' | 'image' | null = null;
     let sourceData: string | null = null;
 
-    if (file) {
-      sourceType = 'image';
-      sourceData = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    } else if (text.trim()) {
-      sourceType = 'text';
-      sourceData = text;
-    }
-
-    if (!sourceType || !sourceData) {
-      toast({ variant: 'destructive', title: 'No data provided', description: 'Please upload an image or paste text to parse.' });
-      setIsLoading(false);
-      return;
-    }
-
-    const result = await prepopulateDataAction(sourceType, sourceData);
-
-    if (result.success && result.data) {
-      const existingResidentNames = new Set(appState.residents.map(r => r.name.toLowerCase()));
-      const newResidents: Resident[] = [];
-      
-      result.data.residents.forEach(r => {
-        if (!existingResidentNames.has(r.name.toLowerCase())) {
-           newResidents.push({
-            id: uuidv4(),
-            type: 'neuro',
-            name: r.name,
-            level: r.level,
-            onService: r.onService,
-            vacationDays: r.vacationDays,
-            isChief: false,
-            chiefOrDays: [],
-            maxOnServiceCalls: 0,
-            offServiceMaxCall: 4,
-            schedule: [],
-            weekendCalls: 0,
-            callDays: [],
-            holidayGroup: 'neither',
-            canBeBackup: false,
-            allowSoloPgy1Call: false,
-            doubleCallDays: 0,
-            orDays: 0,
-          });
+    try {
+        if (file) {
+            if (file.type.startsWith('image/')) {
+                sourceType = 'image';
+                sourceData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            } else if (file.type === 'application/pdf') {
+                sourceType = 'text';
+                sourceData = await parsePdf(file);
+            } else if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                sourceType = 'text';
+                sourceData = await parseDocx(file);
+            } else {
+                 toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload an image, PDF, or .docx file.' });
+                 setIsLoading(false);
+                 return;
+            }
+        } else if (text.trim()) {
+          sourceType = 'text';
+          sourceData = text;
         }
-      });
 
-      if (newResidents.length > 0) {
-        setAppState(prev => ({
-          ...prev,
-          residents: [...prev.residents, ...newResidents]
-        }));
-        toast({ title: 'Success', description: `${newResidents.length} new residents have been populated from the source.` });
-      } else {
-        toast({ title: 'No new residents added', description: 'All residents from the source already exist in the configuration.' });
-      }
+        if (!sourceType || !sourceData) {
+          toast({ variant: 'destructive', title: 'No data provided', description: 'Please upload a file or paste text to parse.' });
+          setIsLoading(false);
+          return;
+        }
 
-    } else {
-      toast({ variant: 'destructive', title: 'Parsing Failed', description: result.error });
+        const result = await prepopulateDataAction(sourceType, sourceData);
+
+        if (result.success && result.data) {
+          const existingResidentNames = new Set(appState.residents.map(r => r.name.toLowerCase()));
+          const newResidents: Resident[] = [];
+          
+          result.data.residents.forEach(r => {
+            if (!existingResidentNames.has(r.name.toLowerCase())) {
+               newResidents.push({
+                id: uuidv4(),
+                type: 'neuro',
+                name: r.name,
+                level: r.level,
+                onService: r.onService,
+                vacationDays: r.vacationDays,
+                isChief: false,
+                chiefOrDays: [],
+                maxOnServiceCalls: 0,
+                offServiceMaxCall: 4,
+                schedule: [],
+                weekendCalls: 0,
+                callDays: [],
+                holidayGroup: 'neither',
+                canBeBackup: false,
+                allowSoloPgy1Call: false,
+                doubleCallDays: 0,
+                orDays: 0,
+              });
+            }
+          });
+
+          if (newResidents.length > 0) {
+            setAppState(prev => ({
+              ...prev,
+              residents: [...prev.residents, ...newResidents]
+            }));
+            toast({ title: 'Success', description: `${newResidents.length} new residents have been populated from the source.` });
+          } else {
+            toast({ title: 'No new residents added', description: 'All residents from the source already exist in the configuration.' });
+          }
+
+        } else {
+          toast({ variant: 'destructive', title: 'Parsing Failed', description: result.error });
+        }
+    } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: 'File Processing Error', description: 'Could not read or parse the uploaded file.' });
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -104,12 +145,12 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
         AI-Powered Pre-population
       </h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Upload an image or paste the text of an existing schedule to have the AI extract and populate resident data. Duplicates will be ignored.
+        Upload an image, PDF, or DOCX file of an existing schedule to have the AI extract and populate resident data. Duplicates will be ignored.
       </p>
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="schedule-image-upload">Upload Schedule Image</Label>
-          <Input id="schedule-image-upload" type="file" accept="image/*" onChange={handleFileChange} className="mt-1" />
+          <Label htmlFor="schedule-file-upload">Upload Schedule File</Label>
+          <Input id="schedule-file-upload" type="file" accept="image/*,.pdf,.docx" onChange={handleFileChange} className="mt-1" />
         </div>
         <div>
           <Label htmlFor="schedule-text-paste">Or Paste Schedule Text</Label>
