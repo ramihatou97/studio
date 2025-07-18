@@ -12,6 +12,7 @@ import { SurgicalBriefingModal } from './modals/surgical-briefing-modal';
 import { EpaModal } from './modals/epa-modal';
 import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit, GraduationCap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from './ui/separator';
 
 interface ActionButtonsProps {
   onGenerate: () => void;
@@ -117,7 +118,8 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
         )}
         
         {hasGenerated && (
-          <div className="w-full md:w-3/4 lg:w-2/3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="w-full md:w-3/4 lg:w-2/3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-4 pt-4 border-t">
+            <h3 className="col-span-full text-center font-semibold text-lg mb-2">Schedule-Dependent AI Tools</h3>
             {currentUserRole === 'program-director' && appState.errors && appState.errors.length > 0 && (
                 <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
@@ -149,13 +151,26 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
                     <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
                 </Button>
             )}
-            <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="col-span-1 md:col-span-2 lg:col-span-3 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
-                <GraduationCap className="mr-2 h-4 w-4" /> EPA Evaluations
-            </Button>
           </div>
         )}
       </div>
 
+      <Separator className="my-8" />
+      
+      <div className="flex flex-col items-center">
+        <h3 className="text-center font-semibold text-lg mb-2">Entrustable Professional Activities (EPA)</h3>
+        <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="w-full md:w-1/2 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
+            <GraduationCap className="mr-2 h-4 w-4" /> Manage EPA Evaluations
+        </Button>
+      </div>
+
+      <EpaModal
+        isOpen={isEpaModalOpen}
+        onOpenChange={setEpaModalOpen}
+        appState={appState}
+        hasGenerated={hasGenerated}
+      />
+      
       {hasGenerated && (
         <>
           <AnalysisModal
@@ -192,11 +207,6 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
           <SurgicalBriefingModal
             isOpen={isSurgicalBriefingModalOpen}
             onOpenChange={setSurgicalBriefingModalOpen}
-            appState={appState}
-          />
-          <EpaModal
-            isOpen={isEpaModalOpen}
-            onOpenChange={setEpaModalOpen}
             appState={appState}
           />
         </>

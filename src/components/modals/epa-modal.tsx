@@ -14,9 +14,10 @@ interface EpaModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
+  hasGenerated: boolean;
 }
 
-export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
+export function EpaModal({ isOpen, onOpenChange, appState, hasGenerated }: EpaModalProps) {
   const [selectedEpa, setSelectedEpa] = useState<EPA | null>(null);
   const { currentUser } = appState;
 
@@ -80,6 +81,7 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
               epa={selectedEpa}
               appState={appState}
               onBack={handleBackToList}
+              hasGenerated={hasGenerated}
             />
           ) : (
             <EpaList epas={ALL_EPAS} onSelectEpa={handleSelectEpa} currentUserRole={currentUser.role} />

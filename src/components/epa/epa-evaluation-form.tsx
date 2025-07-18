@@ -14,17 +14,20 @@ import { Download, Printer } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '../ui/input';
 
 interface EpaEvaluationFormProps {
   epa: EPA;
   appState: AppState;
   onBack: () => void;
+  hasGenerated: boolean;
 }
 
-export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
+export function EpaEvaluationForm({ epa, appState, onBack, hasGenerated }: EpaEvaluationFormProps) {
   const [selectedResidentId, setSelectedResidentId] = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('');
+  const [manualActivity, setManualActivity] = useState('');
   const [milestoneRatings, setMilestoneRatings] = useState<Record<number, number>>({});
   const [overallRating, setOverallRating] = useState(0);
   const [feedback, setFeedback] = useState('');
@@ -42,7 +45,7 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
   }, [currentUser]);
 
   const residentActivities = useMemo(() => {
-    if (!selectedResidentId) return [];
+    if (!selectedResidentId || !hasGenerated) return [];
     
     const resident = appState.residents.find(r => r.id === selectedResidentId);
     if (!resident) return [];
@@ -78,7 +81,7 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
         }
     });
     return activities;
-  }, [selectedResidentId, appState]);
+  }, [selectedResidentId, appState, hasGenerated]);
 
   const handleRatingChange = (milestoneIndex: number, rating: number) => {
     setMilestoneRatings(prev => ({ ...prev, [milestoneIndex]: rating }));
@@ -145,15 +148,22 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-              ) : (
+              ) : (hasGenerated && residentActivities.length > 0) ? (
                 <Select value={selectedActivity} onValueChange={setSelectedActivity} disabled={!selectedResidentId}>
-                    <SelectTrigger><SelectValue placeholder="Choose an activity..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Choose a scheduled activity..." /></SelectTrigger>
                     <SelectContent>
                     {residentActivities.map(act => (
                         <SelectItem key={act.value} value={act.value}>{act.label}</SelectItem>
                     ))}
                     </SelectContent>
                 </Select>
+              ) : (
+                <Input 
+                  placeholder="Manually describe activity (e.g., OR Case)..." 
+                  value={manualActivity} 
+                  onChange={(e) => setManualActivity(e.target.value)} 
+                  disabled={!selectedResidentId}
+                />
               )}
             </div>
           </div>
