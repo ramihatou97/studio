@@ -175,6 +175,16 @@ export interface CurrentUser {
   name: string;
 }
 
+export interface PendingUser {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: 'staff' | 'resident';
+    pgyLevel?: number;
+    status: 'pending';
+}
+
 export interface OffServiceRotation {
     id: string;
     name: string;
@@ -234,11 +244,11 @@ export interface AppState {
   clinicAssignments: ClinicAssignment[];
   residentCall: ResidentCall[];
   onServiceCallRules: OnServiceCallRule[];
-  offServiceRotations?: OffServiceRotation[];
-  offServiceRequests?: OffServiceRequest[];
+  offServiceRotations: OffServiceRotation[];
+  offServiceRequests: OffServiceRequest[];
   errors?: ScheduleError[];
   evaluations?: Evaluation[];
-  manualProcedures?: ManualProcedure[];
+  manualProcedures: ManualProcedure[];
+  pendingUsers?: PendingUser[];
   currentUser: CurrentUser;
 }
-

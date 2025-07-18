@@ -1,6 +1,27 @@
 
-import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest } from './types';
+import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest, PendingUser } from './types';
 import { v4 as uuidv4 } from 'uuid';
+
+// Helper function to merge state from localStorage
+const mergeWithMockState = (initialState: AppState): AppState => {
+  try {
+    const key = 'mock_app_state';
+    const storedStateJSON = localStorage.getItem(key);
+    if (storedStateJSON) {
+      const storedState = JSON.parse(storedStateJSON);
+      if (storedState.pendingUsers) {
+        return {
+          ...initialState,
+          pendingUsers: storedState.pendingUsers,
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Could not merge mock state from localStorage:", error);
+  }
+  return initialState;
+};
+
 
 export function getInitialAppState(): AppState {
   const today = new Date();
@@ -23,7 +44,7 @@ export function getInitialAppState(): AppState {
         { id: 's4', name: 'Dr. Pam Poovey', subspecialty: 'General', specialtyType: 'other' }
     ];
 
-  return {
+  const initialState: AppState = {
     general: {
       startDate: firstDayOfMonth.toISOString().split('T')[0],
       endDate: lastDayOfMonth.toISOString().split('T')[0],
@@ -49,23 +70,32 @@ export function getInitialAppState(): AppState {
       { minDays: 30, maxDays: 31, calls: 8 },
     ],
     offServiceRotations: [
-        {id: 'r1', name: 'Neuroradiology'},
-        {id: 'r2', name: 'Plastics'},
-        {id: 'r3', name: 'Research'},
+        {id: 'r1', name: 'Neuroradiology', canTakeCall: false},
+        {id: 'r2', name: 'Plastics', canTakeCall: true},
+        {id: 'r3', name: 'Research', canTakeCall: false},
     ],
     offServiceRequests: [
         {id: 'req1', residentId: '4', rotationId: 'r2', durationInBlocks: 1, timingPreference: 'early'},
         {id: 'req2', residentId: '5', rotationId: 'r1', durationInBlocks: 1, timingPreference: 'any'},
     ],
+    manualProcedures: [],
+    pendingUsers: [],
     currentUser: {
         id: 'program-director',
         role: 'program-director',
         name: 'Program Director',
     }
   };
+  
+  // This check ensures localStorage is only accessed on the client-side
+  if (typeof window !== 'undefined') {
+    return mergeWithMockState(initialState);
+  }
+  
+  return initialState;
 }
 
-export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateAction<AppState>>) => {
+export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateAction<AppState | null>>, residentData?: Partial<Resident>) => {
   const newResident: Resident = {
     id: uuidv4(),
     type: 'neuro',
@@ -85,11 +115,12 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     holidayGroup: 'neither',
     allowSoloPgy1Call: false,
     canBeBackup: false,
+    ...residentData
   };
-  setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
+  setAppState(prev => prev ? ({ ...prev, residents: [...prev.residents, newResident] }) : null);
 };
 
-export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAction<AppState>>) => {
+export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAction<AppState | null>>) => {
     const newResident: Resident = {
       id: uuidv4(),
       type: 'non-neuro',
@@ -111,10 +142,10 @@ export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAc
       allowSoloPgy1Call: false,
       canBeBackup: false,
     };
-    setAppState(prev => ({ ...prev, residents: [...prev.residents, newResident] }));
+    setAppState(prev => prev ? ({ ...prev, residents: [...prev.residents, newResident] }) : null);
 };
 
-export const addMedicalStudent = (setAppState: React.Dispatch<React.SetStateAction<AppState>>) => {
+export const addMedicalStudent = (setAppState: React.Dispatch<React.SetStateAction<AppState | null>>) => {
     const newStudent: MedicalStudent = {
         id: uuidv4(),
         type: 'student',
@@ -126,10 +157,10 @@ export const addMedicalStudent = (setAppState: React.Dispatch<React.SetStateActi
         vacationDays: [],
         schedule: []
     };
-    setAppState(prev => ({ ...prev, medicalStudents: [...prev.medicalStudents, newStudent] }));
+    setAppState(prev => prev ? ({ ...prev, medicalStudents: [...prev.medicalStudents, newStudent] }) : null);
 };
 
-export const addOtherLearner = (setAppState: React.Dispatch<React.SetStateAction<AppState>>) => {
+export const addOtherLearner = (setAppState: React.Dispatch<React.SetStateAction<AppState | null>>) => {
     const newLearner: OtherLearner = {
         id: uuidv4(),
         type: 'other',
@@ -139,5 +170,15 @@ export const addOtherLearner = (setAppState: React.Dispatch<React.SetStateAction
         vacationDays: [],
         schedule: []
     };
-    setAppState(prev => ({ ...prev, otherLearners: [...prev.otherLearners, newLearner] }));
+    setAppState(prev => prev ? ({ ...prev, otherLearners: [...prev.otherLearners, newLearner] }) : null);
 };
+
+export const addStaffMember = (setAppState: React.Dispatch<React.SetStateAction<AppState | null>>, staffData: Partial<Staff>) => {
+    const newStaff: Staff = {
+        id: uuidv4(),
+        name: staffData.name || '',
+        subspecialty: staffData.subspecialty || 'General',
+        specialtyType: staffData.specialtyType || 'other',
+    };
+     setAppState(prev => prev ? ({ ...prev, staff: [...prev.staff, newStaff] }) : null);
+}

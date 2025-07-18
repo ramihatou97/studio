@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { AppState, UserRole } from '@/lib/types';
+import type { AppState, UserRole, PendingUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -18,8 +18,9 @@ import { OrClinicConfig } from '@/components/config-sections/or-clinic-config';
 import { HolidayCoverage } from '@/components/config-sections/holiday-coverage';
 import { ActionButtons } from '@/components/action-buttons';
 import { ScheduleDisplay } from '@/components/schedule-display';
-import { getInitialAppState } from '@/lib/config-helpers';
+import { getInitialAppState, addNeuroResident, addStaffMember } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
+import { UserCheck, UserX } from 'lucide-react';
 
 export default function AppPage() {
   const [appState, setAppState] = useState<AppState | null>(null);
@@ -27,9 +28,7 @@ export default function AppPage() {
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
   
-  // This effect runs only on the client, after initial render
   useEffect(() => {
-    // Load the full initial state with sample data on the client side
     setAppState(getInitialAppState());
   }, []);
   
@@ -50,7 +49,6 @@ export default function AppPage() {
     setIsLoading(true);
     setHasGenerated(false);
 
-    // Simulate generation delay
     setTimeout(() => {
       try {
         const output = generateSchedules(appState);
@@ -92,11 +90,62 @@ export default function AppPage() {
     }, 500);
   };
   
+  const handleApproval = (userToApprove: PendingUser, approve: boolean) => {
+    setAppState(prev => {
+        if (!prev) return null;
+
+        const updatedPendingUsers = prev.pendingUsers?.filter(u => u.id !== userToApprove.id) || [];
+        
+        if (approve) {
+            if (userToApprove.role === 'resident') {
+                addNeuroResident(setAppState, {
+                    name: `${userToApprove.firstName} ${userToApprove.lastName}`,
+                    level: userToApprove.pgyLevel,
+                });
+            } else if (userToApprove.role === 'staff') {
+                addStaffMember(setAppState, {
+                    name: `${userToApprove.firstName} ${userToApprove.lastName}`,
+                    specialtyType: 'other',
+                    subspecialty: 'General',
+                });
+            }
+            toast({ title: 'User Approved', description: `${userToApprove.firstName} ${userToApprove.lastName} has been added to the system.` });
+            return { ...prev, pendingUsers: updatedPendingUsers };
+        } else {
+            toast({ variant: 'destructive', title: 'User Denied', description: `${userToApprove.firstName} ${userToApprove.lastName}'s request has been denied.` });
+            return { ...prev, pendingUsers: updatedPendingUsers };
+        }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader appState={appState} setAppState={setAppState} />
       <main className="container mx-auto p-4 md:p-8">
         
+        {currentUserRole === 'program-director' && appState.pendingUsers && appState.pendingUsers.length > 0 && (
+            <Card className="mb-8 shadow-lg border-amber-500/50">
+                <CardHeader>
+                    <CardTitle>Pending User Approvals</CardTitle>
+                    <CardDescription>Review and approve or deny new user sign-up requests.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {appState.pendingUsers.map(user => (
+                        <div key={user.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                            <div>
+                                <p className="font-semibold">{user.firstName} {user.lastName} <span className="text-sm text-muted-foreground">({user.email})</span></p>
+                                <p className="text-sm capitalize text-primary font-medium">{user.role} {user.role === 'resident' && `(PGY-${user.pgyLevel})`}</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleApproval(user, true)}><UserCheck className="mr-2 h-4 w-4" /> Approve</Button>
+                                <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleApproval(user, false)}><UserX className="mr-2 h-4 w-4" /> Deny</Button>
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        )}
+
         {currentUserRole === 'program-director' && (
           <Card className="mb-8 shadow-lg">
             <CardHeader>
@@ -158,11 +207,17 @@ export default function AppPage() {
         {hasGenerated ? (
           <ScheduleDisplay appState={appState} setAppState={setAppState} />
         ) : (
-          !isLoading && (
+          !isLoading && currentUserRole !== 'resident' && (
             <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8">
               <p>Generate schedules to view them here.</p>
             </div>
           )
+        )}
+        
+        {currentUserRole === 'resident' && !hasGenerated && (
+             <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8">
+              <p>Your schedule has not been generated yet. Please check back later.</p>
+            </div>
         )}
 
         <AboutSection />
