@@ -31,7 +31,6 @@ export function AboutSection() {
                 <li><span className="font-medium text-foreground">AI-Driven Analysis:</span> Includes a conflict analyzer, a schedule optimizer, a long-term performance analyst, and a natural language chat assistant.</li>
                 <li><span className="font-medium text-foreground">On-Demand Surgical Briefings:</span> Generates detailed, reference-based surgical plans for any scheduled OR case to aid resident preparation.</li>
                 <li><span className="font-medium text-foreground">Personal Procedure Logs:</span> Allows residents to view all their assigned OR cases and export them to a CSV file for personal logging and tracking.</li>
-                <li><span className="font-medium text-foreground">EPA Evaluation Management:</span> Provides a comprehensive system to browse all Neurosurgery EPAs, generate interactive evaluation forms for any activity, and export the completed evaluations as PDFs.</li>
             </ul>
         </div>
         
