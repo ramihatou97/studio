@@ -9,12 +9,22 @@ const mergeWithMockState = (initialState: AppState): AppState => {
     const storedStateJSON = localStorage.getItem(key);
     if (storedStateJSON) {
       const storedState = JSON.parse(storedStateJSON);
+      
+      const mergedState = { ...initialState };
+
       if (storedState.pendingUsers) {
-        return {
-          ...initialState,
-          pendingUsers: storedState.pendingUsers,
-        };
+        mergedState.pendingUsers = storedState.pendingUsers;
       }
+      
+      // Merge approved users into the main lists
+      if (storedState.residents) {
+          mergedState.residents = storedState.residents;
+      }
+      if (storedState.staff) {
+          mergedState.staff = storedState.staff;
+      }
+
+      return mergedState;
     }
   } catch (error) {
     console.error("Could not merge mock state from localStorage:", error);

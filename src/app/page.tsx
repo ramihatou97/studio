@@ -5,13 +5,13 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 // This page will now act as a guard.
-// For this step, we'll just redirect to the login page.
-// In future steps, we'll check for an authenticated user here.
+// We will redirect to the main app page.
+// In a real app, this would check for an authenticated user first.
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/login');
+    router.replace('/app');
   }, [router]);
 
   return (

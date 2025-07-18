@@ -1,10 +1,11 @@
+
 import type { AppState } from '@/lib/types';
 import { MediShiftLogo } from './icons';
 import { RoleSwitcher } from './role-switcher';
 
 interface AppHeaderProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
 }
 
 export function AppHeader({ appState, setAppState }: AppHeaderProps) {

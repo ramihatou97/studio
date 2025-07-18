@@ -96,25 +96,33 @@ export default function AppPage() {
 
         const updatedPendingUsers = prev.pendingUsers?.filter(u => u.id !== userToApprove.id) || [];
         
+        let newState = { ...prev, pendingUsers: updatedPendingUsers };
+
         if (approve) {
             if (userToApprove.role === 'resident') {
-                addNeuroResident(setAppState, {
+                const newResident: Resident = {
+                    id: userToApprove.id,
+                    type: 'neuro',
                     name: `${userToApprove.firstName} ${userToApprove.lastName}`,
-                    level: userToApprove.pgyLevel,
-                });
+                    level: userToApprove.pgyLevel || 1,
+                    onService: true, vacationDays: [], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0
+                };
+                newState.residents = [...newState.residents, newResident];
             } else if (userToApprove.role === 'staff') {
-                addStaffMember(setAppState, {
+                const newStaff: Staff = {
+                    id: userToApprove.id,
                     name: `${userToApprove.firstName} ${userToApprove.lastName}`,
                     specialtyType: 'other',
                     subspecialty: 'General',
-                });
+                };
+                newState.staff = [...newState.staff, newStaff];
             }
             toast({ title: 'User Approved', description: `${userToApprove.firstName} ${userToApprove.lastName} has been added to the system.` });
-            return { ...prev, pendingUsers: updatedPendingUsers };
         } else {
             toast({ variant: 'destructive', title: 'User Denied', description: `${userToApprove.firstName} ${userToApprove.lastName}'s request has been denied.` });
-            return { ...prev, pendingUsers: updatedPendingUsers };
         }
+        
+        return newState;
     });
   };
 

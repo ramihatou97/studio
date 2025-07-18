@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 
 interface RoleSwitcherProps {
     appState: AppState;
-    setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+    setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
 }
 
 export function RoleSwitcher({ appState, setAppState }: RoleSwitcherProps) {
@@ -22,10 +22,10 @@ export function RoleSwitcher({ appState, setAppState }: RoleSwitcherProps) {
             name = residents.find(r => r.id === id)?.name || 'Resident';
         }
 
-        setAppState(prev => ({
+        setAppState(prev => prev ? ({
             ...prev,
             currentUser: { role: role as UserRole, id, name }
-        }));
+        }) : null);
     };
 
     const currentValue = `${currentUser.role}:${currentUser.id}`;
