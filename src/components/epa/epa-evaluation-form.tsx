@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import type { EPA, Milestone } from '@/lib/epa-data';
 import type { AppState } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -31,6 +31,14 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
   
   const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { currentUser } = appState;
+
+  // Pre-select resident if the current user is a resident
+  useEffect(() => {
+    if (currentUser.role === 'resident') {
+        setSelectedResidentId(currentUser.id);
+    }
+  }, [currentUser]);
 
   const residentActivities = useMemo(() => {
     if (!selectedResidentId) return [];
@@ -107,6 +115,8 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
     }
   };
 
+  const isFormDisabled = currentUser.role === 'resident';
+
   return (
     <div className="flex flex-col h-full">
       <Card className="mb-4">
@@ -114,7 +124,7 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label>Select Resident</Label>
-              <Select value={selectedResidentId} onValueChange={setSelectedResidentId}>
+              <Select value={selectedResidentId} onValueChange={setSelectedResidentId} disabled={isFormDisabled}>
                 <SelectTrigger><SelectValue placeholder="Choose a resident..." /></SelectTrigger>
                 <SelectContent>
                   {appState.residents.filter(r => r.type === 'neuro').map(r => (
@@ -163,7 +173,7 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
                 {epa.milestones.map((milestone, index) => (
                   <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                     <p className="flex-1 text-sm">{milestone.text}</p>
-                    <StarRating rating={milestoneRatings[index] || 0} onRatingChange={(rating) => handleRatingChange(index, rating)} />
+                    <StarRating rating={milestoneRatings[index] || 0} onRatingChange={(rating) => handleRatingChange(index, rating)} disabled={isFormDisabled} />
                   </div>
                 ))}
               </div>
@@ -178,12 +188,12 @@ export function EpaEvaluationForm({ epa, appState }: EpaEvaluationFormProps) {
                 <div>
                     <Label className="font-semibold">Overall Entrustment Score</Label>
                     <p className="text-xs text-muted-foreground mb-2">How much supervision was required for this activity?</p>
-                    <StarRating rating={overallRating} onRatingChange={setOverallRating} />
+                    <StarRating rating={overallRating} onRatingChange={setOverallRating} disabled={isFormDisabled}/>
                 </div>
                 <div>
                     <Label className="font-semibold">Narrative Feedback</Label>
                     <p className="text-xs text-muted-foreground mb-2">Provide specific comments on strengths and areas for improvement.</p>
-                    <Textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Feedback..." />
+                    <Textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Feedback..." disabled={isFormDisabled}/>
                 </div>
             </CardContent>
             <CardFooter>

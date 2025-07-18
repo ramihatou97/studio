@@ -1,4 +1,5 @@
 
+
 export interface Staff {
   id: string;
   name: string;
@@ -157,6 +158,14 @@ export interface Evaluation {
   evaluationDate: string;
 }
 
+export type UserRole = 'program-director' | 'staff' | 'resident';
+
+export interface CurrentUser {
+  id: string; // 'program-director' or a specific staff/resident ID
+  role: UserRole;
+  name: string;
+}
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];
@@ -170,4 +179,5 @@ export interface AppState {
   onServiceCallRules: OnServiceCallRule[];
   errors?: ScheduleError[];
   evaluations?: Evaluation[];
+  currentUser: CurrentUser;
 }

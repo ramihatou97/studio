@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { AppState } from '@/lib/types';
+import type { AppState, UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -25,6 +25,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
+  
+  const currentUserRole = appState.currentUser.role;
 
   const handleGenerateClick = () => {
     setIsLoading(true);
@@ -74,36 +76,58 @@ export default function Home() {
   
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <AppHeader appState={appState} setAppState={setAppState}/>
       <main className="container mx-auto p-4 md:p-8">
-        <Card className="mb-8 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">Configuration</CardTitle>
-            <CardDescription>
-              Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <AiPrepopulation setAppState={setAppState} appState={appState} />
-            <Separator />
-            <div className="grid md:grid-cols-2 gap-8">
-              <GeneralSettings appState={appState} setAppState={setAppState} />
-              <ResidentsConfig appState={appState} setAppState={setAppState} />
-            </div>
-            <Accordion type="single" collapsible className="w-full space-y-4">
-              <StaffConfig appState={appState} setAppState={setAppState} />
-              <OrClinicConfig appState={appState} setAppState={setAppState} />
-            </Accordion>
-          </CardContent>
-        </Card>
+        
+        {currentUserRole === 'program-director' && (
+          <Card className="mb-8 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">Configuration</CardTitle>
+              <CardDescription>
+                Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <AiPrepopulation setAppState={setAppState} appState={appState} />
+              <Separator />
+              <div className="grid md:grid-cols-2 gap-8">
+                <GeneralSettings appState={appState} setAppState={setAppState} />
+                <ResidentsConfig appState={appState} setAppState={setAppState} />
+              </div>
+              <Accordion type="single" collapsible className="w-full space-y-4">
+                <StaffConfig appState={appState} setAppState={setAppState} />
+                <OrClinicConfig appState={appState} setAppState={setAppState} />
+              </Accordion>
+            </CardContent>
+          </Card>
+        )}
+        
+        {currentUserRole === 'staff' && (
+             <Card className="mb-8 shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-bold">Staff Configuration</CardTitle>
+                    <CardDescription>
+                        As a staff surgeon, you can configure your on-call, OR, and clinic assignments.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <Accordion type="single" collapsible defaultValue="staff-config" className="w-full space-y-4">
+                        <StaffConfig appState={appState} setAppState={setAppState} />
+                        <OrClinicConfig appState={appState} setAppState={setAppState} />
+                    </Accordion>
+                </CardContent>
+            </Card>
+        )}
 
-        <ActionButtons
-          onGenerate={handleGenerateClick}
-          appState={appState}
-          setAppState={setAppState}
-          isLoading={isLoading}
-          hasGenerated={hasGenerated}
-        />
+        {currentUserRole === 'program-director' && (
+            <ActionButtons
+            onGenerate={handleGenerateClick}
+            appState={appState}
+            setAppState={setAppState}
+            isLoading={isLoading}
+            hasGenerated={hasGenerated}
+            />
+        )}
 
         {isLoading && (
           <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8">
@@ -123,6 +147,18 @@ export default function Home() {
             </div>
           )
         )}
+
+        {/* Action buttons are shown for all roles once a schedule is generated */}
+        {hasGenerated && currentUserRole !== 'program-director' && (
+            <ActionButtons
+                onGenerate={handleGenerateClick}
+                appState={appState}
+                setAppState={setAppState}
+                isLoading={isLoading}
+                hasGenerated={hasGenerated}
+            />
+        )}
+
         <AboutSection />
       </main>
     </div>

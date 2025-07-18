@@ -31,6 +31,11 @@ export function getInitialAppState(): AppState {
       { minDays: 27, maxDays: 29, calls: 7 },
       { minDays: 30, maxDays: 31, calls: 8 },
     ],
+    currentUser: {
+        id: 'program-director',
+        role: 'program-director',
+        name: 'Program Director',
+    }
   };
 }
 

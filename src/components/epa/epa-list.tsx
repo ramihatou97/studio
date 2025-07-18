@@ -2,6 +2,7 @@
 "use client";
 import { useState } from 'react';
 import type { EPA } from '@/lib/epa-data';
+import type { UserRole } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '../ui/button';
@@ -10,9 +11,10 @@ import { Badge } from '../ui/badge';
 interface EpaListProps {
   epas: EPA[];
   onSelectEpa: (epa: EPA) => void;
+  currentUserRole: UserRole;
 }
 
-export function EpaList({ epas, onSelectEpa }: EpaListProps) {
+export function EpaList({ epas, onSelectEpa, currentUserRole }: EpaListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredEpas = epas.filter(epa =>
@@ -20,6 +22,8 @@ export function EpaList({ epas, onSelectEpa }: EpaListProps) {
     epa.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (epa.stage && epa.stage.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  
+  const canTriggerEvaluation = currentUserRole === 'program-director' || currentUserRole === 'staff';
 
   return (
     <div className="flex flex-col h-full">
@@ -44,7 +48,11 @@ export function EpaList({ epas, onSelectEpa }: EpaListProps) {
                     {epa.type && <Badge variant="outline">{epa.type}</Badge>}
                  </div>
               </div>
-              <Button onClick={() => onSelectEpa(epa)}>Evaluate</Button>
+              {canTriggerEvaluation ? (
+                <Button onClick={() => onSelectEpa(epa)}>Evaluate</Button>
+              ) : (
+                <Button onClick={() => onSelectEpa(epa)}>View Details</Button>
+              )}
             </div>
           ))}
         </div>

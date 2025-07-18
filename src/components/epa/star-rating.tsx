@@ -8,9 +8,10 @@ interface StarRatingProps {
   rating: number;
   onRatingChange: (rating: number) => void;
   starCount?: number;
+  disabled?: boolean;
 }
 
-export function StarRating({ rating, onRatingChange, starCount = 5 }: StarRatingProps) {
+export function StarRating({ rating, onRatingChange, starCount = 5, disabled = false }: StarRatingProps) {
   const [hover, setHover] = useState(0);
 
   return (
@@ -22,12 +23,14 @@ export function StarRating({ rating, onRatingChange, starCount = 5 }: StarRating
             type="button"
             key={starValue}
             className={cn(
-              "cursor-pointer transition-colors",
+              "transition-colors",
+              disabled ? "cursor-not-allowed" : "cursor-pointer",
               starValue <= (hover || rating) ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"
             )}
-            onClick={() => onRatingChange(starValue)}
-            onMouseEnter={() => setHover(starValue)}
-            onMouseLeave={() => setHover(0)}
+            onClick={() => !disabled && onRatingChange(starValue)}
+            onMouseEnter={() => !disabled && setHover(starValue)}
+            onMouseLeave={() => !disabled && setHover(0)}
+            disabled={disabled}
           >
             <Star className="w-6 h-6 fill-current" />
           </button>

@@ -18,6 +18,7 @@ interface EpaModalProps {
 
 export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
   const [selectedEpa, setSelectedEpa] = useState<EPA | null>(null);
+  const { currentUser } = appState;
 
   const handleSelectEpa = (epa: EPA) => {
     setSelectedEpa(epa);
@@ -68,7 +69,7 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
               onBack={handleBackToList}
             />
           ) : (
-            <EpaList epas={ALL_EPAS} onSelectEpa={handleSelectEpa} />
+            <EpaList epas={ALL_EPAS} onSelectEpa={handleSelectEpa} currentUserRole={currentUser.role} />
           )}
         </div>
       </DialogContent>

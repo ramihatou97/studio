@@ -33,6 +33,8 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const currentUserRole = appState.currentUser.role;
+
   const handleSave = () => {
     try {
       const stateString = JSON.stringify(appState, null, 2);
@@ -85,29 +87,34 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
   return (
     <>
       <div className="my-8 flex flex-col items-center space-y-4">
-        <Button
-          onClick={onGenerate}
-          disabled={isLoading}
-          className="w-full md:w-1/2 text-lg py-6"
-        >
-          {isLoading ? (
-            <><Bot className="mr-2 h-5 w-5 animate-spin" /> Generating...</>
-          ) : (
-            <><Wand2 className="mr-2 h-5 w-5" /> {hasGenerated ? 'Re-generate Schedules' : 'Generate Schedules'}</>
-          )}
-        </Button>
-        <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-2">
-            <Button onClick={handleSave} variant="outline">
-                <FileDown className="mr-2 h-4 w-4" /> Save Config
-            </Button>
-            <Button onClick={handleLoadClick} variant="outline">
-                <FileUp className="mr-2 h-4 w-4" /> Load Config
-            </Button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
-        </div>
+        {currentUserRole === 'program-director' && (
+            <>
+                <Button
+                onClick={onGenerate}
+                disabled={isLoading}
+                className="w-full md:w-1/2 text-lg py-6"
+                >
+                {isLoading ? (
+                    <><Bot className="mr-2 h-5 w-5 animate-spin" /> Generating...</>
+                ) : (
+                    <><Wand2 className="mr-2 h-5 w-5" /> {hasGenerated ? 'Re-generate Schedules' : 'Generate Schedules'}</>
+                )}
+                </Button>
+                <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <Button onClick={handleSave} variant="outline">
+                        <FileDown className="mr-2 h-4 w-4" /> Save Config
+                    </Button>
+                    <Button onClick={handleLoadClick} variant="outline">
+                        <FileUp className="mr-2 h-4 w-4" /> Load Config
+                    </Button>
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
+                </div>
+            </>
+        )}
+        
         {hasGenerated && (
-          <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {appState.errors && appState.errors.length > 0 && (
+          <div className="w-full md:w-3/4 lg:w-2/3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {currentUserRole === 'program-director' && appState.errors && appState.errors.length > 0 && (
                 <Button onClick={() => setOptimizerModalOpen(true)} variant="outline" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">
                     <Sparkles className="mr-2 h-4 w-4" /> AI Optimizer
                 </Button>
@@ -115,21 +122,29 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
              <Button onClick={() => setSurgicalBriefingModalOpen(true)} variant="outline" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-indigo-500/20">
                 <BrainCircuit className="mr-2 h-4 w-4" /> Surgical Briefing
             </Button>
-            <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-500/20">
-              <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
-            </Button>
-            <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20">
-              <FileText className="mr-2 h-4 w-4" /> Handover Email
-            </Button>
+            {currentUserRole === 'program-director' && (
+                <Button onClick={() => setAnalysisModalOpen(true)} variant="outline" className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-500/20">
+                <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
+                </Button>
+            )}
+            {currentUserRole === 'program-director' && (
+                <Button onClick={() => setHandoverModalOpen(true)} variant="outline" className="bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 border-sky-500/20">
+                <FileText className="mr-2 h-4 w-4" /> Handover Email
+                </Button>
+            )}
             <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20">
               <BookUser className="mr-2 h-4 w-4" /> Procedure Log
             </Button>
-            <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">
-              <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
-            </Button>
-            <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
-                <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
-            </Button>
+            {currentUserRole === 'program-director' && (
+                <Button onClick={() => setLongTermAnalysisModalOpen(true)} variant="outline" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">
+                <BarChart className="mr-2 h-4 w-4" /> Long-Term Analysis
+                </Button>
+            )}
+            {currentUserRole === 'program-director' && (
+                <Button onClick={() => setChatModalOpen(true)} variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
+                    <MessageCircle className="mr-2 h-4 w-4" /> Chat with AI
+                </Button>
+            )}
             <Button onClick={() => setEpaModalOpen(true)} variant="outline" className="col-span-1 md:col-span-2 lg:col-span-3 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 border-teal-500/20">
                 <GraduationCap className="mr-2 h-4 w-4" /> EPA Evaluations
             </Button>

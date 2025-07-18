@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,13 +14,21 @@ interface ProcedureLogModalProps {
 
 export function ProcedureLogModal({ isOpen, onOpenChange, appState }: ProcedureLogModalProps) {
   const [selectedResidentId, setSelectedResidentId] = useState<string>('');
+  const { currentUser, residents } = appState;
 
-  const neuroResidents = useMemo(() => appState.residents.filter(r => r.type === 'neuro'), [appState.residents]);
+  // If current user is a resident, pre-select them and disable the dropdown.
+  useEffect(() => {
+    if (currentUser.role === 'resident') {
+      setSelectedResidentId(currentUser.id);
+    }
+  }, [currentUser]);
+
+  const neuroResidents = useMemo(() => residents.filter(r => r.type === 'neuro'), [residents]);
 
   const procedureLogData = useMemo(() => {
     if (!selectedResidentId) return [];
 
-    const resident = appState.residents.find(r => r.id === selectedResidentId);
+    const resident = residents.find(r => r.id === selectedResidentId);
     if (!resident) return [];
 
     const log: (OrCase & { date: string })[] = [];
@@ -45,7 +53,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState }: ProcedureL
   const handleExportCSV = () => {
     if (!procedureLogData.length || !selectedResidentId) return;
     
-    const residentName = appState.residents.find(r => r.id === selectedResidentId)?.name || 'resident';
+    const residentName = residents.find(r => r.id === selectedResidentId)?.name || 'resident';
 
     const headers = [
         "Date", "Patient Age", "Patient Sex", "Patient MRN", "Attending", 
@@ -80,6 +88,8 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState }: ProcedureL
         document.body.removeChild(link);
     }
   };
+  
+  const isDropdownDisabled = currentUser.role === 'resident';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -87,12 +97,15 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState }: ProcedureL
         <DialogHeader>
           <DialogTitle>Resident Procedure Log</DialogTitle>
           <DialogDescription>
-            Select a resident to view their assigned OR cases from this schedule and export them to a CSV file for personal logging.
+            {isDropdownDisabled
+              ? "View your assigned OR cases from this schedule and export them to a CSV file for personal logging."
+              : "Select a resident to view their assigned OR cases from this schedule and export them to a CSV file."
+            }
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex items-center gap-4 p-4 border rounded-lg">
-          <Select value={selectedResidentId} onValueChange={setSelectedResidentId}>
+          <Select value={selectedResidentId} onValueChange={setSelectedResidentId} disabled={isDropdownDisabled}>
             <SelectTrigger className="flex-1"><SelectValue placeholder="Select a resident..." /></SelectTrigger>
             <SelectContent>
               {neuroResidents.map(r => (
