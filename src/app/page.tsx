@@ -15,6 +15,7 @@ import { GeneralSettings } from '@/components/config-sections/general-settings';
 import { ResidentsConfig } from '@/components/config-sections/residents-config';
 import { StaffConfig } from '@/components/config-sections/staff-config';
 import { OrClinicConfig } from '@/components/config-sections/or-clinic-config';
+import { HolidayCoverage } from '@/components/config-sections/holiday-coverage';
 import { ActionButtons } from '@/components/action-buttons';
 import { ScheduleDisplay } from '@/components/schedule-display';
 import { getInitialAppState } from '@/lib/config-helpers';
