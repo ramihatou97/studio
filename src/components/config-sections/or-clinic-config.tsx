@@ -53,6 +53,7 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
                 surgeon: caseItem.surgeon,
                 diagnosis: caseItem.diagnosis,
                 procedure: caseItem.procedure,
+                procedureCode: caseItem.procedureCode,
             });
         }
       });
@@ -74,12 +75,12 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
         </h4>
         <p className="text-sm text-muted-foreground mb-4">
             Paste the text of an existing OR schedule to have the AI extract and populate the assignments.
-            Include day numbers, surgeon names, and case details.
+            Include day numbers, surgeon names, case details, and procedure codes.
         </p>
         <Textarea
             rows={4}
             className="mt-1"
-            placeholder="e.g., 'July 1: Dr. Smith - Craniotomy for tumor. Dr. Jones - ACDF C5-6...'"
+            placeholder="e.g., 'July 1: Dr. Smith - Craniotomy for tumor (61510). Dr. Jones - ACDF C5-6 (22551)...'"
             value={text}
             onChange={(e) => setText(e.target.value)}
         />
@@ -101,7 +102,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const { general, orCases, staff, clinicAssignments } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
-  const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '' });
+  const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '', procedureCode: '' });
   const [selectedSurgeon, setSelectedSurgeon] = useState<string>('');
   
   const [newClinic, setNewClinic] = useState<Partial<ClinicAssignment>>({});
@@ -138,7 +139,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     }
     newOrCases[dayIndex].push(fullCase);
     setAppState(prev => ({ ...prev, orCases: newOrCases }));
-    setNewCase({ diagnosis: '', procedure: '' });
+    setNewCase({ diagnosis: '', procedure: '', procedureCode: '' });
     setSelectedSurgeon('');
   };
   
@@ -275,7 +276,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                 {currentEditingDay !== null && (orCases[currentEditingDay] || []).map((c, i) => (
                     <div key={i} className="p-2 bg-muted rounded-md flex justify-between items-center">
                     <div>
-                        <p className="font-semibold">{c.procedure}</p>
+                        <p className="font-semibold">{c.procedure} <span className="font-normal text-muted-foreground">({c.procedureCode})</span></p>
                         <p className="text-sm text-muted-foreground">{c.surgeon} | {c.diagnosis}</p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => handleRemoveCase(currentEditingDay, i)}><Trash2 className="h-4 w-4"/></Button>
@@ -301,9 +302,15 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                         <Label>Diagnosis</Label>
                         <Input value={newCase.diagnosis} onChange={e => setNewCase(c => ({...c, diagnosis: e.target.value}))}/>
                     </div>
-                    <div className="md:col-span-2">
-                        <Label>Approach / Procedure</Label>
-                        <Input value={newCase.procedure} onChange={e => setNewCase(c => ({...c, procedure: e.target.value}))} />
+                    <div className="md:col-span-2 grid grid-cols-3 gap-2">
+                        <div className="col-span-2">
+                           <Label>Approach / Procedure</Label>
+                           <Input value={newCase.procedure} onChange={e => setNewCase(c => ({...c, procedure: e.target.value}))} />
+                        </div>
+                         <div>
+                           <Label>Code</Label>
+                           <Input value={newCase.procedureCode} onChange={e => setNewCase(c => ({...c, procedureCode: e.target.value}))} />
+                        </div>
                     </div>
                 </div>
                 <Button onClick={handleAddCase} className="w-full mt-2">Add Case</Button>

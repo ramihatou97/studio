@@ -24,6 +24,7 @@ const PrepopulateOrCasesOutputSchema = z.object({
       surgeon: z.string().describe('The name of the surgeon performing the case.'),
       diagnosis: z.string().describe('The diagnosis for the case.'),
       procedure: z.string().describe('The procedure for the case.'),
+      procedureCode: z.string().describe('The procedure code for the case.'),
     })
   ).describe('The extracted OR case schedule.'),
 });
@@ -39,7 +40,7 @@ const prompt = ai.definePrompt({
   output: {schema: PrepopulateOrCasesOutputSchema},
   prompt: `You are an AI assistant that extracts an OR case schedule from a block of text.
   The user will provide text representing a monthly OR schedule and a list of valid staff surgeon names.
-  Parse the text to identify the day number, the surgeon, the diagnosis, and the procedure for each case mentioned.
+  Parse the text to identify the day number, the surgeon, the diagnosis, the procedure, and the procedure code for each case mentioned.
   Match the surgeon names from the text to the provided staff list. The output must only contain names from the provided staff list.
   The day should be the day of the month (e.g., for "July 1st", the day is 1).
 

@@ -9,6 +9,7 @@ export interface OrCase {
   surgeon: string;
   diagnosis: string;
   procedure: string;
+  procedureCode: string;
 }
 
 export interface ClinicAssignment {
@@ -122,6 +123,7 @@ export interface ResidentCall {
 export interface HistoricalCase {
     date: string; // YYYY-MM-DD
     procedure: string;
+    procedureCode: string;
     diagnosis: string;
     surgeon: string;
     caseType: 'cranial' | 'spine' | 'other';
