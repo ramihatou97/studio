@@ -260,7 +260,12 @@ export default function AppPage() {
         {showMobileStaffConfig && (
             <Card className="shadow-lg">
                 <CardHeader><CardTitle>Staff Configuration</CardTitle><CardDescription>Configure your on-call, OR, and clinic assignments.</CardDescription></CardHeader>
-                <CardContent><Accordion type="single" collapsible defaultValue="staff-config" className="w-full space-y-4"><StaffConfig appState={appState} setAppState={setAppState} /><OrClinicConfig appState={appState} setAppState={setAppState} /></Accordion></CardContent>
+                <CardContent>
+                    <div className="w-full space-y-4">
+                        <StaffConfig appState={appState} setAppState={setAppState} />
+                        <OrClinicConfig appState={appState} setAppState={setAppState} />
+                    </div>
+                </CardContent>
             </Card>
         )}
         <Card onClick={() => setShowMobileSchedule(!showMobileSchedule)} className="cursor-pointer hover:bg-muted transition-colors shadow-sm">
