@@ -5,7 +5,7 @@ import { optimizeScheduleAction } from '@/ai/actions';
 import type { AppState, Resident } from '@/lib/types';
 import { Bot, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '../ui/card';
-import { validateSchedule } from '@/lib/schedule-generator';
+import { generateSchedules } from '@/lib/schedule-generator';
 import { useToast } from '@/hooks/use-toast';
 
 interface OptimizerModalProps {
@@ -36,7 +36,7 @@ export function OptimizerModal({ isOpen, onOpenChange, appState, setAppState }: 
       const fetchSuggestion = async () => {
         setIsLoading(true);
         setSuggestion(null);
-        const conflictDetails = (appState.errors || []).join('\n');
+        const conflictDetails = (appState.errors || []).map(e => e.message).join('\n');
         const result = await optimizeScheduleAction(appState, conflictDetails);
         if (result.success) {
           setSuggestion(result.data);
@@ -53,7 +53,8 @@ export function OptimizerModal({ isOpen, onOpenChange, appState, setAppState }: 
     if (!suggestion || typeof suggestion.suggestedSwaps === 'string') return;
 
     setAppState(prev => {
-        let newResidents = [...prev.residents];
+        let tempState = { ...prev };
+        let newResidents = [...tempState.residents];
         
         suggestion.suggestedSwaps.forEach(swap => {
             const dayIndex = swap.day - 1;
@@ -64,23 +65,28 @@ export function OptimizerModal({ isOpen, onOpenChange, appState, setAppState }: 
                 const res1Activity = newResidents[res1Index].schedule[dayIndex];
                 const res2Activity = newResidents[res2Index].schedule[dayIndex];
 
-                const tempResidents = [...newResidents];
-                tempResidents[res1Index] = {
-                    ...tempResidents[res1Index],
-                    schedule: tempResidents[res1Index].schedule.map((s, i) => i === dayIndex ? res2Activity : s)
+                const tempSwapResidents = [...newResidents];
+                tempSwapResidents[res1Index] = {
+                    ...tempSwapResidents[res1Index],
+                    schedule: tempSwapResidents[res1Index].schedule.map((s, i) => i === dayIndex ? res2Activity : s)
                 };
-                tempResidents[res2Index] = {
-                    ...tempResidents[res2Index],
-                    schedule: tempResidents[res2Index].schedule.map((s, i) => i === dayIndex ? res1Activity : s)
+                tempSwapResidents[res2Index] = {
+                    ...tempSwapResidents[res2Index],
+                    schedule: tempSwapResidents[res2Index].schedule.map((s, i) => i === dayIndex ? res1Activity : s)
                 };
-                newResidents = tempResidents;
+                newResidents = tempSwapResidents;
             }
         });
         
-        // Re-validate the schedule after applying all swaps
-        const newErrors = validateSchedule({ ...prev, residents: newResidents });
+        // Re-generate the schedule with the swapped residents to re-validate everything
+        const updatedStateWithSwaps = { ...tempState, residents: newResidents };
+        const finalOutput = generateSchedules(updatedStateWithSwaps);
 
-        return { ...prev, residents: newResidents, errors: newErrors };
+        return { 
+          ...tempState, 
+          residents: finalOutput.residents, 
+          errors: finalOutput.errors 
+        };
     });
     
     toast({ title: "AI Fixes Applied", description: "The schedule has been updated with the AI's suggestions." });

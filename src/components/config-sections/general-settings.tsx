@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { OnServiceCallRules } from "./on-service-call-rules";
-import { HolidayCoverage } from "./holiday-coverage";
 
 interface GeneralSettingsProps {
   appState: AppState;
@@ -14,7 +13,7 @@ interface GeneralSettingsProps {
 
 export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps) {
   const handleGeneralChange = (field: string, value: any) => {
-    setAppState(prev => ({ ...prev, general: { ...prev.general, [field]: value } }));
+    setAppState(prev => prev ? ({ ...prev, general: { ...prev.general, [field]: value } }) : null);
   };
   
   const { general } = appState;
@@ -49,7 +48,6 @@ export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps)
       
       <Accordion type="single" collapsible className="w-full space-y-4">
         <OnServiceCallRules appState={appState} setAppState={setAppState} />
-        <HolidayCoverage appState={appState} setAppState={setAppState} />
       </Accordion>
     </div>
   );

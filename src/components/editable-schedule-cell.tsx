@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface EditableScheduleCellProps {
   resident: Resident;
   dayIndex: number;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
   hasError: boolean;
 }
 
@@ -36,6 +36,7 @@ export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError
 
   const handleActivityChange = (newActivity: PossibleActivity) => {
     setAppState(prev => {
+      if (!prev) return null;
       const newResidents = prev.residents.map(r => {
         if (r.id === resident.id) {
           const newSchedule = [...r.schedule];

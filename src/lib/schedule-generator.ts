@@ -1,75 +1,6 @@
 import type { AppState, ScheduleOutput, Resident, MedicalStudent, OtherLearner, ScheduleActivity, ScheduleError } from './types';
 
 
-// Validation function to check for rule violations
-export function validateSchedule(appState: AppState): ScheduleError[] {
-  const { residents, general, onServiceCallRules } = appState;
-  const { startDate, endDate } = general;
-  const errors: ScheduleError[] = [];
-  
-  if (!startDate || !endDate) return [{ type: 'NO_ELIGIBLE_RESIDENT', message: "Start and End dates must be set." }];
-  const numberOfDays = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-  // Recalculate call stats from the schedule
-  const validatedResidents = residents.map(r => {
-      const callDays: number[] = [];
-      let weekendCalls = 0;
-      r.schedule.forEach((activities, dayIndex) => {
-          if (activities.some(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string))) {
-              callDays.push(dayIndex);
-              const currentDate = new Date(startDate);
-              currentDate.setDate(currentDate.getDate() + dayIndex);
-              const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-              if (isWeekend) weekendCalls++;
-          }
-      });
-      return {...r, callDays, weekendCalls};
-  });
-  
-  validatedResidents.forEach(res => {
-    // Rule: Max calls
-    const maxCalls = res.onService ? (onServiceCallRules.find(rule => (numberOfDays - res.vacationDays.length) >= rule.minDays && (numberOfDays - res.vacationDays.length) <= rule.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
-    if (res.callDays.length > maxCalls && maxCalls > 0) {
-        errors.push({
-            type: 'MAX_CALLS',
-            message: `${res.name} exceeds max calls (${res.callDays.length}/${maxCalls}).`,
-            residentId: res.id,
-        });
-    }
-
-    // Rule: Post-call violations
-    for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
-        const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
-        if (hasNightOrWeekendCall && !res.schedule[dayIndex + 1].includes('Post-Call') && !res.schedule[dayIndex + 1].includes('Vacation')) {
-            errors.push({
-                type: 'POST_CALL_VIOLATION',
-                message: `${res.name} has a post-call violation on day ${dayIndex + 2}.`,
-                residentId: res.id,
-                dayIndex: dayIndex + 1
-            });
-        }
-    }
-    
-    // Rule: PGY-1 solo call
-    if (res.type === 'neuro' && res.level === 1 && !res.allowSoloPgy1Call) {
-        res.callDays.forEach(dayIndex => {
-            const backupPresent = validatedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
-            if (!backupPresent) {
-                errors.push({
-                    type: 'NO_BACKUP',
-                    message: `PGY-1 ${res.name} is on call without backup on day ${dayIndex + 1}.`,
-                    residentId: res.id,
-                    dayIndex: dayIndex
-                });
-            }
-        });
-    }
-  });
-
-  return errors;
-}
-
-
 // Main function to generate all schedules
 export function generateSchedules(appState: AppState): ScheduleOutput {
   const { residents, medicalStudents, otherLearners, general, onServiceCallRules, residentCall, orCases, clinicAssignments, staffCall } = appState;
@@ -406,12 +337,52 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   const updatedMedicalStudents = medicalStudents.map(student => ({ ...student }));
   const updatedOtherLearners = otherLearners.map(learner => ({ ...learner }));
 
-  const finalErrors = validateSchedule({ ...appState, residents: processedResidents });
+  // --- Final Validation Pass ---
+  processedResidents.forEach(res => {
+    // Rule: Max calls
+    const maxCalls = res.onService ? (onServiceCallRules.find(rule => (numberOfDays - res.vacationDays.length) >= rule.minDays && (numberOfDays - res.vacationDays.length) <= rule.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
+    if (res.callDays.length > maxCalls && maxCalls > 0) {
+        generationErrors.push({
+            type: 'MAX_CALLS',
+            message: `${res.name} exceeds max calls (${res.callDays.length}/${maxCalls}).`,
+            residentId: res.id,
+        });
+    }
+
+    // Rule: Post-call violations
+    for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
+        const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
+        if (hasNightOrWeekendCall && !res.schedule[dayIndex + 1].includes('Post-Call') && !res.schedule[dayIndex + 1].includes('Vacation')) {
+            generationErrors.push({
+                type: 'POST_CALL_VIOLATION',
+                message: `${res.name} has a post-call violation on day ${dayIndex + 2}.`,
+                residentId: res.id,
+                dayIndex: dayIndex + 1
+            });
+        }
+    }
+    
+    // Rule: PGY-1 solo call
+    if (res.type === 'neuro' && res.level === 1 && !res.allowSoloPgy1Call) {
+        res.callDays.forEach(dayIndex => {
+            const backupPresent = processedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
+            if (!backupPresent) {
+                generationErrors.push({
+                    type: 'NO_BACKUP',
+                    message: `PGY-1 ${res.name} is on call without backup on day ${dayIndex + 1}.`,
+                    residentId: res.id,
+                    dayIndex: dayIndex
+                });
+            }
+        });
+    }
+  });
+
 
   return {
     residents: processedResidents,
     medicalStudents: updatedMedicalStudents,
     otherLearners: updatedOtherLearners,
-    errors: [...generationErrors, ...finalErrors],
+    errors: generationErrors,
   };
 }

@@ -20,38 +20,29 @@ import { ScheduleDisplay } from '@/components/schedule-display';
 import { getInitialAppState } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
 
-// Return a minimal, empty state for server-side rendering to prevent hydration mismatches
-const getSsrState = (): AppState => ({
-  general: { startDate: '', endDate: '', statHolidays: '', usePredefinedCall: false, christmasStart: '', christmasEnd: '', newYearStart: '', newYearEnd: '' },
-  residents: [],
-  medicalStudents: [],
-  otherLearners: [],
-  staff: [],
-  staffCall: [],
-  orCases: {},
-  clinicAssignments: [],
-  residentCall: [],
-  onServiceCallRules: [],
-  manualProcedures: [],
-  currentUser: { id: 'program-director', role: 'program-director', name: 'Program Director' }
-});
-
-
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>(getSsrState);
-  const [isClient, setIsClient] = useState(false);
-
-  // This effect runs only on the client, after initial render
-  useEffect(() => {
-    // Load the full initial state with sample data on the client side
-    setAppState(getInitialAppState());
-    setIsClient(true);
-  }, []);
-  
+  const [appState, setAppState] = useState<AppState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
   
+  // This effect runs only on the client, after initial render
+  useEffect(() => {
+    // Load the full initial state with sample data on the client side
+    setAppState(getInitialAppState());
+  }, []);
+  
+  if (!appState) {
+    return (
+        <div className="flex items-center justify-center h-screen text-muted-foreground bg-background">
+            <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p>Loading MediShift...</p>
+            </div>
+        </div>
+    );
+  }
+
   const currentUserRole = appState.currentUser.role;
 
   const handleGenerateClick = () => {
@@ -62,13 +53,13 @@ export default function Home() {
     setTimeout(() => {
       try {
         const output = generateSchedules(appState);
-        setAppState(prev => ({
+        setAppState(prev => prev ? ({
           ...prev,
           residents: output.residents,
           medicalStudents: output.medicalStudents,
           otherLearners: output.otherLearners,
           errors: output.errors,
-        }));
+        }) : null);
         setHasGenerated(true);
 
         if (output.errors.length > 0) {
@@ -100,14 +91,9 @@ export default function Home() {
     }, 500);
   };
   
-  // Don't render the main content until the client-side state is loaded
-  if (!isClient) {
-    return null; 
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader appState={appState} setAppState={setAppState}/>
+      <AppHeader appState={appState} setAppState={setAppState} />
       <main className="container mx-auto p-4 md:p-8">
         
         {currentUserRole === 'program-director' && (
@@ -128,6 +114,7 @@ export default function Home() {
               <Accordion type="single" collapsible className="w-full space-y-4">
                 <StaffConfig appState={appState} setAppState={setAppState} />
                 <OrClinicConfig appState={appState} setAppState={setAppState} />
+                <HolidayCoverage appState={appState} setAppState={setAppState} />
               </Accordion>
             </CardContent>
           </Card>
@@ -149,16 +136,14 @@ export default function Home() {
                 </CardContent>
             </Card>
         )}
-
-        {currentUserRole === 'program-director' && (
-            <ActionButtons
+        
+        <ActionButtons
             onGenerate={handleGenerateClick}
             appState={appState}
             setAppState={setAppState}
             isLoading={isLoading}
             hasGenerated={hasGenerated}
-            />
-        )}
+        />
 
         {isLoading && (
           <div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8">
@@ -177,17 +162,6 @@ export default function Home() {
               <p>Generate schedules to view them here.</p>
             </div>
           )
-        )}
-
-        {/* Action buttons are shown for all roles once a schedule is generated */}
-        {hasGenerated && currentUserRole !== 'program-director' && (
-            <ActionButtons
-                onGenerate={handleGenerateClick}
-                appState={appState}
-                setAppState={setAppState}
-                isLoading={isLoading}
-                hasGenerated={hasGenerated}
-            />
         )}
 
         <AboutSection />
