@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import type { AppState, Resident } from '@/lib/types';
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ interface ResidentCardProps {
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
 }
 
-export function ResidentCard({ resident, updateResident, removeResident, appState }: ResidentCardProps) {
+export function ResidentCard({ resident, updateResident, removeResident, appState, setAppState }: ResidentCardProps) {
   
   const { numberOfDays } = (() => {
     const start = new Date(appState.general.startDate);
@@ -48,24 +49,31 @@ export function ResidentCard({ resident, updateResident, removeResident, appStat
     updateResident(resident.id, { vacationDays });
   };
   
-  const handleChiefChange = (value: string) => {
-    const isChief = value === resident.id;
-    // Unset other chiefs
-    const updatedResidents = appState.residents.map(r => 
-        r.id === resident.id ? {...r, isChief} : {...r, isChief: false}
-    );
-     // Bit of a hack, but we need to update the whole array
-    appState.residents.forEach(r => updateResident(r.id, { isChief: r.id === resident.id }));
+  const handleChiefChange = (selectedResidentId: string) => {
+    const isChiefSelected = appState.residents.find(r => r.id === selectedResidentId)?.isChief ?? false;
+
+    // If the selected resident is already the chief, do nothing on re-selection of the same radio button.
+    // If we want to allow deselecting, a different UI like a toggle would be better.
+    if (isChiefSelected) return;
+
+    setAppState(prevState => {
+      if (!prevState) return prevState;
+      const updatedResidents = prevState.residents.map(r => ({
+        ...r,
+        isChief: r.id === selectedResidentId
+      }));
+      return { ...prevState, residents: updatedResidents };
+    });
   }
 
   const cardClasses = resident.type === 'neuro'
     ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
     : 'bg-teal-50 dark:bg-teal-900/50 border-teal-200 dark:border-teal-700';
   
-  const isChief = appState.residents.find(r => r.id === resident.id)?.isChief ?? false;
+  const chiefResidentId = appState.residents.find(r => r.isChief)?.id;
 
   return (
-    <div className={`resident-entry flex flex-col space-y-3 p-3 rounded-lg border ${cardClasses} ${isChief ? 'border-2 border-yellow-400 dark:border-yellow-500' : ''}`}>
+    <div className={`resident-entry flex flex-col space-y-3 p-3 rounded-lg border ${cardClasses} ${resident.isChief ? 'border-2 border-yellow-400 dark:border-yellow-500' : ''}`}>
       <div className="flex items-center space-x-3">
         {resident.type === 'neuro' ? (
           <Input placeholder="Resident Name" value={resident.name} onChange={(e) => updateResident(resident.id, { name: e.target.value })} className="flex-grow" />
@@ -154,14 +162,14 @@ export function ResidentCard({ resident, updateResident, removeResident, appStat
       {resident.type === 'neuro' && (
         <>
             <div className="flex items-center space-x-2 pt-2 border-t">
-                <RadioGroup onValueChange={handleChiefChange} value={isChief ? resident.id : ''}>
+                <RadioGroup onValueChange={handleChiefChange} value={chiefResidentId}>
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value={resident.id} id={`chief-radio-${resident.id}`} />
                         <Label htmlFor={`chief-radio-${resident.id}`} className="font-medium text-yellow-600 dark:text-yellow-400">Set as Chief</Label>
                     </div>
                 </RadioGroup>
             </div>
-            {isChief && (
+            {resident.isChief && (
                 <div className="chief-or-days-container bg-yellow-50 dark:bg-yellow-900/30 p-2 rounded-md">
                     <Label className="font-semibold text-yellow-600 dark:text-yellow-400">Chief's Chosen OR Days (by day #)</Label>
                     <Input 
