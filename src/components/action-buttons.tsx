@@ -159,10 +159,12 @@ export function ActionButtons({ onGenerate, appState, setAppState, isLoading, ha
       <div className="flex flex-col items-center space-y-4">
         <h3 className="text-center font-semibold text-lg mb-2">Strategic & Educational Tools</h3>
         <div className="w-full md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button onClick={() => setYearlyRotationModalOpen(true)} variant="outline" className="h-20 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 flex-col">
-                <CalendarDays className="h-6 w-6 mb-1"/>
-                <span className="font-semibold">Yearly Rotation Planner</span>
-            </Button>
+            {currentUserRole === 'program-director' && (
+              <Button onClick={() => setYearlyRotationModalOpen(true)} variant="outline" className="h-20 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 flex-col">
+                  <CalendarDays className="h-6 w-6 mb-1"/>
+                  <span className="font-semibold">Yearly Rotation Planner</span>
+              </Button>
+            )}
             <Button onClick={() => setProcedureLogModalOpen(true)} variant="outline" className="h-20 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border-rose-500/20 flex-col">
               <BookUser className="h-6 w-6 mb-1" />
               <span className="font-semibold">Procedure Log</span>
