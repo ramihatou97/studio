@@ -23,7 +23,17 @@ export function EpaList({ epas, onSelectEpa, currentUserRole }: EpaListProps) {
     (epa.stage && epa.stage.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  const canTriggerEvaluation = currentUserRole === 'program-director' || currentUserRole === 'staff';
+  const getButtonText = () => {
+      switch (currentUserRole) {
+          case 'program-director':
+          case 'staff':
+              return 'Evaluate';
+          case 'resident':
+              return 'Request Evaluation';
+          default:
+              return 'View Details';
+      }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -48,11 +58,7 @@ export function EpaList({ epas, onSelectEpa, currentUserRole }: EpaListProps) {
                     {epa.type && <Badge variant="outline">{epa.type}</Badge>}
                  </div>
               </div>
-              {canTriggerEvaluation ? (
-                <Button onClick={() => onSelectEpa(epa)}>Evaluate</Button>
-              ) : (
-                <Button onClick={() => onSelectEpa(epa)}>View Details</Button>
-              )}
+              <Button onClick={() => onSelectEpa(epa)}>{getButtonText()}</Button>
             </div>
           ))}
         </div>

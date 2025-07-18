@@ -35,6 +35,19 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
     onOpenChange(open);
   }
 
+  const getTitle = () => {
+    if (!selectedEpa) return "EPA Evaluation Management";
+    if (currentUser.role === 'resident') return `EPA Evaluation Request: ${selectedEpa.title}`;
+    return `EPA Evaluation: ${selectedEpa.title}`;
+  }
+
+  const getDescription = () => {
+    if (!selectedEpa) return "Browse all Entrustable Professional Activities or select one to start an evaluation.";
+    if (currentUser.role === 'resident') return "Select the relevant activity and use the export button to send this form to your staff for completion.";
+    return "Fill out the evaluation form for the selected resident and activity.";
+  }
+
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
@@ -45,17 +58,17 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
                 <ArrowLeft className="h-4 w-4"/>
               </Button>
               <div>
-                <DialogTitle>EPA Evaluation: {selectedEpa.title}</DialogTitle>
+                <DialogTitle>{getTitle()}</DialogTitle>
                 <DialogDescription>
-                  Fill out the evaluation form for the selected resident and activity.
+                  {getDescription()}
                 </DialogDescription>
               </div>
             </div>
           ) : (
              <div>
-                <DialogTitle>EPA Evaluation Management</DialogTitle>
+                <DialogTitle>{getTitle()}</DialogTitle>
                 <DialogDescription>
-                  Browse all Entrustable Professional Activities or select one to start an evaluation.
+                  {getDescription()}
                 </DialogDescription>
             </div>
           )}
