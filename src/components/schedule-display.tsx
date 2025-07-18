@@ -8,7 +8,7 @@ import { WeeklyScheduleView } from './weekly-schedule-view';
 
 interface ScheduleDisplayProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
 }
 
 export function ScheduleDisplay({ appState, setAppState }: ScheduleDisplayProps) {
