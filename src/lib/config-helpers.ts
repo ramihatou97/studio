@@ -2,56 +2,25 @@
 import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest, PendingUser } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
-// Helper function to merge state from localStorage
-const mergeWithMockState = (initialState: AppState): AppState => {
-  try {
-    const key = 'mock_app_state';
-    const storedStateJSON = localStorage.getItem(key);
-    if (storedStateJSON) {
-      const storedState = JSON.parse(storedStateJSON);
-      
-      const mergedState = { ...initialState };
-
-      if (storedState.pendingUsers) {
-        mergedState.pendingUsers = storedState.pendingUsers;
-      }
-      
-      // Merge approved users into the main lists
-      if (storedState.residents) {
-          mergedState.residents = storedState.residents;
-      }
-      if (storedState.staff) {
-          mergedState.staff = storedState.staff;
-      }
-
-      return mergedState;
-    }
-  } catch (error) {
-    console.error("Could not merge mock state from localStorage:", error);
-  }
-  return initialState;
-};
-
-
 export function getInitialAppState(): AppState {
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   
   const sampleResidents: Resident[] = [
-      { id: '1', type: 'neuro', name: 'Dr. Evelyn Reed', level: 6, onService: true, isChief: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
-      { id: '2', type: 'neuro', name: 'Dr. Ben Carter', level: 4, onService: true, isChief: false, chiefOrDays: [], vacationDays: [8, 9, 10, 11, 12], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
-      { id: '3', type: 'neuro', name: 'Dr. Olivia Chen', level: 3, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
-      { id: '4', type: 'neuro', name: 'Dr. Leo Martinez', level: 2, onService: false, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
-      { id: '5', type: 'neuro', name: 'Dr. Sofia Khan', level: 1, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
-      { id: '6', type: 'non-neuro', name: 'Dr. Sam Jones', specialty: 'Plastics', level: 2, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 3, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 }
+      { id: '1', type: 'neuro', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@medishift.com', level: 6, onService: true, isChief: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: '2', type: 'neuro', name: 'Dr. Ben Carter', email: 'ben.carter@medishift.com', level: 4, onService: true, isChief: false, chiefOrDays: [], vacationDays: [8, 9, 10, 11, 12], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: '3', type: 'neuro', name: 'Dr. Olivia Chen', email: 'olivia.chen@medishift.com', level: 3, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: '4', type: 'neuro', name: 'Dr. Leo Martinez', email: 'leo.martinez@medishift.com', level: 2, onService: false, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
+      { id: '5', type: 'neuro', name: 'Dr. Sofia Khan', email: 'sofia.khan@medishift.com', level: 1, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
+      { id: '6', type: 'non-neuro', name: 'Dr. Sam Jones', email: 'sam.jones@medishift.com', specialty: 'Plastics', level: 2, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 3, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 }
     ];
     
   const sampleStaff: Staff[] = [
-        { id: 's1', name: 'Dr. Sterling Archer', subspecialty: 'Vascular', specialtyType: 'cranial' },
-        { id: 's2', name: 'Dr. Lana Kane', subspecialty: 'Tumor', specialtyType: 'cranial' },
-        { id: 's3', name: 'Dr. Cyril Figgis', subspecialty: 'Complex Spine', specialtyType: 'spine' },
-        { id: 's4', name: 'Dr. Pam Poovey', subspecialty: 'General', specialtyType: 'other' }
+        { id: 's1', name: 'Dr. Sterling Archer', email: 'sterling.archer@medishift.com', subspecialty: 'Vascular', specialtyType: 'cranial' },
+        { id: 's2', name: 'Dr. Lana Kane', email: 'lana.kane@medishift.com', subspecialty: 'Tumor', specialtyType: 'cranial' },
+        { id: 's3', name: 'Dr. Cyril Figgis', email: 'cyril.figgis@medishift.com', subspecialty: 'Complex Spine', specialtyType: 'spine' },
+        { id: 's4', name: 'Dr. Pam Poovey', email: 'pam.poovey@medishift.com', subspecialty: 'General', specialtyType: 'other' }
     ];
 
   const initialState: AppState = {
@@ -97,11 +66,6 @@ export function getInitialAppState(): AppState {
     }
   };
   
-  // This check ensures localStorage is only accessed on the client-side
-  if (typeof window !== 'undefined') {
-    return mergeWithMockState(initialState);
-  }
-  
   return initialState;
 }
 
@@ -110,6 +74,7 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     id: uuidv4(),
     type: 'neuro',
     name: '',
+    email: '',
     level: 1,
     onService: true,
     vacationDays: [],
@@ -135,6 +100,7 @@ export const addNonNeuroResident = (setAppState: React.Dispatch<React.SetStateAc
       id: uuidv4(),
       type: 'non-neuro',
       name: '',
+      email: '',
       specialty: '',
       level: 1,
       onService: true,
@@ -160,6 +126,7 @@ export const addMedicalStudent = (setAppState: React.Dispatch<React.SetStateActi
         id: uuidv4(),
         type: 'student',
         name: '',
+        email: '',
         level: 'MS3',
         preceptor: '',
         weeks: [],
@@ -175,6 +142,7 @@ export const addOtherLearner = (setAppState: React.Dispatch<React.SetStateAction
         id: uuidv4(),
         type: 'other',
         name: '',
+        email: '',
         role: 'PA Student',
         scheduleText: '',
         vacationDays: [],
@@ -187,6 +155,7 @@ export const addStaffMember = (setAppState: React.Dispatch<React.SetStateAction<
     const newStaff: Staff = {
         id: uuidv4(),
         name: staffData.name || '',
+        email: staffData.email || '',
         subspecialty: staffData.subspecialty || 'General',
         specialtyType: staffData.specialtyType || 'other',
     };

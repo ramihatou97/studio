@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { AppState, UserRole, PendingUser } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import type { AppState, UserRole, PendingUser, Resident, Staff } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -18,19 +19,60 @@ import { OrClinicConfig } from '@/components/config-sections/or-clinic-config';
 import { HolidayCoverage } from '@/components/config-sections/holiday-coverage';
 import { ActionButtons } from '@/components/action-buttons';
 import { ScheduleDisplay } from '@/components/schedule-display';
-import { getInitialAppState, addNeuroResident, addStaffMember } from '@/lib/config-helpers';
+import { getInitialAppState } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
 import { UserCheck, UserX } from 'lucide-react';
+
+const MOCK_STATE_KEY = 'mock_app_state';
+
+// Helper to get the full app state from localStorage
+const getAppStateFromMockDb = (): AppState | null => {
+    if (typeof window === 'undefined') return null;
+    const storedStateJSON = localStorage.getItem(MOCK_STATE_KEY);
+    return storedStateJSON ? JSON.parse(storedStateJSON) : getInitialAppState();
+}
+
+// Helper to get only the current user from localStorage
+const getCurrentUserFromMockDb = (): AppState['currentUser'] | null => {
+    if (typeof window === 'undefined') return null;
+    const storedUser = localStorage.getItem('currentUser');
+    return storedUser ? JSON.parse(storedUser) : null;
+}
+
+// Helper to save the full state to localStorage
+const saveAppStateToMockDb = (state: AppState) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(MOCK_STATE_KEY, JSON.stringify(state));
+    localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+}
 
 export default function AppPage() {
   const [appState, setAppState] = useState<AppState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const { toast } = useToast();
-  
+  const router = useRouter();
+
   useEffect(() => {
-    setAppState(getInitialAppState());
-  }, []);
+    const loggedInUser = getCurrentUserFromMockDb();
+    if (!loggedInUser) {
+      router.replace('/login');
+    } else {
+      const fullState = getAppStateFromMockDb();
+      if (fullState) {
+        // Ensure the loggedInUser is correctly set in the full state
+        fullState.currentUser = loggedInUser;
+        setAppState(fullState);
+      }
+    }
+  }, [router]);
+  
+  // Persist state changes to localStorage
+  useEffect(() => {
+    if (appState) {
+        saveAppStateToMockDb(appState);
+    }
+  }, [appState]);
   
   if (!appState) {
     return (
@@ -104,6 +146,7 @@ export default function AppPage() {
                     id: userToApprove.id,
                     type: 'neuro',
                     name: `${userToApprove.firstName} ${userToApprove.lastName}`,
+                    email: userToApprove.email,
                     level: userToApprove.pgyLevel || 1,
                     onService: true, vacationDays: [], isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0
                 };
@@ -112,6 +155,7 @@ export default function AppPage() {
                 const newStaff: Staff = {
                     id: userToApprove.id,
                     name: `${userToApprove.firstName} ${userToApprove.lastName}`,
+                    email: userToApprove.email,
                     specialtyType: 'other',
                     subspecialty: 'General',
                 };

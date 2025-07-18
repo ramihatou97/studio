@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 // This page will now act as a guard.
 // We will redirect to the main app page.
-// In a real app, this would check for an authenticated user first.
+// The /app page will handle auth checking and redirect to /login if needed.
 export default function Home() {
   const router = useRouter();
 

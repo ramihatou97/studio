@@ -5,6 +5,7 @@ import { z } from 'zod';
 export interface Staff {
   id: string;
   name: string;
+  email: string;
   subspecialty: string;
   specialtyType: 'cranial' | 'spine' | 'other';
 }
@@ -61,6 +62,7 @@ export interface OnServiceCallRule {
 interface BasePersonnel {
   id:string;
   name: string;
+  email: string;
   vacationDays: number[];
   schedule: ScheduleActivity[][];
 }
