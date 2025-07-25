@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { AppState, UserProfile } from '@/lib/types';
+import type { AppState } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -33,17 +33,7 @@ import { SurgicalBriefingModal } from '@/components/modals/surgical-briefing-mod
 import { YearlyRotationModal } from '@/components/modals/yearly-rotation-modal';
 import { Loader2, GraduationCap, BookUser, CalendarDays, ScrollText, Users } from 'lucide-react';
 
-const defaultProgramDirectorProfile: UserProfile = {
-  uid: 'program-director-01',
-  name: 'Program Director',
-  firstName: 'Program',
-  lastName: 'Director',
-  email: 'pd@medishift.com',
-  role: 'program-director',
-  status: 'active',
-};
-
-// A mock in-memory store since we are removing Firebase.
+// A mock in-memory store.
 let memoryState: AppState | null = null;
 
 
@@ -72,17 +62,14 @@ export default function AppPage() {
     if (!memoryState) {
         memoryState = getInitialAppState();
     }
-    // Add the default user to the state
-    setAppState({ ...memoryState, currentUser: defaultProgramDirectorProfile });
+    setAppState(memoryState);
   }, []);
 
   const updateAppState = (updater: React.SetStateAction<AppState | null>) => {
     setAppState(prevState => {
       const newState = typeof updater === 'function' ? updater(prevState) : updater;
       if (newState) {
-        // Keep the currentUser consistent
-        const { currentUser, ...stateToSave } = newState;
-        memoryState = stateToSave as AppState;
+        memoryState = newState;
       }
       return newState;
     });

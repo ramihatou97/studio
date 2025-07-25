@@ -2,27 +2,18 @@
 import { z } from 'zod';
 
 export type UserRole = 'program-director' | 'staff' | 'resident';
-export type UserStatus = 'pending' | 'active' | 'inactive';
 
-// Stored in /users/{uid} in Firestore
-export interface UserProfile {
-  uid: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  name: string;
+// This represents the user currently being viewed or managed.
+// In the simplified, no-auth version, it's always the Program Director.
+export interface CurrentUser {
+  id: string;
   role: UserRole;
-  status: UserStatus;
-  pgyLevel?: number; // Only for residents
+  name: string;
 }
-
-// Represents the current user viewing the app.
-// If a PD is impersonating someone, this will be the impersonated user's profile.
-export type CurrentUser = UserProfile;
 
 
 export interface Staff {
-  id: string; // This is the user's UID
+  id: string; 
   name: string;
   email: string;
   subspecialty: string;
@@ -200,16 +191,6 @@ export interface Evaluation {
   requestToken?: string; // For "magic link" evaluation
 }
 
-export interface PendingUser {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    role: 'staff' | 'resident';
-    pgyLevel?: number;
-    status: 'pending';
-}
-
 export interface OffServiceRotation {
     id: string;
     name: string;
@@ -291,6 +272,5 @@ export interface AppState {
   errors?: ScheduleError[];
   evaluations: Evaluation[];
   manualProcedures: ManualProcedure[];
-  pendingUsers?: PendingUser[];
   currentUser: CurrentUser;
 }
