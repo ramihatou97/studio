@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AppState, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ import { SurgicalBriefingModal } from '@/components/modals/surgical-briefing-mod
 import { YearlyRotationModal } from '@/components/modals/yearly-rotation-modal';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, query, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { UserCheck, UserX, GraduationCap, BookUser, CalendarDays, ScrollText, Users, Loader2 } from 'lucide-react';
 import type { PendingUser, Resident, Staff } from '@/lib/types';
 
@@ -80,21 +80,22 @@ export default function AppPage() {
     }
   }, [user, authLoading, router]);
 
-  // Effect to subscribe to user profiles
+  // Effect to subscribe to user profiles and set the current user's profile
   useEffect(() => {
+    if (!user) return;
+
     const q = query(collection(db, "users"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const usersData = querySnapshot.docs.map(doc => doc.data() as UserProfile);
       setAllUsers(usersData);
       
-      if (user) {
-        const profile = usersData.find(u => u.uid === user.uid);
-        if (profile) {
-          setUserProfile(profile);
-          // Initially, the user views as themselves
-          if (!viewAsUser) {
-            setViewAsUser(profile);
-          }
+      const profile = usersData.find(u => u.uid === user.uid);
+      if (profile) {
+        setUserProfile(profile);
+        // This is the key fix: if we aren't impersonating someone else,
+        // make sure the view is set to the currently logged-in user.
+        if (!viewAsUser || viewAsUser.uid !== profile.uid) {
+           setViewAsUser(profile);
         }
       }
     });
@@ -190,7 +191,7 @@ export default function AppPage() {
             // Also add them to the relevant list in the main appState
             if (userToApprove.role === 'resident') {
                 const newResident: Resident = {
-                    id: userToApprove.uid, type: 'neuro', name: userToApprove.name, email: userToApprove.email, level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0, vacationDays: []
+                    id: userToApprove.uid, type: 'neuro', name: userToApprove.name, email: userToApprove.email, level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0
                 };
                 await updateFirestoreState({ residents: [...(appState?.residents || []), newResident] });
             } else if (userToApprove.role === 'staff') {
@@ -329,16 +330,16 @@ export default function AppPage() {
           <CardContent className="space-y-8">
             <AiPrepopulation setAppState={updateFirestoreState} appState={{...appState, currentUser: viewAsUser}} />
             <Separator />
-            <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} /><ResidentsConfig appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} /></div>
+            <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} /><ResidentsConfig appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState as any} /></div>
             <Accordion type="single" collapsible className="w-full space-y-4"><StaffConfig appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} /><OrClinicConfig appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} /><HolidayCoverage appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} /></Accordion>
           </CardContent>
         </Card>
       )}
 
-      <ActionButtons onGenerate={handleGenerateClick} appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} isLoading={isGenerating} hasGenerated={hasGenerated} onEpaClick={() => setEpaModalOpen(true)} onProcedureLogClick={() => setProcedureLogModalOpen(true)} onYearlyRotationClick={() => setYearlyRotationModalOpen(true)} onAnalysisClick={() => setAnalysisModalOpen(true)} onOptimizerClick={() => setOptimizerModalOpen(true)} onHandoverClick={() => setHandoverModalOpen(true)} onChatClick={() => setChatModalOpen(true)} onLongTermAnalysisClick={() => setLongTermAnalysisModalOpen(true)} onSurgicalBriefingClick={() => setSurgicalBriefingModalOpen(true)}/>
+      <ActionButtons onGenerate={handleGenerateClick} appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState as any} isLoading={isGenerating} hasGenerated={hasGenerated} onEpaClick={() => setEpaModalOpen(true)} onProcedureLogClick={() => setProcedureLogModalOpen(true)} onYearlyRotationClick={() => setYearlyRotationModalOpen(true)} onAnalysisClick={() => setAnalysisModalOpen(true)} onOptimizerClick={() => setOptimizerModalOpen(true)} onHandoverClick={() => setHandoverModalOpen(true)} onChatClick={() => setChatModalOpen(true)} onLongTermAnalysisClick={() => setLongTermAnalysisModalOpen(true)} onSurgicalBriefingClick={() => setSurgicalBriefingModalOpen(true)}/>
       
       {isGenerating ? (<div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8"><div className="flex flex-col items-center gap-2"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div><p>Generating schedules...</p></div></div>) 
-      : hasGenerated ? (<ScheduleDisplay appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} />) 
+      : hasGenerated ? (<ScheduleDisplay appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState as any} />) 
       : (<div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8"><p>Generate schedules to view them here.</p></div>)}
     </>
   );
@@ -368,7 +369,7 @@ export default function AppPage() {
         <AboutSection />
       </main>
 
-      <EpaModal isOpen={isEpaModalOpen} onOpenChange={setEpaModalOpen} appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} />
+      <EpaModal isOpen={isEpaModalOpen} onOpenChange={setEpaModalOpen} appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState as any} />
       <ProcedureLogModal isOpen={isProcedureLogModalOpen} onOpenChange={setProcedureLogModalOpen} appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} />
       <YearlyRotationModal isOpen={isYearlyRotationModalOpen} onOpenChange={setYearlyRotationModalOpen} appState={{...appState, currentUser: viewAsUser}} setAppState={updateFirestoreState} />
       
