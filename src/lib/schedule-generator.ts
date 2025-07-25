@@ -99,6 +99,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
         else if (res.type === 'neuro' && !res.onService) score += 500;
         // Call Load Priority (lower is better)
         score -= res.callDays.length * 100;
+        // Double call day penalty
+        score -= res.doubleCallDays * 200;
         // Seniority (lower PGY is higher priority)
         score += (7 - res.level) * 85;
         
@@ -139,6 +141,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
           resident.schedule[dayIndex].push(call);
           resident.callDays.push(dayIndex);
           if (isWeekend || isStatHoliday) resident.weekendCalls++;
+          if (doubleCallDays.has(dayIndex)) resident.doubleCallDays++;
       };
 
       const findAndAssignBackup = (primaryResident: Resident, availableCandidates: Resident[]) => {
@@ -211,11 +214,11 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
         // Hard rule: critical shortage
         if (availableCount <= 2) {
-             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `CRITICAL: Resident shortage on day ${dayIndex + 1}. Only ${availableCount} residents available (min 3).` });
+             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `CRITICAL: Resident shortage on day ${dayIndex + 1}. Only ${availableCount} residents available.` });
         } 
         // Soft rule: non-ideal staffing
         else if (availableCount < 3) {
-            generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: Non-ideal staffing on day ${dayIndex + 1}. Only ${availableCount} residents available (ideal is 3+).` });
+            generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: Non-ideal staffing on day ${dayIndex + 1}. Only ${availableCount} residents available.` });
         }
         
         // Hard rule: senior coverage
@@ -246,8 +249,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   });
 
   // --- Pass 4: OR & Clinic Assignment ---
-  const chiefs = processedResidents.filter(r => r.isChief);
-
+  
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
     const currentDate = new Date(start);
     currentDate.setDate(currentDate.getDate() + dayIndex);
@@ -258,58 +260,67 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
     // OR Assignments first
     const dailyOrCases = orCases[dayIndex] || [];
-    let assignedToOrToday: Resident[] = [];
+    dailyOrCases.forEach(orCase => {
+        let assignedResidentsToCase: Resident[] = [];
+        
+        // Get all available on-service residents, sorted by PGY level desc
+        const orCandidates = processedResidents
+            .filter(r => r.onService && r.schedule[dayIndex].length === 0)
+            .sort((a, b) => b.level - a.level);
 
-    chiefs.forEach(chief => {
-      if (chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
-        chief.schedule[dayIndex].push('OR');
-        chief.orDays++;
-        assignedToOrToday.push(chief);
-      }
-    });
-    
-    const pgyLevels = [6, 5, 4, 3, 2, 1];
-    pgyLevels.forEach(level => {
-        const residentsAtLevel = processedResidents.filter(r => r.level === level && r.onService && r.schedule[dayIndex].length === 0);
-        let targetOrDaysPerWeek = 0;
-        if(level >= 6) targetOrDaysPerWeek = 5;
-        else if (level >= 3) targetOrDaysPerWeek = 3;
-        else targetOrDaysPerWeek = 1;
-
-        const targetOrDaysTotal = targetOrDaysPerWeek * (numberOfDays / 7);
-
-        residentsAtLevel.forEach(res => {
-            if(res.orDays < targetOrDaysTotal){
-                 if (dailyOrCases.length * 2 > assignedToOrToday.length) {
-                    res.schedule[dayIndex].push('OR');
-                    res.orDays++;
-                    assignedToOrToday.push(res);
+        // Assign based on complexity
+        if (orCase.complexity === 'complex') {
+            // Assign a senior resident first
+            const senior = orCandidates.find(r => r.level >= 4);
+            if (senior) {
+                senior.schedule[dayIndex].push('OR');
+                senior.orDays++;
+                assignedResidentsToCase.push(senior);
+                // Try to pair with a junior
+                const junior = orCandidates.find(r => r.id !== senior.id && r.level <= 2 && senior.level - r.level >= 2);
+                if (junior) {
+                    junior.schedule[dayIndex].push('OR');
+                    junior.orDays++;
+                    assignedResidentsToCase.push(junior);
                 }
             }
-        });
+        } else { // Routine case
+            // Assign up to two residents, prioritizing a senior-junior pair if possible
+            const senior = orCandidates.find(r => r.level >= 3);
+            if (senior) {
+                senior.schedule[dayIndex].push('OR');
+                senior.orDays++;
+                assignedResidentsToCase.push(senior);
+            }
+            // Find a second resident if slot is available
+            if (assignedResidentsToCase.length < 2) {
+                const secondResident = orCandidates.find(r => !assignedResidentsToCase.find(ar => ar.id === r.id));
+                if (secondResident) {
+                    // Check PGY gap if a senior was already assigned
+                    if (senior && secondResident.level >= senior.level - 1) {
+                       // Don't assign if gap is not large enough, leave slot open or find another
+                    } else {
+                       secondResident.schedule[dayIndex].push('OR');
+                       secondResident.orDays++;
+                       assignedResidentsToCase.push(secondResident);
+                    }
+                }
+            }
+        }
     });
 
-    let orAssignments = processedResidents.filter(r => r.schedule[dayIndex].includes('OR'));
-    if (orAssignments.length > dailyOrCases.length * 2) {
-      orAssignments.sort((a,b) => a.level - b.level); // sort ascending by level
-      while(orAssignments.length > dailyOrCases.length * 2) {
-        const residentToRemove = orAssignments.shift();
-        if(residentToRemove) {
-          residentToRemove.schedule[dayIndex] = [];
-          residentToRemove.orDays--;
+    // Chief's OR Days - assign them if they are free and there's a need
+    const chiefs = processedResidents.filter(r => r.isChief);
+    chiefs.forEach(chief => {
+      if (chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
+        const assignedOrCount = processedResidents.filter(r => r.schedule[dayIndex].includes('OR')).length;
+        if (dailyOrCases.length * 2 > assignedOrCount) {
+             chief.schedule[dayIndex].push('OR');
+             chief.orDays++;
         }
       }
-    }
-    
-    // Junior-Senior Pairing in OR
-    orAssignments = processedResidents.filter(r => r.schedule[dayIndex].includes('OR'));
-    const seniorsInOR = orAssignments.filter(r => r.level >= 3);
-    const juniorsInOR = orAssignments.filter(r => r.level < 3);
+    });
 
-    if (juniorsInOR.length > 0 && seniorsInOR.length > 0) {
-        // This is a complex check, for now we ensure the 2-resident-per-case is respected.
-        // A more advanced version would check PGY gaps.
-    }
 
     // Clinic Assignments
     const dailyClinics = clinicAssignments.filter(c => c.day === dayIndex + 1);

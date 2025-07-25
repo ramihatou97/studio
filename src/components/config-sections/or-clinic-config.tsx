@@ -1,4 +1,5 @@
 
+
 import type { AppState, OrCase, ClinicAssignment } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
                 diagnosis: caseItem.diagnosis,
                 procedure: caseItem.procedure,
                 procedureCode: caseItem.procedureCode,
+                complexity: 'routine', // Default to routine
                 patientMrn: caseItem.patientMrn,
                 patientSex: caseItem.patientSex,
                 age: caseItem.age,
@@ -106,7 +108,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const { general, orCases, staff, clinicAssignments } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
-  const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '', procedureCode: '', patientMrn: '', patientSex: 'male', age: 0 });
+  const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '', procedureCode: '', complexity: 'routine', patientMrn: '', patientSex: 'male', age: 0 });
   const [selectedSurgeon, setSelectedSurgeon] = useState<string>('');
   
   const [newClinic, setNewClinic] = useState<Partial<ClinicAssignment>>({});
@@ -143,7 +145,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     }
     newOrCases[dayIndex].push(fullCase);
     setAppState(prev => ({ ...prev, orCases: newOrCases }));
-    setNewCase({ diagnosis: '', procedure: '', procedureCode: '', patientMrn: '', patientSex: 'male', age: 0 });
+    setNewCase({ diagnosis: '', procedure: '', procedureCode: '', complexity: 'routine', patientMrn: '', patientSex: 'male', age: 0 });
     setSelectedSurgeon('');
   };
   
@@ -281,7 +283,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                     <div key={i} className="p-2 bg-muted rounded-md flex justify-between items-center">
                     <div>
                         <p className="font-semibold">{c.procedure} <span className="font-normal text-muted-foreground">({c.procedureCode})</span></p>
-                        <p className="text-sm text-muted-foreground">{c.surgeon} | Dx: {c.diagnosis}</p>
+                        <p className="text-sm text-muted-foreground">{c.surgeon} | Dx: {c.diagnosis} | <span className="capitalize font-medium">{c.complexity}</span></p>
                         <p className="text-xs text-muted-foreground">Patient: {c.patientMrn} ({c.age}yo {c.patientSex})</p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => handleRemoveCase(currentEditingDay, i)}><Trash2 className="h-4 w-4"/></Button>
@@ -304,6 +306,16 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                             </Select>
                         </div>
                         <div>
+                            <Label>Case Complexity</Label>
+                            <Select value={newCase.complexity} onValueChange={(val: 'routine' | 'complex') => setNewCase(c => ({ ...c, complexity: val }))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="routine">Routine</SelectItem>
+                                    <SelectItem value="complex">Complex</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="md:col-span-2">
                             <Label>Diagnosis</Label>
                             <Input value={newCase.diagnosis} onChange={e => setNewCase(c => ({...c, diagnosis: e.target.value}))}/>
                         </div>

@@ -17,6 +17,7 @@ export interface OrCase {
   diagnosis: string;
   procedure: string;
   procedureCode: string;
+  complexity: 'routine' | 'complex';
   patientMrn: string;
   patientSex: 'male' | 'female' | 'other';
   age: number;
