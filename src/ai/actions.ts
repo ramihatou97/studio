@@ -13,7 +13,8 @@ import { analyzeResidentPerformance as analyzeResidentPerformanceFlow } from '@/
 import { generateSurgicalBriefing as generateSurgicalBriefingFlow } from '@/ai/flows/generate-surgical-briefing';
 import { generateYearlyRotationSchedule as generateYearlyRotationScheduleFlow } from '@/ai/flows/generate-yearly-rotation-schedule';
 import { suggestEpaForActivity as suggestEpaForActivityFlow } from '@/ai/flows/suggest-epa-for-activity';
-import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput } from '../lib/types';
+import { analyzeEpaPerformance as analyzeEpaPerformanceFlow } from '@/ai/flows/analyze-epa-performance';
+import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput, Evaluation } from '../lib/types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
   try {
@@ -187,5 +188,15 @@ export async function suggestEpaAction(activityDescription: string) {
     } catch (error) {
         console.error('Error in suggestEpaAction:', error);
         return { success: false, error: 'Failed to suggest EPA.' };
+    }
+}
+
+export async function analyzeEpaPerformanceAction(residentName: string, evaluations: Evaluation[]) {
+    try {
+        const result = await analyzeEpaPerformanceFlow({ residentName, evaluations });
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Error in analyzeEpaPerformanceAction:', error);
+        return { success: false, error: 'Failed to analyze EPA performance.' };
     }
 }

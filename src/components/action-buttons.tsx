@@ -164,7 +164,7 @@ export function ActionButtons({
             </Button>
             <Button onClick={onEpaClick} variant="outline" className="h-24 border-teal-500/20 text-teal-600 hover:bg-teal-500/10 hover:text-teal-700 flex-col">
                 <GraduationCap className="h-6 w-6 mb-1" />
-                <span className="font-semibold text-base">Manage EPA Evaluations</span>
+                <span className="font-semibold text-base">EPA Dashboard</span>
             </Button>
         </CardContent>
       </Card>

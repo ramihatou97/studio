@@ -34,6 +34,7 @@ export function getInitialAppState(): AppState {
       christmasEnd: '',
       newYearStart: '',
       newYearEnd: '',
+      reminderFrequency: 3,
     },
     residents: sampleResidents,
     medicalStudents: [],
@@ -59,6 +60,7 @@ export function getInitialAppState(): AppState {
         {id: 'req2', residentId: '5', rotationId: 'r1', durationInBlocks: 1, timingPreference: 'any'},
     ],
     manualProcedures: [],
+    evaluations: [],
     pendingUsers: [],
     currentUser: {
         id: 'program-director',

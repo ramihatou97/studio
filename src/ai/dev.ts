@@ -13,3 +13,4 @@ import '@/ai/flows/analyze-resident-performance.ts';
 import '@/ai/flows/generate-surgical-briefing.ts';
 import '@/ai/flows/generate-yearly-rotation-schedule.ts';
 import '@/ai/flows/suggest-epa-for-activity.ts';
+import '@/ai/flows/analyze-epa-performance.ts';

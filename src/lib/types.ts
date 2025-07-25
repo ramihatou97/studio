@@ -25,7 +25,7 @@ export interface OrCase {
   comments?: string;
 }
 
-export interface ManualProcedure extends Omit<OrCase, 'diagnosis'> {
+export interface ManualProcedure extends Omit<OrCase, 'diagnosis' | 'complexity'> {
     id: string;
     residentId: string;
     date: string; // YYYY-MM-DD
@@ -48,6 +48,7 @@ export const POSSIBLE_ACTIVITIES = [
   'Float',
   'Pager Holder',
   'Backup',
+  'Holiday',
 ] as const;
 
 export type PossibleActivity = typeof POSSIBLE_ACTIVITIES[number];
@@ -105,7 +106,7 @@ export interface OtherLearner extends BasePersonnel {
 export type Personnel = Resident | MedicalStudent | OtherLearner;
 
 export interface ScheduleError {
-  type: 'MAX_CALLS' | 'POST_CALL_VIOLATION' | 'NO_BACKUP' | 'NO_ELIGIBLE_RESIDENT' | 'INSUFFICIENT_BACKUP' | 'POST_CALL_CONFLICT';
+  type: 'MAX_CALLS' | 'POST_CALL_VIOLATION' | 'NO_BACKUP' | 'NO_ELIGIBLE_RESIDENT' | 'INSUFFICIENT_BACKUP' | 'POST_CALL_CONFLICT' | 'STAFFING_SHORTAGE_CRITICAL' | 'STAFFING_SHORTAGE_WARNING' | 'SENIOR_COVERAGE_GAP';
   message: string;
   residentId?: string;
   dayIndex?: number;
@@ -127,6 +128,7 @@ export interface GeneralSettings {
   christmasEnd: string;
   newYearStart: string;
   newYearEnd: string;
+  reminderFrequency: number;
 }
 
 export interface StaffCall {
@@ -161,15 +163,23 @@ export interface HistoricalData {
     callDays: number;
 }
 
+export type EvaluationStatus = 'pending' | 'completed' | 'draft';
+
 export interface Evaluation {
+  id: string; // Unique ID for this specific evaluation instance
   epaId: string;
   residentId: string;
-  activityValue: string;
+  evaluatorId: string;
+  status: EvaluationStatus;
+  activityDescription: string;
+  activityDate: string;
+  evaluationDate: string | null;
   milestoneRatings: Record<number, number>;
   overallRating: number;
   feedback: string;
-  evaluationDate: string;
+  requestToken?: string; // For "magic link" evaluation
 }
+
 
 export type UserRole = 'program-director' | 'staff' | 'resident';
 
@@ -268,7 +278,7 @@ export interface AppState {
   offServiceRotations: OffServiceRotation[];
   offServiceRequests: OffServiceRequest[];
   errors?: ScheduleError[];
-  evaluations?: Evaluation[];
+  evaluations: Evaluation[];
   manualProcedures: ManualProcedure[];
   pendingUsers?: PendingUser[];
   currentUser: CurrentUser;
