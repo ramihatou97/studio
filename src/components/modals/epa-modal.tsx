@@ -159,7 +159,7 @@ export function EpaModal({
   
   const hasGenerated = appState.residents.some(r => r.schedule.length > 0);
 
-  const pendingRequests = appState.evaluations.filter(e => e.status === 'pending' && (currentUser.role === 'program-director' || e.evaluatorId === currentUser.id));
+  const pendingRequests = (appState.evaluations || []).filter(e => e.status === 'pending' && (currentUser.role === 'program-director' || e.evaluatorId === currentUser.id));
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
