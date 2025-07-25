@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AppState } from '@/lib/types';
 import { ALL_EPAS, type EPA } from '@/lib/epa-data';
@@ -9,17 +9,82 @@ import { EpaList } from '../epa/epa-list';
 import { EpaEvaluationForm } from '../epa/epa-evaluation-form';
 import { Button } from '../ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { suggestEpaAction } from '@/ai/actions';
+import { useToast } from '@/hooks/use-toast';
 
 interface EpaModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
+  preselectedResidentId?: string;
+  preselectedDayIndex?: number;
 }
 
-export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
+export function EpaModal({ 
+  isOpen, 
+  onOpenChange, 
+  appState, 
+  preselectedResidentId, 
+  preselectedDayIndex 
+}: EpaModalProps) {
   const [selectedEpa, setSelectedEpa] = useState<EPA | null>(null);
   const { currentUser } = appState;
+  const { toast } = useToast();
   const hasGenerated = Object.values(appState.residents).some(r => r.schedule && r.schedule.length > 0);
+  
+  const [activityDescription, setActivityDescription] = useState('');
+  const [isSuggesting, setIsSuggesting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && preselectedResidentId !== undefined && preselectedDayIndex !== undefined) {
+      // Logic to find activity description
+      const resident = appState.residents.find(r => r.id === preselectedResidentId);
+      if (resident) {
+        let description = resident.schedule[preselectedDayIndex]?.join(', ') || '';
+        
+        // If it's an OR day, get more specific case info
+        if (description.includes('OR')) {
+            const cases = appState.orCases[preselectedDayIndex] || [];
+            if (cases.length > 0) {
+                // For simplicity, using the first case. A real app might let the user choose.
+                description = cases[0].procedure;
+            }
+        }
+        setActivityDescription(description);
+      }
+    }
+  }, [isOpen, preselectedResidentId, preselectedDayIndex, appState]);
+
+
+  useEffect(() => {
+    const suggestEpa = async () => {
+      if (activityDescription && !selectedEpa) {
+        setIsSuggesting(true);
+        const result = await suggestEpaAction(activityDescription);
+        if (result.success && result.data) {
+          const foundEpa = ALL_EPAS.find(e => e.id === result.data.suggestedEpaId);
+          if (foundEpa) {
+            setSelectedEpa(foundEpa);
+            toast({
+              title: "AI Suggestion",
+              description: `Based on "${activityDescription}", we suggest evaluating: ${foundEpa.id}.`,
+            });
+          }
+        } else {
+            toast({
+                variant: 'destructive',
+                title: "AI Suggestion Failed",
+                description: "Could not automatically suggest an EPA.",
+            });
+        }
+        setIsSuggesting(false);
+      }
+    };
+    if (isOpen && activityDescription) {
+        suggestEpa();
+    }
+  }, [isOpen, activityDescription, selectedEpa, toast]);
+
 
   const handleSelectEpa = (epa: EPA) => {
     setSelectedEpa(epa);
@@ -32,6 +97,7 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setSelectedEpa(null);
+      setActivityDescription('');
     }
     onOpenChange(open);
   }
@@ -47,7 +113,6 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
     if (currentUser.role === 'resident') return "Select the relevant activity and use the export button to send this form to your staff for completion.";
     return "Fill out the evaluation form for the selected resident and activity.";
   }
-
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -69,7 +134,7 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
              <div>
                 <DialogTitle>{getTitle()}</DialogTitle>
                 <DialogDescription>
-                  {getDescription()}
+                  {isSuggesting ? 'AI is suggesting an EPA for your selected activity...' : getDescription()}
                 </DialogDescription>
             </div>
           )}
@@ -82,9 +147,11 @@ export function EpaModal({ isOpen, onOpenChange, appState }: EpaModalProps) {
               appState={appState}
               onBack={handleBackToList}
               hasGenerated={hasGenerated}
+              prefilledResidentId={preselectedResidentId}
+              prefilledActivityDescription={activityDescription}
             />
           ) : (
-            <EpaList epas={ALL_EPAS} onSelectEpa={handleSelectEpa} currentUserRole={currentUser.role} />
+            <EpaList epas={ALL_EPAS} onSelectEpa={handleSelectEpa} currentUserRole={currentUser.role} isLoading={isSuggesting} />
           )}
         </div>
       </DialogContent>

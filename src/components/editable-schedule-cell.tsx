@@ -4,15 +4,18 @@ import { POSSIBLE_ACTIVITIES } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import { GraduationCap } from 'lucide-react';
 
 interface EditableScheduleCellProps {
   resident: Resident;
   dayIndex: number;
   setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
   hasError: boolean;
+  onEpaClick: (residentId: string, dayIndex: number, activity: string) => void;
 }
 
-export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError }: EditableScheduleCellProps) {
+export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError, onEpaClick }: EditableScheduleCellProps) {
   const activities = resident.schedule[dayIndex];
   // For simplicity, we'll only show and edit the first activity in a cell.
   const primaryActivity = (Array.isArray(activities) && activities.length > 0) ? activities.join(', ') : 'Float';
@@ -61,11 +64,13 @@ export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError
     return "bg-secondary text-secondary-foreground";
   };
   
+  const isEvaluable = primaryActivity.includes('OR') || primaryActivity.includes('Clinic');
+
   return (
-    <div ref={setDroppableNodeRef} className="h-full w-full">
+    <div ref={setDroppableNodeRef} className="h-full w-full relative group">
       <div ref={setDraggableNodeRef} style={style} {...listeners} {...attributes}>
         <Select value={primaryActivity} onValueChange={handleActivityChange}>
-          <SelectTrigger className={cn("w-[120px] h-auto p-1.5 text-xs border-0 focus:ring-0 focus:ring-offset-0", getCellClass(primaryActivity), isOver && "ring-2 ring-offset-2 ring-ring", hasError && "ring-2 ring-offset-1 ring-destructive")}>
+          <SelectTrigger className={cn("w-full h-auto p-1.5 text-xs border-0 focus:ring-0 focus:ring-offset-0", getCellClass(primaryActivity), isOver && "ring-2 ring-offset-2 ring-ring", hasError && "ring-2 ring-offset-1 ring-destructive")}>
             <SelectValue placeholder="Select..." />
           </SelectTrigger>
           <SelectContent>
@@ -77,6 +82,20 @@ export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError
           </SelectContent>
         </Select>
       </div>
+
+       {isEvaluable && (
+        <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute top-0 right-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-background/50 hover:bg-background/80"
+            onClick={(e) => {
+                e.stopPropagation(); // Prevent drag from starting
+                onEpaClick(resident.id, dayIndex, primaryActivity);
+            }}
+            >
+            <GraduationCap className="h-4 w-4 text-primary" />
+        </Button>
+       )}
     </div>
   );
 }

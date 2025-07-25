@@ -12,6 +12,7 @@ import { generateHistoricalData as generateHistoricalDataFlow } from '@/ai/flows
 import { analyzeResidentPerformance as analyzeResidentPerformanceFlow } from '@/ai/flows/analyze-resident-performance';
 import { generateSurgicalBriefing as generateSurgicalBriefingFlow } from '@/ai/flows/generate-surgical-briefing';
 import { generateYearlyRotationSchedule as generateYearlyRotationScheduleFlow } from '@/ai/flows/generate-yearly-rotation-schedule';
+import { suggestEpaForActivity as suggestEpaForActivityFlow } from '@/ai/flows/suggest-epa-for-activity';
 import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput } from '../lib/types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
@@ -176,5 +177,15 @@ export async function generateYearlyRotationScheduleAction(input: GenerateYearly
     } catch (error) {
         console.error('Error in generateYearlyRotationScheduleAction:', error);
         return { success: false, error: 'Failed to generate yearly rotation schedule.' };
+    }
+}
+
+export async function suggestEpaAction(activityDescription: string) {
+    try {
+        const result = await suggestEpaForActivityFlow({ activityDescription });
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Error in suggestEpaAction:', error);
+        return { success: false, error: 'Failed to suggest EPA.' };
     }
 }

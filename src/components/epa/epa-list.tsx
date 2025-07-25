@@ -7,14 +7,16 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Loader2 } from 'lucide-react';
 
 interface EpaListProps {
   epas: EPA[];
   onSelectEpa: (epa: EPA) => void;
   currentUserRole: UserRole;
+  isLoading?: boolean;
 }
 
-export function EpaList({ epas, onSelectEpa, currentUserRole }: EpaListProps) {
+export function EpaList({ epas, onSelectEpa, currentUserRole, isLoading = false }: EpaListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredEpas = epas.filter(epa =>
@@ -46,23 +48,30 @@ export function EpaList({ epas, onSelectEpa, currentUserRole }: EpaListProps) {
           className="w-full"
         />
       </div>
-      <ScrollArea className="flex-1 mt-2 border rounded-lg">
-        <div className="p-4 space-y-3">
-          {filteredEpas.map(epa => (
-            <div key={epa.id} className="p-4 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition-colors">
-              <div>
-                <h3 className="font-semibold text-lg">{epa.id}: {epa.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{epa.keyFeatures}</p>
-                 <div className="mt-2 flex gap-2">
-                    {epa.stage && <Badge variant="secondary">{epa.stage}</Badge>}
-                    {epa.type && <Badge variant="outline">{epa.type}</Badge>}
-                 </div>
-              </div>
-              <Button onClick={() => onSelectEpa(epa)}>{getButtonText()}</Button>
-            </div>
-          ))}
+       {isLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="mt-2">AI is suggesting an EPA...</p>
         </div>
-      </ScrollArea>
+      ) : (
+        <ScrollArea className="flex-1 mt-2 border rounded-lg">
+            <div className="p-4 space-y-3">
+            {filteredEpas.map(epa => (
+                <div key={epa.id} className="p-4 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition-colors">
+                <div>
+                    <h3 className="font-semibold text-lg">{epa.id}: {epa.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{epa.keyFeatures}</p>
+                    <div className="mt-2 flex gap-2">
+                        {epa.stage && <Badge variant="secondary">{epa.stage}</Badge>}
+                        {epa.type && <Badge variant="outline">{epa.type}</Badge>}
+                    </div>
+                </div>
+                <Button onClick={() => onSelectEpa(epa)}>{getButtonText()}</Button>
+                </div>
+            ))}
+            </div>
+        </ScrollArea>
+       )}
     </div>
   );
 }

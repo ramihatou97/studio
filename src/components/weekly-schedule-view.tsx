@@ -6,13 +6,15 @@ import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { getMonth, getYear } from 'date-fns';
 import { generateSchedules } from '@/lib/schedule-generator';
+import { useState } from 'react';
+import { EpaModal } from './modals/epa-modal';
 
 interface WeeklyScheduleViewProps {
   appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
 }
 
-function WeekTable({ weekNumber, appState, setAppState, weekStartDate, daysInWeek }: { weekNumber: number, appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState | null>>, weekStartDate: Date, daysInWeek: number }) {
+function WeekTable({ weekNumber, appState, setAppState, weekStartDate, daysInWeek, onEpaClick }: { weekNumber: number, appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState | null>>, weekStartDate: Date, daysInWeek: number, onEpaClick: (residentId: string, dayIndex: number, activity: string) => void }) {
   const { residents, errors } = appState;
 
   return (
@@ -51,6 +53,7 @@ function WeekTable({ weekNumber, appState, setAppState, weekStartDate, daysInWee
                           dayIndex={dayIndex}
                           setAppState={setAppState}
                           hasError={hasError}
+                          onEpaClick={onEpaClick}
                         />
                       </TableCell>
                     );
@@ -69,6 +72,10 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
   const { residents, general } = appState;
   const { startDate, endDate } = general;
   const { toast } = useToast();
+  
+  const [isEpaModalOpen, setEpaModalOpen] = useState(false);
+  const [epaModalState, setEpaModalState] = useState<{residentId: string, dayIndex: number}>({residentId: '', dayIndex: 0});
+
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -142,6 +149,11 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
     }
   };
   
+  const handleEpaClick = (residentId: string, dayIndex: number, activity: string) => {
+    setEpaModalState({ residentId, dayIndex });
+    setEpaModalOpen(true);
+  };
+
   if (!startDate || !endDate) return null;
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -165,9 +177,18 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
                 setAppState={setAppState} 
                 weekStartDate={weekStartDate}
                 daysInWeek={daysInWeek}
+                onEpaClick={handleEpaClick}
             />
          )
        })}
+
+       <EpaModal 
+        isOpen={isEpaModalOpen} 
+        onOpenChange={setEpaModalOpen} 
+        appState={appState} 
+        preselectedResidentId={epaModalState.residentId}
+        preselectedDayIndex={epaModalState.dayIndex}
+      />
     </DndContext>
   );
 }
