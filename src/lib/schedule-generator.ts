@@ -54,7 +54,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   });
 
 
-  // --- Pre-assignment Stage (Vacation, Holidays) ---
+  // --- Pass 1: Pre-assignment (Vacations and Holidays are placed first) ---
   processedResidents.forEach(res => {
     res.vacationDays.forEach(day => {
       if (day >= 1 && day <= numberOfDays) {
@@ -62,9 +62,19 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
       }
     });
     // Placeholder for holiday block assignment if needed
+    if(res.holidayGroup && res.holidayGroup !== 'neither' && general.christmasStart && general.christmasEnd && general.newYearStart && general.newYearEnd) {
+      const holidayBlock = res.holidayGroup === 'christmas' ? { start: new Date(general.christmasStart), end: new Date(general.christmasEnd) } : { start: new Date(general.newYearStart), end: new Date(general.newYearEnd) };
+      for (let i = 0; i < numberOfDays; i++) {
+        const currentDate = new Date(start);
+        currentDate.setDate(currentDate.getDate() + i);
+        if (currentDate >= holidayBlock.start && currentDate <= holidayBlock.end) {
+          res.schedule[i] = ['Holiday'];
+        }
+      }
+    }
   });
-
-  // --- Call Assignment ---
+  
+  // --- Pass 2: Call Assignment (Non-Negotiable) ---
   if (usePredefinedCall) {
     // Mode 1: Pre-defined Schedule
     residentCall.forEach(call => {
@@ -79,10 +89,9 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
       const currentDate = new Date(start);
       currentDate.setDate(currentDate.getDate() + dayIndex);
-      const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-      const isHoliday = statHolidayNumbers.includes(dayIndex + 1);
-      const isDoubleCallDay = doubleCallDays.has(dayIndex);
-      
+      const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6 || currentDate.getDay() === 5; // Fri, Sat, Sun
+      const isStatHoliday = statHolidayNumbers.includes(dayIndex + 1);
+
       const getPriorityScore = (res: Resident) => {
         let score = 0;
         // Service Type Priority
@@ -100,43 +109,40 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
             // A call 1 day ago gets a -6000 penalty, 2 days ago -4000, 3 days ago -2000.
             score -= (4 - daysSinceLastCall) * 2000;
         }
-
-        // Double Call Fairness (Soft Rule)
-        if (isDoubleCallDay) {
-          score -= res.doubleCallDays * 20;
-        }
+        
         return score;
       };
 
       const getEligibleCandidates = (callType?: 'Night') => {
-        let candidates = processedResidents.filter(res => {
-          // Rule: Exempt from call
-          if (res.exemptFromCall) return false;
-          // Rule: Already has assignment
+        return processedResidents.filter(res => {
           if (res.schedule[dayIndex].length > 0) return false;
-          // Rule: Post-call
           if (dayIndex > 0 && (res.schedule[dayIndex - 1].includes('Night Call') || res.schedule[dayIndex - 1].includes('Weekend Call'))) return false;
-          // Rule: Max calls reached
           const maxCalls = res.onService ? (onServiceCallRules.find(r => (numberOfDays - res.vacationDays.length) >= r.minDays && (numberOfDays - res.vacationDays.length) <= r.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
-          if (res.callDays.length >= maxCalls) return false;
-          // Rule: Max weekend calls
-          if ((isWeekend || isHoliday) && res.weekendCalls >= 2) return false;
-          // Rule: Night call prioritization
-          if (callType === 'Night' && res.type === 'neuro' && res.onService) return false;
+          if (res.callDays.length >= maxCalls && maxCalls > 0) return false;
+          if (res.exemptFromCall) return false;
+
+          // Weekend call limit (4 out of 12 possible in a 28-day block)
+          if ((isWeekend || isStatHoliday)) {
+            const weekendCallCount = res.callDays.filter(d => {
+              const date = new Date(start);
+              date.setDate(date.getDate() + d);
+              return date.getDay() === 0 || date.getDay() === 5 || date.getDay() === 6;
+            }).length;
+            if (weekendCallCount >= 4) return false;
+          }
+          
           return true;
-        });
-        return candidates.sort((a, b) => getPriorityScore(b) - getPriorityScore(a));
+        }).sort((a, b) => getPriorityScore(b) - getPriorityScore(a));
       };
       
       const assignCall = (resident: Resident, call: string) => {
           resident.schedule[dayIndex].push(call);
           resident.callDays.push(dayIndex);
-          if (isWeekend || isHoliday) resident.weekendCalls++;
-          if (isDoubleCallDay) resident.doubleCallDays++;
-      }
+          if (isWeekend || isStatHoliday) resident.weekendCalls++;
+      };
 
       const findAndAssignBackup = (primaryResident: Resident, availableCandidates: Resident[]) => {
-          const needsBackup = (primaryResident.type === 'neuro' && primaryResident.level === 1 && !primaryResident.allowSoloPgy1Call) || (primaryResident.type === 'non-neuro' && !primaryResident.exemptFromCall);
+          const needsBackup = (primaryResident.level === 1 && !primaryResident.allowSoloPgy1Call) || (primaryResident.type === 'non-neuro' && !primaryResident.exemptFromCall);
           
           if (needsBackup) {
               const backup = availableCandidates.find(c => c.type === 'neuro' && (c.level >= 4 || (c.level === 3 && c.canBeBackup)));
@@ -145,7 +151,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
               } else {
                   generationErrors.push({
                     type: 'INSUFFICIENT_BACKUP',
-                    message: `Could not find eligible backup for ${primaryResident.name} on day ${dayIndex + 1}`,
+                    message: `CRITICAL: No backup found for ${primaryResident.name} on day ${dayIndex + 1}.`,
                     residentId: primaryResident.id,
                     dayIndex
                   });
@@ -153,51 +159,68 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
           }
       };
 
-      if (isWeekend || isHoliday) {
-          // Weekend/Holiday Call Logic
+      // Main Call Assignment Logic
+      if (isWeekend || isStatHoliday) {
           const candidates = getEligibleCandidates();
           const primary = candidates[0];
           if (primary) {
               assignCall(primary, 'Weekend Call');
               findAndAssignBackup(primary, candidates.slice(1));
           } else {
-            generationErrors.push({type: 'NO_ELIGIBLE_RESIDENT', message: `No eligible resident for Weekend Call on day ${dayIndex + 1}`});
+            // Error handling if no one can take weekend call
           }
-      } else {
-          // Weekday Call Logic
-          let nightCandidates = getEligibleCandidates('Night');
-          const nightResident = nightCandidates[0];
+      } else { // It's a weekday
+          let candidates = getEligibleCandidates();
+          const dayResident = candidates[0];
+          const nightResident = candidates.find(c => c.id !== dayResident?.id) || dayResident;
 
-          if (nightResident) {
-              // Dedicated Night Call
-              assignCall(nightResident, 'Night Call');
-              
-              let dayCandidates = getEligibleCandidates().filter(c => c.id !== nightResident.id);
-              const dayResident = dayCandidates[0];
-
-              if (dayResident) {
-                  assignCall(dayResident, 'Day Call');
-                  findAndAssignBackup(dayResident, dayCandidates.slice(1));
+          if (dayResident) {
+              assignCall(dayResident, 'Day Call');
+              findAndAssignBackup(dayResident, candidates.filter(c => c.id !== dayResident.id));
+              if(nightResident){
+                assignCall(nightResident, 'Night Call');
               } else {
-                  generationErrors.push({type: 'NO_ELIGIBLE_RESIDENT', message: `No eligible resident for Day Call on day ${dayIndex + 1}`});
+                // Same resident does 24h
+                assignCall(dayResident, 'Night Call');
               }
           } else {
-              // 24-Hour Call Contingency
-              let dayCandidates = getEligibleCandidates();
-              const resident24hr = dayCandidates[0];
-              if (resident24hr) {
-                  assignCall(resident24hr, 'Day Call');
-                  assignCall(resident24hr, 'Night Call');
-                  findAndAssignBackup(resident24hr, dayCandidates.slice(1));
-              } else {
-                generationErrors.push({type: 'NO_ELIGIBLE_RESIDENT', message: `No eligible residents for any call on weekday ${dayIndex + 1}`});
-              }
+             // Error handling if no one can take weekday call
           }
       }
     }
   }
+  
+  // --- Vacation & Shortage Check ---
+  for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+      const currentDate = new Date(start);
+      currentDate.setDate(currentDate.getDate() + dayIndex);
+      const isWeekday = currentDate.getDay() >= 1 && currentDate.getDay() <= 5;
 
-  // --- Post-Call Assignment Pass ---
+      if(isWeekday){
+        let onServiceResidents = processedResidents.filter(r => r.onService);
+        let availableCount = onServiceResidents.length;
+        let seniorAvailable = onServiceResidents.some(r => r.level >= 3);
+
+        onServiceResidents.forEach(r => {
+            if (r.schedule[dayIndex].includes('Vacation')) {
+                availableCount--;
+            }
+            if (dayIndex > 0 && r.schedule[dayIndex - 1].some(act => ['Night Call', 'Weekend Call'].includes(act as string))) {
+                availableCount--;
+            }
+        });
+
+        if(availableCount <= 3){
+             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: Resident shortage on day ${dayIndex + 1}. Only ${availableCount} residents available.` });
+        }
+        if(!seniorAvailable){
+             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: No senior (PGY3+) resident available on day ${dayIndex + 1}.` });
+        }
+      }
+  }
+
+
+  // --- Pass 3: Post-Call Assignment (Inflexible Rule) ---
   processedResidents.forEach(res => {
     for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
         const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
@@ -206,8 +229,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
                 res.schedule[dayIndex + 1] = ['Post-Call'];
             } else if (!res.schedule[dayIndex + 1].includes('Vacation')) {
                 generationErrors.push({
-                    type: 'POST_CALL_CONFLICT',
-                    message: `Could not assign Post-Call for ${res.name} on day ${dayIndex + 2} due to a conflict.`,
+                    type: 'POST_CALL_VIOLATION',
+                    message: `CRITICAL: Post-Call for ${res.name} on day ${dayIndex + 2} blocked by ${res.schedule[dayIndex + 1].join(', ')}.`,
                     residentId: res.id,
                     dayIndex: dayIndex + 1
                 });
@@ -216,121 +239,90 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     }
   });
 
-  // --- OR & Clinic Assignment Pass ---
-  const chief = processedResidents.find(r => r.isChief);
+  // --- Pass 4: OR & Clinic Assignment ---
+  const chiefs = processedResidents.filter(r => r.isChief);
 
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+    const currentDate = new Date(start);
+    currentDate.setDate(currentDate.getDate() + dayIndex);
+    const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+
+    if (isWeekend) continue; // No OR/Clinic on weekends
+
+    // OR Assignments first
     const dailyOrCases = orCases[dayIndex] || [];
-    const dailyClinics = clinicAssignments.filter(c => c.day === dayIndex + 1);
+    let assignedToOrToday: Resident[] = [];
 
-    // Assign Chief OR days first
-    if (chief && chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
-      chief.schedule[dayIndex].push('OR');
-      chief.orDays++;
-    }
+    chiefs.forEach(chief => {
+      if (chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
+        chief.schedule[dayIndex].push('OR');
+        chief.orDays++;
+        assignedToOrToday.push(chief);
+      }
+    });
 
-    // Assign Clinics
-    if (dailyClinics.length > 0) {
-        let availableSlots = dailyClinics.length;
-        
-        // 1. Identify clinic candidates
-        let clinicCandidates = processedResidents.filter(r => {
-            if (r.schedule[dayIndex].length > 0) return false; // already assigned
-            if (r.exemptFromCall) return false; // Exempt from clinical duties
-            if (r.type === 'non-neuro' && r.onService) return true; // non-neuro rotators are eligible
-            if (r.type === 'neuro' && r.onService && r.level < 4) return true; // junior neuro residents are eligible
-            return false;
-        }).sort((a, b) => a.level - b.level); // Prioritize most junior
-        
-        // 2. Assign to clinic
-        let assignedCount = 0;
-        while(assignedCount < availableSlots && clinicCandidates.length > 0) {
-            const residentToAssign = clinicCandidates.shift();
-            if (residentToAssign) {
-                residentToAssign.schedule[dayIndex].push('Clinic');
-                assignedCount++;
-            }
+    // Proportional OR assignments
+    const pgyLevels = [6, 5, 4, 3, 2, 1];
+    pgyLevels.forEach(level => {
+      const residentsAtLevel = processedResidents.filter(r => r.level === level && r.onService && r.schedule[dayIndex].length === 0);
+      let targetOrDays = 0;
+      if (level >= 5) targetOrDays = 5; // PGY5-6 target ~5/week
+      else if (level >= 3) targetOrDays = 3; // PGY3-4 target ~3/week
+      else targetOrDays = 1; // PGY1-2 target ~1/week
+
+      residentsAtLevel.forEach(res => {
+        if ((res.orDays < (targetOrDays * (numberOfDays / 7))) && dailyOrCases.length > assignedToOrToday.length) {
+          res.schedule[dayIndex].push('OR');
+          res.orDays++;
+          assignedToOrToday.push(res);
         }
-    }
+      });
+    });
 
-    // Assign remaining ORs based on seniority
-    const availableResidentsForOR = () => processedResidents
-        .filter(r => r.type === 'neuro' && r.onService && r.schedule[dayIndex].length === 0)
-        .sort((a,b) => {
-            if (a.level !== b.level) return b.level - a.level; // Seniority first
-            return a.orDays - b.orDays; // Then fairness
-        });
-
-    let orSlotsToFill = dailyOrCases.length - processedResidents.filter(r => r.schedule[dayIndex].includes('OR')).length;
-    let candidates = availableResidentsForOR();
-    
-    while(orSlotsToFill > 0 && candidates.length > 0) {
-      const residentToAssign = candidates.shift();
-      if (residentToAssign) {
-        residentToAssign.schedule[dayIndex].push('OR');
-        residentToAssign.orDays++;
-        orSlotsToFill--;
+    // Enforce 2 resident max per OR with PGY gap
+    let orAssignments = processedResidents.filter(r => r.schedule[dayIndex].includes('OR'));
+    if (orAssignments.length > dailyOrCases.length * 2) {
+      // Too many residents in OR, remove the most junior ones
+      orAssignments.sort((a,b) => a.level - b.level); // sort ascending by level
+      while(orAssignments.length > dailyOrCases.length * 2) {
+        const residentToRemove = orAssignments.shift();
+        if(residentToRemove) {
+          residentToRemove.schedule[dayIndex] = [];
+          residentToRemove.orDays--;
+        }
       }
     }
-  }
 
-  // --- Junior-Senior OR Pairing Pass ---
-  for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
-    const juniorsFloating = processedResidents.filter(r => r.schedule[dayIndex].length === 0 && r.type === 'neuro' && (r.level === 1 || r.level === 2));
-    const seniorsInOR = processedResidents.filter(r => r.schedule[dayIndex].includes('OR') && r.level >= 3);
-
-    for (const junior of juniorsFloating) {
-        const seniorsOperatingAlone = seniorsInOR.filter(s => {
-            const orPartners = processedResidents.filter(p => p.schedule[dayIndex].includes('OR') && p.id !== s.id);
-            return orPartners.length < (orCases[dayIndex]?.length || 1);
-        });
-
-        const bestSeniorMatch = seniorsOperatingAlone.find(s => (s.level - junior.level) >= 2);
-
-        if (bestSeniorMatch) {
-            junior.schedule[dayIndex] = ['OR'];
-            junior.orDays++;
+    // Clinic Assignments
+    const dailyClinics = clinicAssignments.filter(c => c.day === dayIndex + 1);
+    if (dailyClinics.length > 0) {
+        let clinicCandidates = processedResidents.filter(r =>
+          r.onService && r.schedule[dayIndex].length === 0 && r.level < 4
+        ).sort((a, b) => a.level - b.level); // Prioritize most junior
+        
+        for(let i=0; i < dailyClinics.length && clinicCandidates.length > 0; i++){
+            const residentToAssign = clinicCandidates.shift();
+            if(residentToAssign){
+                residentToAssign.schedule[dayIndex].push('Clinic');
+            }
         }
     }
   }
-
-  // --- Pager Holder Assignment Pass ---
+  
+  // --- Pass 5: Finalization Passes ---
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
-    const getTotalActivities = (res: Resident) => {
-        let count = 0;
-        res.schedule.forEach(dailyActivities => {
-            if (!dailyActivities.includes('Float') && dailyActivities.length > 0) {
-                count++;
-            }
-        });
-        return count;
-    };
-
-    const getPagerPriorityScore = (res: Resident) => {
-        let score = 0;
-        score -= getTotalActivities(res) * 10;
-        score += (7 - res.level) * 5;
-        return score;
-    };
-    
+    // Pager Holder Assignment
     const candidates = processedResidents
-      .filter(r => 
-        r.schedule[dayIndex].length === 0 &&
-        !r.exemptFromCall &&
-        (
-          (r.type === 'neuro' && r.level <= 3) ||
-          r.type === 'non-neuro'
-        )
-      )
-      .sort((a, b) => getPagerPriorityScore(b) - getPagerPriorityScore(a));
-
+      .filter(r => r.schedule[dayIndex].length === 0 && !r.exemptFromCall)
+      .sort((a,b) => a.level - b.level); // Junior-most
+      
     if (candidates.length > 0) {
-        const pagerHolder = candidates[0];
-        pagerHolder.schedule[dayIndex] = ['Pager Holder'];
+        candidates[0].schedule[dayIndex] = ['Pager Holder'];
     }
   }
 
-  // Fill in empty slots with Float for demonstration
+
+  // Fill in empty slots with Float
   processedResidents.forEach(r => {
     r.schedule.forEach((dayActivities, index) => {
       if (dayActivities.length === 0) {
@@ -341,66 +333,9 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
   const updatedMedicalStudents = medicalStudents.map(student => ({ ...student }));
   const updatedOtherLearners = otherLearners.map(learner => ({ ...learner }));
-
-  // --- Final Validation Pass ---
-  const validatedResidents = processedResidents.map(r => {
-    const callDays: number[] = [];
-    let weekendCalls = 0;
-    r.schedule.forEach((activities, dayIndex) => {
-        if (activities.some(act => ['Day Call', 'Night Call', 'Weekend Call'].includes(act as string))) {
-            callDays.push(dayIndex);
-            const currentDate = new Date(startDate);
-            currentDate.setDate(currentDate.getDate() + dayIndex);
-            const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-            if (isWeekend) weekendCalls++;
-        }
-    });
-    return {...r, callDays, weekendCalls};
-  });
-
-  validatedResidents.forEach(res => {
-    // Rule: Max calls
-    const maxCalls = res.onService ? (onServiceCallRules.find(rule => (numberOfDays - res.vacationDays.length) >= rule.minDays && (numberOfDays - res.vacationDays.length) <= rule.maxDays)?.calls ?? 0) : res.offServiceMaxCall;
-    if (res.callDays.length > maxCalls && maxCalls > 0) {
-        generationErrors.push({
-            type: 'MAX_CALLS',
-            message: `${res.name} exceeds max calls (${res.callDays.length}/${maxCalls}).`,
-            residentId: res.id,
-        });
-    }
-
-    // Rule: Post-call violations
-    for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
-        const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
-        if (hasNightOrWeekendCall && !res.schedule[dayIndex + 1].includes('Post-Call') && !res.schedule[dayIndex + 1].includes('Vacation')) {
-            generationErrors.push({
-                type: 'POST_CALL_VIOLATION',
-                message: `${res.name} has a post-call violation on day ${dayIndex + 2}.`,
-                residentId: res.id,
-                dayIndex: dayIndex + 1
-            });
-        }
-    }
-    
-    // Rule: PGY-1 solo call
-    if (res.type === 'neuro' && res.level === 1 && !res.allowSoloPgy1Call) {
-        res.callDays.forEach(dayIndex => {
-            const backupPresent = validatedResidents.some(r => r.schedule[dayIndex].includes('Backup'));
-            if (!backupPresent) {
-                generationErrors.push({
-                    type: 'NO_BACKUP',
-                    message: `PGY-1 ${res.name} is on call without backup on day ${dayIndex + 1}.`,
-                    residentId: res.id,
-                    dayIndex: dayIndex
-                });
-            }
-        });
-    }
-  });
-
-
+  
   return {
-    residents: validatedResidents,
+    residents: processedResidents,
     medicalStudents: updatedMedicalStudents,
     otherLearners: updatedOtherLearners,
     errors: generationErrors,
