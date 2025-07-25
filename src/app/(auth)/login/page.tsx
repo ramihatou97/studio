@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL || '');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();

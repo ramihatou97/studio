@@ -27,7 +27,7 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!role) {
+    if (!role && email !== process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL) {
         toast({ variant: 'destructive', title: 'Please select a role.' });
         return;
     }
@@ -39,29 +39,40 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
-        // Step 1: Create user in Firebase Auth
+        const isProgramDirector = email === process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL;
+        const finalRole = isProgramDirector ? 'program-director' : role;
+        
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Step 2: Create a user profile document in Firestore
         const userProfile: UserProfile = {
             uid: user.uid,
             email: user.email!,
             firstName,
             lastName,
             name: `${firstName} ${lastName}`,
-            role,
-            status: 'pending', // All new users are pending approval
-            pgyLevel: role === 'resident' ? pgyLevel : undefined,
+            role: finalRole as UserProfile['role'],
+            status: isProgramDirector ? 'active' : 'pending',
+            pgyLevel: finalRole === 'resident' ? pgyLevel : undefined,
         };
 
         await setDoc(doc(db, "users", user.uid), userProfile);
 
-        setIsSubmitted(true);
-        toast({
-            title: "Sign-up Request Submitted",
-            description: "Your request has been sent to the Program Director for approval."
-        });
+        if (isProgramDirector) {
+            toast({
+                title: "Admin Account Created",
+                description: "Your Program Director account is active. Please log in."
+            });
+            // Redirect to login so the PD can sign in immediately
+            window.location.href = '/login'; 
+        } else {
+            setIsSubmitted(true);
+            toast({
+                title: "Sign-up Request Submitted",
+                description: "Your request has been sent to the Program Director for approval."
+            });
+        }
+
 
     } catch (error: any) {
         let errorMessage = 'An unknown error occurred.';
@@ -102,6 +113,8 @@ export default function SignupPage() {
     );
   }
 
+  const isProgramDirectorSignup = email === process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL;
+
   return (
     <div>
       <div className="text-center mb-6">
@@ -127,36 +140,41 @@ export default function SignupPage() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} />
         </div>
-        <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Select onValueChange={(v) => setRole(v as 'resident' | 'staff')} required disabled={isLoading}>
-                <SelectTrigger id="role">
-                    <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="resident">Resident</SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
         
-        {role === 'resident' && (
-             <div className="space-y-2">
-                <Label htmlFor="pgy-level">PGY Level</Label>
-                <Select onValueChange={(val) => setPgyLevel(Number(val))} required disabled={isLoading}>
-                    <SelectTrigger id="pgy-level">
-                        <SelectValue placeholder="Select PGY Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                       {[1, 2, 3, 4, 5, 6].map(l => <SelectItem key={l} value={String(l)}>PGY-{l}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
+        {!isProgramDirectorSignup && (
+            <>
+                <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select onValueChange={(v) => setRole(v as 'resident' | 'staff')} required disabled={isLoading}>
+                        <SelectTrigger id="role">
+                            <SelectValue placeholder="Select your role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="staff">Staff</SelectItem>
+                            <SelectItem value="resident">Resident</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                
+                {role === 'resident' && (
+                     <div className="space-y-2">
+                        <Label htmlFor="pgy-level">PGY Level</Label>
+                        <Select onValueChange={(val) => setPgyLevel(Number(val))} required disabled={isLoading}>
+                            <SelectTrigger id="pgy-level">
+                                <SelectValue placeholder="Select PGY Level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                               {[...Array(6)].map((_, i) => <SelectItem key={i+1} value={String(i+1)}>PGY-{i+1}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+            </>
         )}
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Request Account
+          {isProgramDirectorSignup ? 'Create Admin Account' : 'Request Account'}
         </Button>
       </form>
       <div className="mt-4 text-center text-sm">
