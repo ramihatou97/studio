@@ -29,6 +29,7 @@ export interface ManualProcedure extends Omit<OrCase, 'diagnosis' | 'complexity'
     id: string;
     residentId: string;
     date: string; // YYYY-MM-DD
+    basedOn?: string; // Optional: ID of the original OR case it was based on
 }
 
 export interface ClinicAssignment {

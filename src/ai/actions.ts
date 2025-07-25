@@ -14,6 +14,7 @@ import { generateSurgicalBriefing as generateSurgicalBriefingFlow } from '@/ai/f
 import { generateYearlyRotationSchedule as generateYearlyRotationScheduleFlow } from '@/ai/flows/generate-yearly-rotation-schedule';
 import { suggestEpaForActivity as suggestEpaForActivityFlow } from '@/ai/flows/suggest-epa-for-activity';
 import { analyzeEpaPerformance as analyzeEpaPerformanceFlow } from '@/ai/flows/analyze-epa-performance';
+import { suggestProcedureCode as suggestProcedureCodeFlow } from '@/ai/flows/suggest-procedure-code';
 import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput, Evaluation } from '../lib/types';
 
 export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
@@ -198,5 +199,15 @@ export async function analyzeEpaPerformanceAction(residentName: string, evaluati
     } catch (error) {
         console.error('Error in analyzeEpaPerformanceAction:', error);
         return { success: false, error: 'Failed to analyze EPA performance.' };
+    }
+}
+
+export async function suggestProcedureCodeAction(procedureDescription: string) {
+    try {
+        const result = await suggestProcedureCodeFlow({ procedureDescription });
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Error in suggestProcedureCodeAction:', error);
+        return { success: false, error: 'Failed to suggest procedure code.' };
     }
 }

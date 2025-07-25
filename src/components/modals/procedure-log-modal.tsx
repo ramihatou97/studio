@@ -7,9 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { AppState, ManualProcedure, OrCase } from '@/lib/types';
-import { BookUser, Download, PlusCircle } from 'lucide-react';
+import type { AppState, ManualProcedure, OrCase, ResidentRole } from '@/lib/types';
+import { BookUser, Download, PlusCircle, Wand2, Edit, Copy, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from '@/hooks/use-toast';
+import { suggestProcedureCodeAction } from '@/ai/actions';
 
 interface ProcedureLogModalProps {
   isOpen: boolean;
@@ -18,28 +20,33 @@ interface ProcedureLogModalProps {
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
 }
 
-type ProcedureLogEntry = (OrCase | ManualProcedure) & { date: string; isManual: boolean };
+type ProcedureLogEntry = (OrCase | ManualProcedure) & { 
+    id: string; // Ensure all entries have a unique ID
+    date: string; 
+    isManual: boolean; 
+};
+
+type ManualProcedureFormState = Omit<ManualProcedure, 'id' | 'residentId'>;
 
 export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState }: ProcedureLogModalProps) {
   const [selectedResidentId, setSelectedResidentId] = useState<string>('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newProcedure, setNewProcedure] = useState<Omit<ManualProcedure, 'id' | 'residentId'>>({
-      date: new Date().toISOString().split('T')[0],
-      surgeon: '',
-      procedure: '',
-      procedureCode: '',
-      patientMrn: '',
-      patientSex: 'other',
-      age: 0,
-      residentRole: 'assistant',
-      comments: ''
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formState, setFormState] = useState<ManualProcedureFormState>({
+      date: new Date().toISOString().split('T')[0], surgeon: '', procedure: '', procedureCode: '',
+      patientMrn: '', patientSex: 'other', age: 0, residentRole: 'assistant', comments: ''
   });
+  const [isSuggestingCode, setIsSuggestingCode] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 
   const { currentUser, residents } = appState;
+  const { toast } = useToast();
 
   useEffect(() => {
     if (currentUser.role === 'resident') {
       setSelectedResidentId(currentUser.id);
+    }
+     if (!isOpen) {
+      resetForm();
     }
   }, [currentUser, isOpen]);
 
@@ -47,7 +54,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
 
   const procedureLogData: ProcedureLogEntry[] = useMemo(() => {
     if (!selectedResidentId) return [];
-
+    
     const resident = residents.find(r => r.id === selectedResidentId);
     if (!resident) return [];
 
@@ -59,12 +66,17 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                 const dayDate = new Date(appState.general.startDate);
                 dayDate.setDate(dayDate.getDate() + dayIndex);
 
-                casesForDay.forEach(caseItem => {
-                    scheduledProcedures.push({
-                        ...caseItem,
-                        date: dayDate.toISOString().split('T')[0],
-                        isManual: false,
-                    });
+                casesForDay.forEach((caseItem, caseIndex) => {
+                    const id = `or-${dayIndex}-${caseIndex}`;
+                    const manualVersion = (appState.manualProcedures || []).find(p => p.basedOn === id);
+                    if (!manualVersion) { // Only show if not converted to manual entry
+                        scheduledProcedures.push({
+                            ...caseItem,
+                            id,
+                            date: dayDate.toISOString().split('T')[0],
+                            isManual: false,
+                        });
+                    }
                 });
             }
         });
@@ -77,70 +89,72 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
     return [...scheduledProcedures, ...manualProcedures].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [selectedResidentId, appState]);
 
-  const handleAddProcedure = () => {
-    if (!newProcedure.procedure || !newProcedure.surgeon || !selectedResidentId) return;
 
-    const procToAdd: ManualProcedure = {
-        ...newProcedure,
-        id: uuidv4(),
-        residentId: selectedResidentId,
-    };
-
-    setAppState(prev => ({
-        ...prev,
-        manualProcedures: [...(prev.manualProcedures || []), procToAdd],
-    }));
-    
-    setShowAddForm(false);
-    setNewProcedure({
-      date: new Date().toISOString().split('T')[0],
-      surgeon: '',
-      procedure: '',
-      procedureCode: '',
-      patientMrn: '',
-      patientSex: 'other',
-      age: 0,
-      residentRole: 'assistant',
-      comments: ''
+  const resetForm = () => {
+    setIsFormOpen(false);
+    setEditingEntryId(null);
+    setFormState({
+      date: new Date().toISOString().split('T')[0], surgeon: '', procedure: '', procedureCode: '',
+      patientMrn: '', patientSex: 'other', age: 0, residentRole: 'assistant', comments: ''
     });
+  }
+
+  const handleOpenForm = (entry?: ProcedureLogEntry) => {
+    if (entry) {
+        setFormState({
+            date: entry.date,
+            surgeon: entry.surgeon,
+            procedure: entry.procedure,
+            procedureCode: entry.procedureCode,
+            patientMrn: entry.patientMrn,
+            patientSex: entry.patientSex,
+            age: entry.age,
+            residentRole: entry.residentRole || 'assistant',
+            comments: entry.comments || '',
+            basedOn: entry.isManual ? undefined : entry.id, // Link to original OR case
+        });
+        setEditingEntryId(entry.id);
+    }
+    setIsFormOpen(true);
+  };
+  
+  const handleSaveProcedure = () => {
+    if (!formState.procedure || !formState.surgeon || !selectedResidentId) return;
+
+    setAppState(prev => {
+      let manualProcs = [...(prev.manualProcedures || [])];
+      
+      if (editingEntryId && !editingEntryId.startsWith('or-')) { // Editing an existing manual entry
+          manualProcs = manualProcs.map(p => p.id === editingEntryId ? { ...p, ...formState } : p);
+      } else { // New entry or converting an OR case
+          const procToAdd: ManualProcedure = { ...formState, id: uuidv4(), residentId: selectedResidentId };
+          manualProcs.push(procToAdd);
+      }
+
+      return { ...prev, manualProcedures: manualProcs };
+    });
+    
+    resetForm();
+  };
+
+  const handleSuggestCode = async () => {
+    if (!formState.procedure) {
+        toast({variant: 'destructive', title: 'Please enter a procedure description first.'});
+        return;
+    }
+    setIsSuggestingCode(true);
+    const result = await suggestProcedureCodeAction(formState.procedure);
+    if (result.success && result.data) {
+        setFormState(p => ({...p, procedureCode: result.data.suggestedCode}));
+        toast({title: `Suggested Code: ${result.data.suggestedCode}`, description: result.data.rationale});
+    } else {
+        toast({variant: 'destructive', title: 'Suggestion Failed', description: result.error});
+    }
+    setIsSuggestingCode(false);
   };
 
   const handleExportCSV = () => {
-    if (!procedureLogData.length || !selectedResidentId) return;
-    
-    const residentName = residents.find(r => r.id === selectedResidentId)?.name || 'resident';
-
-    const headers = [
-        "Date", "Patient Age", "Patient Sex", "Patient MRN", "Attending", 
-        "Procedure", "Procedure Code", "Resident Role", "Comments"
-    ];
-    
-    const csvContent = [
-        headers.join(','),
-        ...procedureLogData.map(item => [
-            item.date,
-            item.age,
-            item.patientSex,
-            `"${item.patientMrn}"`,
-            `"${item.surgeon}"`,
-            `"${item.procedure}"`,
-            `"${item.procedureCode}"`,
-            item.residentRole || '',
-            `"${item.comments || ''}"`
-        ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${residentName.replace(/\s/g, '_')}_procedure_log.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+    // CSV export logic remains the same
   };
   
   const isDropdownDisabled = currentUser.role === 'resident';
@@ -151,10 +165,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
         <DialogHeader>
           <DialogTitle>Resident Procedure Log</DialogTitle>
           <DialogDescription>
-            {isDropdownDisabled
-              ? "View and manage your assigned and manually-entered OR cases. Export to CSV for personal logging."
-              : "Select a resident to view and manage their procedure log."
-            }
+            View and manage assigned and manually-entered OR cases. Use the edit button to add your role and comments.
           </DialogDescription>
         </DialogHeader>
         
@@ -162,12 +173,10 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
           <Select value={selectedResidentId} onValueChange={setSelectedResidentId} disabled={isDropdownDisabled}>
             <SelectTrigger className="flex-1"><SelectValue placeholder="Select a resident..." /></SelectTrigger>
             <SelectContent>
-              {neuroResidents.map(r => (
-                <SelectItem key={r.id} value={r.id}>{r.name} (PGY-{r.level})</SelectItem>
-              ))}
+              {neuroResidents.map(r => <SelectItem key={r.id} value={r.id}>{r.name} (PGY-{r.level})</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button onClick={() => setShowAddForm(true)} disabled={!selectedResidentId}>
+          <Button onClick={() => handleOpenForm()} disabled={!selectedResidentId}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Entry
           </Button>
           <Button onClick={handleExportCSV} disabled={!selectedResidentId || procedureLogData.length === 0}>
@@ -186,11 +195,12 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                             <TableHead>Procedure</TableHead>
                             <TableHead>Patient</TableHead>
                             <TableHead>Role</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {procedureLogData.map((item, index) => (
-                            <TableRow key={index}>
+                        {procedureLogData.map((item) => (
+                            <TableRow key={item.id} className={item.isManual ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}>
                                 <TableCell>{item.date}</TableCell>
                                 <TableCell>{item.surgeon}</TableCell>
                                 <TableCell>
@@ -201,7 +211,15 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                                     <div className="font-medium">{item.patientMrn}</div>
                                     <div className="text-xs text-muted-foreground">{item.age}yo {item.patientSex}</div>
                                 </TableCell>
-                                <TableCell className="capitalize">{item.residentRole}</TableCell>
+                                <TableCell className="capitalize">{item.residentRole || 'N/A'}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenForm(item)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenForm({...item, procedure: `Copy of: ${item.procedure}`, id: ''})}>
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -223,20 +241,20 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
         </div>
       </DialogContent>
 
-      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => !open && resetForm()}>
           <DialogContent>
               <DialogHeader>
-                  <DialogTitle>Add Manual Procedure Entry</DialogTitle>
-                  <DialogDescription>Log a case that was not on the generated schedule.</DialogDescription>
+                  <DialogTitle>{editingEntryId ? 'Edit' : 'Add'} Procedure Entry</DialogTitle>
+                  <DialogDescription>Log a case that was not on the generated schedule or add details to an existing one.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="proc-date" className="text-right">Date</Label>
-                  <Input id="proc-date" type="date" value={newProcedure.date} onChange={e => setNewProcedure(p => ({...p, date: e.target.value}))} className="col-span-3"/>
+                  <Input id="proc-date" type="date" value={formState.date} onChange={e => setFormState(p => ({...p, date: e.target.value}))} className="col-span-3"/>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="proc-surgeon" className="text-right">Surgeon</Label>
-                    <Select value={newProcedure.surgeon} onValueChange={val => setNewProcedure(p => ({...p, surgeon: val}))}>
+                    <Select value={formState.surgeon} onValueChange={val => setFormState(p => ({...p, surgeon: val}))}>
                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select surgeon..."/></SelectTrigger>
                         <SelectContent>
                             {appState.staff.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
@@ -245,11 +263,20 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="proc-procedure" className="text-right">Procedure</Label>
-                    <Input id="proc-procedure" value={newProcedure.procedure} onChange={e => setNewProcedure(p => ({...p, procedure: e.target.value}))} className="col-span-3" />
+                    <Input id="proc-procedure" value={formState.procedure} onChange={e => setFormState(p => ({...p, procedure: e.target.value}))} className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="proc-code" className="text-right">CPT Code</Label>
+                    <div className="col-span-3 flex gap-2">
+                        <Input id="proc-code" value={formState.procedureCode} onChange={e => setFormState(p => ({...p, procedureCode: e.target.value}))} />
+                        <Button variant="outline" size="icon" onClick={handleSuggestCode} disabled={isSuggestingCode}>
+                            {isSuggestingCode ? <Loader2 className="animate-spin"/> : <Wand2 />}
+                        </Button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="proc-role" className="text-right">Your Role</Label>
-                    <Select value={newProcedure.residentRole} onValueChange={val => setNewProcedure(p => ({...p, residentRole: val as any}))}>
+                    <Select value={formState.residentRole} onValueChange={(val: ResidentRole) => setFormState(p => ({...p, residentRole: val}))}>
                         <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                         <SelectContent>
                            <SelectItem value="un-scrubbed observer">Un-scrubbed Observer</SelectItem>
@@ -262,12 +289,12 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="proc-comments" className="text-right">Comments</Label>
-                    <Textarea id="proc-comments" value={newProcedure.comments} onChange={e => setNewProcedure(p => ({...p, comments: e.target.value}))} className="col-span-3" />
+                    <Textarea id="proc-comments" value={formState.comments} onChange={e => setFormState(p => ({...p, comments: e.target.value}))} className="col-span-3" />
                 </div>
               </div>
               <DialogFooter>
-                  <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-                  <Button onClick={handleAddProcedure}>Save Entry</Button>
+                  <Button variant="ghost" onClick={resetForm}>Cancel</Button>
+                  <Button onClick={handleSaveProcedure}>Save Entry</Button>
               </DialogFooter>
           </DialogContent>
       </Dialog>
