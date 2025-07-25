@@ -1,7 +1,7 @@
 
 "use client";
-import { useState, useRef, useEffect, useMemo } from 'react';
-import type { EPA, Milestone } from '@/lib/epa-data';
+import { useState, useRef } from 'react';
+import type { EPA } from '@/lib/epa-data';
 import type { AppState, Evaluation } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ScrollArea } from '../ui/scroll-area';
@@ -11,13 +11,77 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Download, Send } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '../ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { v4 as uuidv4 } from 'uuid';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+
+const styles = StyleSheet.create({
+  page: { padding: 30, fontFamily: 'Helvetica', fontSize: 11, color: '#333' },
+  header: { textAlign: 'center', marginBottom: 20 },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#624BFF' },
+  subtitle: { fontSize: 12, color: '#555' },
+  section: { marginBottom: 15, border: '1px solid #eee', borderRadius: 5, padding: 10 },
+  sectionTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 8, borderBottom: '1px solid #eee', paddingBottom: 4, color: '#624BFF' },
+  grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  gridItem: { flex: 1 },
+  label: { fontSize: 10, color: '#666', marginBottom: 2 },
+  value: { fontSize: 11, fontWeight: 'bold' },
+  milestone: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5, borderBottom: '1px dotted #ccc' },
+  milestoneText: { flex: 1, marginRight: 10 },
+  rating: { fontWeight: 'bold' },
+  feedback: { marginTop: 5, fontStyle: 'italic' }
+});
+
+const EpaPdfDocument = ({ epa, evaluation, appState }: { epa: EPA, evaluation: Evaluation, appState: AppState }) => {
+    const resident = appState.residents.find(r => r.id === evaluation.residentId);
+    const evaluator = appState.staff.find(s => s.id === evaluation.evaluatorId);
+    return (
+        <Document>
+            <Page style={styles.page}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>EPA Evaluation: {epa.id}</Text>
+                    <Text style={styles.subtitle}>{epa.title}</Text>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Evaluation Details</Text>
+                    <View style={styles.grid}>
+                        <View style={styles.gridItem}><Text style={styles.label}>Resident</Text><Text style={styles.value}>{resident?.name || 'N/A'}</Text></View>
+                        <View style={styles.gridItem}><Text style={styles.label}>Evaluator</Text><Text style={styles.value}>{evaluator?.name || 'N/A'}</Text></View>
+                    </View>
+                    <View style={styles.grid}>
+                       <View style={styles.gridItem}><Text style={styles.label}>Activity Date</Text><Text style={styles.value}>{evaluation.activityDate}</Text></View>
+                       <View style={styles.gridItem}><Text style={styles.label}>Evaluation Date</Text><Text style={styles.value}>{new Date().toLocaleDateString()}</Text></View>
+                    </View>
+                     <Text style={styles.label}>Activity</Text><Text style={styles.value}>{evaluation.activityDescription}</Text>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Overall Assessment</Text>
+                     <View style={styles.grid}>
+                        <View style={styles.gridItem}><Text style={styles.label}>Overall Entrustment Score</Text><Text style={styles.value}>{evaluation.overallRating} / 5</Text></View>
+                    </View>
+                    <Text style={styles.label}>Narrative Feedback</Text>
+                    <Text style={styles.feedback}>"{evaluation.feedback || 'No feedback provided.'}"</Text>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Milestone Ratings</Text>
+                    {epa.milestones.map((milestone, index) => (
+                        <View key={index} style={styles.milestone}>
+                            <Text style={styles.milestoneText}>{milestone.text}</Text>
+                            <Text style={styles.rating}>{evaluation.milestoneRatings[index] || 'N/R'} / 5</Text>
+                        </View>
+                    ))}
+                </View>
+            </Page>
+        </Document>
+    )
+};
+
 
 interface EpaEvaluationFormProps {
   evaluation: Evaluation;
@@ -38,7 +102,6 @@ export function EpaEvaluationForm({
   const [isProcessing, setIsProcessing] = useState(false);
   const [evaluationMode, setEvaluationMode] = useState<'request' | 'evaluate_junior'>('request');
   
-  const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { currentUser, staff, residents } = appState;
   
@@ -48,7 +111,7 @@ export function EpaEvaluationForm({
 
   const isResidentInitiator = currentUser.role === 'resident';
 
-  const juniorResidents = useMemo(() => {
+  const juniorResidents = React.useMemo(() => {
     if (!isResidentInitiator) return [];
     const currentUserLevel = residents.find(r => r.id === currentUser.id)?.level || 0;
     return residents.filter(r => r.id !== currentUser.id && r.level < currentUserLevel);
@@ -106,27 +169,6 @@ export function EpaEvaluationForm({
     onComplete();
   };
 
-  const handleDownloadPdf = async () => {
-    if (!formRef.current) return;
-    setIsProcessing(true);
-    toast({title: "Generating PDF...", description: "Please wait a moment."});
-
-    try {
-        const canvas = await html2canvas(formRef.current, { scale: 2, useCORS: true, logging: false });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: [canvas.width, canvas.height] });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        const residentName = appState.residents.find(r => r.id === evalData.residentId)?.name || 'resident';
-        const fileName = `EPA_${epa.id.replace(/\s/g, '_')}_${residentName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-        pdf.save(fileName);
-    } catch (error) {
-        console.error("Error generating PDF:", error);
-        toast({variant: "destructive", title: "PDF Generation Failed", description: "There was an error creating the PDF."});
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
   const getActionButtons = () => {
     if (isResidentInitiator) {
         if (evaluationMode === 'request') {
@@ -154,7 +196,7 @@ export function EpaEvaluationForm({
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
-        <div ref={formRef} className="p-1">
+        <div className="p-1">
           <Card>
             <CardHeader>
               <CardTitle>Evaluation Details</CardTitle>
@@ -262,7 +304,7 @@ export function EpaEvaluationForm({
              <CardHeader>
               <CardTitle>Milestone Evaluation</CardTitle>
               <CardDescription>Rate each milestone on a scale of 1 (pre-entrustable) to 5 (aspirational).</CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent>
               <div className="space-y-4">
                 {epa.milestones.map((milestone, index) => (
@@ -295,9 +337,17 @@ export function EpaEvaluationForm({
         </div>
       </ScrollArea>
        <CardFooter className="pt-6 border-t gap-2">
-          <Button variant="outline" className="w-full" onClick={handleDownloadPdf} disabled={isProcessing}>
-              <Download className="mr-2 h-4 w-4" /> Export as PDF
-          </Button>
+            <PDFDownloadLink
+                document={<EpaPdfDocument epa={epa} evaluation={evalData} appState={appState} />}
+                fileName={`EPA_${epa.id.replace(/\s/g, '_')}_${appState.residents.find(r => r.id === evalData.residentId)?.name.replace(/\s/g, '_') || 'resident'}.pdf`}
+                className="w-full"
+            >
+                {({ blob, url, loading, error }) => (
+                    <Button variant="outline" className="w-full" disabled={loading}>
+                        {loading ? 'Generating...' : <><Download className="mr-2 h-4 w-4" /> Export as PDF</>}
+                    </Button>
+                )}
+            </PDFDownloadLink>
           {getActionButtons()}
         </CardFooter>
     </div>

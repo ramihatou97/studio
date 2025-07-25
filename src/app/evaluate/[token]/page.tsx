@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import type { AppState, Evaluation } from '@/lib/types';
 import { ALL_EPAS, type EPA } from '@/lib/epa-data';
-import { EpaEvaluationForm } from '@/components/epa/epa-evaluation-form'; // Adjust path if needed
+import { EpaEvaluationForm } from '@/components/modals/epa-evaluation-form';
 import { getInitialAppState } from '@/lib/config-helpers'; // Adjust path
 import { Button } from '@/components/ui/button';
 import { MediShiftLogo } from '@/components/icons';
@@ -133,4 +133,3 @@ export default function EvaluatePage({ params }: { params: { token: string } }) 
         </div>
     );
 }
-

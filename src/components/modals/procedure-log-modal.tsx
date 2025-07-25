@@ -1,4 +1,6 @@
 
+"use client";
+
 import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -99,12 +101,12 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
     });
   }
 
-  const handleOpenForm = (entry?: ProcedureLogEntry) => {
+  const handleOpenForm = (entry?: ProcedureLogEntry, isCopy = false) => {
     if (entry) {
-        setFormState({
+        const baseState = {
             date: entry.date,
             surgeon: entry.surgeon,
-            procedure: entry.procedure,
+            procedure: isCopy ? `Copy of: ${entry.procedure}` : entry.procedure,
             procedureCode: entry.procedureCode,
             patientMrn: entry.patientMrn,
             patientSex: entry.patientSex,
@@ -112,8 +114,9 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
             residentRole: entry.residentRole || 'assistant',
             comments: entry.comments || '',
             basedOn: entry.isManual ? undefined : entry.id, // Link to original OR case
-        });
-        setEditingEntryId(entry.id);
+        };
+        setFormState(baseState);
+        setEditingEntryId(isCopy ? null : entry.id); // If copying, it's a new entry, so no editingId
     }
     setIsFormOpen(true);
   };
@@ -122,6 +125,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
     if (!formState.procedure || !formState.surgeon || !selectedResidentId) return;
 
     setAppState(prev => {
+      if (!prev) return null;
       let manualProcs = [...(prev.manualProcedures || [])];
       
       if (editingEntryId && !editingEntryId.startsWith('or-')) { // Editing an existing manual entry
@@ -154,7 +158,32 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
   };
 
   const handleExportCSV = () => {
-    // CSV export logic remains the same
+    const headers = ['Date', 'Surgeon', 'Procedure', 'CPT Code', 'Patient MRN', 'Patient Age', 'Patient Sex', 'Resident Role', 'Comments'];
+    const csvContent = [
+      headers.join(','),
+      ...procedureLogData.map(item => [
+        `"${item.date}"`,
+        `"${item.surgeon}"`,
+        `"${item.procedure}"`,
+        `"${item.procedureCode}"`,
+        `"${item.patientMrn}"`,
+        item.age,
+        `"${item.patientSex}"`,
+        `"${item.residentRole || ''}"`,
+        `"${(item.comments || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const residentName = residents.find(r => r.id === selectedResidentId)?.name || 'resident';
+    link.setAttribute('download', `procedure_log_${residentName.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "CSV Exported", description: "Your procedure log has been downloaded." });
   };
   
   const isDropdownDisabled = currentUser.role === 'resident';
@@ -216,7 +245,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenForm(item)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenForm({...item, procedure: `Copy of: ${item.procedure}`, id: ''})}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenForm(item, true)}>
                                         <Copy className="h-4 w-4" />
                                     </Button>
                                 </TableCell>
