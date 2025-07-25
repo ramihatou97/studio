@@ -341,7 +341,7 @@ export function EpaEvaluationForm({
              <CardHeader>
               <CardTitle>Milestone Evaluation</CardTitle>
               <CardDescription>Rate each milestone on a scale of 1 (pre-entrustable) to 5 (aspirational).</CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {epa.milestones.map((milestone, index) => (
@@ -357,7 +357,7 @@ export function EpaEvaluationForm({
           <Card className="mt-4">
             <CardHeader>
                 <CardTitle>Overall Assessment & Feedback</CardTitle>
-            </Header>
+            </CardHeader>
             <CardContent className="space-y-4">
                 <div>
                     <Label className="font-semibold">Overall Entrustment Score</Label>
