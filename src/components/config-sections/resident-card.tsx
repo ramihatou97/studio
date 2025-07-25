@@ -1,4 +1,5 @@
 
+
 import { useEffect } from 'react';
 import type { AppState, Resident } from '@/lib/types';
 import { Input } from "@/components/ui/input";
@@ -60,7 +61,9 @@ export function ResidentCard({ resident, updateResident, removeResident, appStat
       if (!prevState) return prevState;
       const updatedResidents = prevState.residents.map(r => ({
         ...r,
-        isChief: r.id === selectedResidentId
+        isChief: r.id === selectedResidentId,
+        // When a new chief is selected, default their call participation to true
+        chiefTakesCall: r.id === selectedResidentId ? true : r.chiefTakesCall
       }));
       return { ...prevState, residents: updatedResidents };
     });
@@ -170,14 +173,26 @@ export function ResidentCard({ resident, updateResident, removeResident, appStat
                 </RadioGroup>
             </div>
             {resident.isChief && (
-                <div className="chief-or-days-container bg-yellow-50 dark:bg-yellow-900/30 p-2 rounded-md">
-                    <Label className="font-semibold text-yellow-600 dark:text-yellow-400">Chief's Chosen OR Days (by day #)</Label>
-                    <Input 
-                      type="text" 
-                      className="mt-1"
-                      value={resident.chiefOrDays.join(', ')}
-                      onChange={(e) => updateResident(resident.id, { chiefOrDays: e.target.value.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d)) })}
-                    />
+                <div className="space-y-2 chief-or-days-container bg-yellow-50 dark:bg-yellow-900/30 p-2 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id={`chief-takes-call-${resident.id}`} 
+                        checked={resident.chiefTakesCall} 
+                        onCheckedChange={(checked) => updateResident(resident.id, { chiefTakesCall: checked })} 
+                      />
+                      <Label htmlFor={`chief-takes-call-${resident.id}`} className="font-semibold text-yellow-600 dark:text-yellow-400">
+                        Participate in Call Schedule
+                      </Label>
+                    </div>
+                    <div>
+                      <Label className="font-semibold text-yellow-600 dark:text-yellow-400">Chief's Chosen OR Days (by day #)</Label>
+                      <Input 
+                        type="text" 
+                        className="mt-1"
+                        value={resident.chiefOrDays.join(', ')}
+                        onChange={(e) => updateResident(resident.id, { chiefOrDays: e.target.value.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d)) })}
+                      />
+                    </div>
                 </div>
             )}
         </>

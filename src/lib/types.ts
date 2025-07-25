@@ -73,6 +73,7 @@ export interface Resident extends BasePersonnel {
   level: number;
   onService: boolean;
   isChief: boolean;
+  chiefTakesCall?: boolean;
   chiefOrDays: number[];
   maxOnServiceCalls: number;
   offServiceMaxCall: number;

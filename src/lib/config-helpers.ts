@@ -1,4 +1,5 @@
 
+
 import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest, PendingUser } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,7 +9,7 @@ export function getInitialAppState(): AppState {
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   
   const sampleResidents: Resident[] = [
-      { id: '1', type: 'neuro', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@medishift.com', level: 6, onService: true, isChief: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
+      { id: '1', type: 'neuro', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@medishift.com', level: 6, onService: true, isChief: true, chiefTakesCall: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
       { id: '2', type: 'neuro', name: 'Dr. Ben Carter', email: 'ben.carter@medishift.com', level: 4, onService: true, isChief: false, chiefOrDays: [], vacationDays: [8, 9, 10, 11, 12], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
       { id: '3', type: 'neuro', name: 'Dr. Olivia Chen', email: 'olivia.chen@medishift.com', level: 3, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
       { id: '4', type: 'neuro', name: 'Dr. Leo Martinez', email: 'leo.martinez@medishift.com', level: 2, onService: false, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
@@ -79,6 +80,7 @@ export const addNeuroResident = (setAppState: React.Dispatch<React.SetStateActio
     onService: true,
     vacationDays: [],
     isChief: false,
+    chiefTakesCall: true,
     chiefOrDays: [],
     maxOnServiceCalls: 0,
     offServiceMaxCall: 4,
