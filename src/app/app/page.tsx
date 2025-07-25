@@ -33,7 +33,7 @@ import { SurgicalBriefingModal } from '@/components/modals/surgical-briefing-mod
 import { YearlyRotationModal } from '@/components/modals/yearly-rotation-modal';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, query, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
 import { UserCheck, UserX, GraduationCap, BookUser, CalendarDays, ScrollText, Users, Loader2 } from 'lucide-react';
 import type { PendingUser, Resident, Staff } from '@/lib/types';
 
@@ -46,15 +46,9 @@ export default function AppPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  // State for the application's data
   const [appState, setAppState] = useState<AppState | null>(null);
-
-  // State for all user profiles (for role switching and approvals)
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  // The profile of the *actually* logged-in user
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  
-  // The user profile currently being viewed/impersonated.
   const [viewAsUser, setViewAsUser] = useState<UserProfile | null>(null);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -74,82 +68,78 @@ export default function AppPage() {
 
   const isMobile = useIsMobile();
   
-  // Effect for auth state
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace('/login');
     }
   }, [user, authLoading, router]);
 
-  // Effect to get all user profiles for the role switcher
+  // Effect to load all user profiles and determine the current user's profile
   useEffect(() => {
       if (!user) return;
       const q = query(collection(db, "users"));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
           const usersData = querySnapshot.docs.map(doc => doc.data() as UserProfile);
           setAllUsers(usersData);
-
-          // Find the logged-in user's profile
-          const profile = usersData.find(u => u.uid === user.uid);
-          if (profile) {
-              setUserProfile(profile);
-              // Set the initial view to the logged-in user if it's not already set
+          
+          const currentUserProfile = usersData.find(u => u.uid === user.uid);
+          if (currentUserProfile) {
+              setUserProfile(currentUserProfile);
               if (!viewAsUser) {
-                  setViewAsUser(profile);
+                  setViewAsUser(currentUserProfile);
               }
           }
+      }, (error) => {
+        console.error("Error fetching user profiles:", error);
+        toast({ variant: 'destructive', title: 'Permission Error', description: 'Could not fetch user data.' });
       });
+
       return () => unsubscribe();
-  }, [user, viewAsUser]);
+  }, [user, toast, viewAsUser]);
 
 
-  // Effect to subscribe to the main app state from Firestore
+  // Effect to subscribe to the main app state from Firestore, depends on viewAsUser
   useEffect(() => {
-    // Only subscribe after we know who the user is
     if (!viewAsUser) return;
 
-    const docRef = doc(db, "appState", APP_STATE_DOC_ID);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const stateFromDb = docSnap.data() as Omit<AppState, 'currentUser'>;
-        setAppState({
-            ...stateFromDb,
-            currentUser: viewAsUser,
-        });
-      } else {
-        // If the document doesn't exist, create it with the initial state
-        console.log("No app state found in Firestore, creating initial state...");
-        const initialState = getInitialAppState();
-        setDoc(docRef, initialState).then(() => {
-          setAppState({
-              ...initialState,
-              currentUser: viewAsUser,
-          });
-        }).catch(error => {
-          console.error("Error creating initial app state:", error);
-          toast({ variant: 'destructive', title: 'Initialization Error', description: 'Could not create initial app state.' });
-        });
-      }
+    const appStateRef = doc(db, "appState", APP_STATE_DOC_ID);
+
+    const unsubscribe = onSnapshot(appStateRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setAppState({
+                ...(docSnap.data() as Omit<AppState, 'currentUser'>),
+                currentUser: viewAsUser,
+            });
+        } else {
+            console.log("No app state found in Firestore, creating initial state...");
+            const initialState = getInitialAppState();
+            setDoc(appStateRef, initialState)
+                .then(() => {
+                    setAppState({ ...initialState, currentUser: viewAsUser });
+                    console.log("Initial app state created successfully.");
+                })
+                .catch(error => {
+                    console.error("Error creating initial app state:", error);
+                    toast({ variant: 'destructive', title: 'Initialization Error', description: 'Could not create initial app state.' });
+                });
+        }
     }, (error) => {
         console.error("Error subscribing to app state:", error);
         toast({ variant: 'destructive', title: 'Connection Error', description: 'Could not connect to the database.' });
     });
 
     return () => unsubscribe();
-  }, [toast, viewAsUser]); // Depend on viewAsUser
+  }, [toast, viewAsUser]);
   
-  // Effect to update the currentUser in appState when viewAsUser changes
   useEffect(() => {
-    if (appState && viewAsUser) {
+    if (appState && viewAsUser && appState.currentUser.uid !== viewAsUser.uid) {
       setAppState(prev => prev ? ({ ...prev, currentUser: viewAsUser }) : null);
     }
-  }, [viewAsUser]);
+  }, [viewAsUser, appState]);
 
 
-  // Helper to update parts of the app state in Firestore
   const updateFirestoreState = async (updates: Partial<AppState>) => {
     if (!appState) return;
-    // Remove currentUser before updating Firestore, as it's client-side state
     const { currentUser, ...stateToSave } = updates;
     const docRef = doc(db, "appState", APP_STATE_DOC_ID);
     try {
@@ -169,7 +159,6 @@ export default function AppPage() {
       try {
         const output = generateSchedules(appState);
         
-        // Update the state in Firestore
         updateFirestoreState({
           residents: output.residents,
           medicalStudents: output.medicalStudents,
@@ -209,28 +198,30 @@ export default function AppPage() {
   const handleApproval = async (userToApprove: UserProfile, approve: boolean) => {
     const userRef = doc(db, "users", userToApprove.uid);
     try {
+        const batch = writeBatch(db);
         if (approve) {
-            await updateDoc(userRef, { status: 'active' });
+            batch.update(userRef, { status: 'active' });
 
-            // Also add them to the relevant list in the main appState
             if (userToApprove.role === 'resident') {
                 const newResident: Resident = {
-                    id: userToApprove.uid, type: 'neuro', name: userToApprove.name, email: userToApprove.email || '', level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0
+                    id: userToApprove.uid, type: 'neuro', name: userToApprove.name, email: userToApprove.email || '', level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0,
                 };
-                await updateFirestoreState({ residents: [...(appState?.residents || []), newResident] });
+                 updateFirestoreState({ residents: [...(appState?.residents || []), newResident] });
             } else if (userToApprove.role === 'staff') {
                 const newStaff: Staff = {
                     id: userToApprove.uid, name: userToApprove.name, email: userToApprove.email || '', specialtyType: 'other', subspecialty: 'General',
                 };
-                await updateFirestoreState({ staff: [...(appState?.staff || []), newStaff] });
+                updateFirestoreState({ staff: [...(appState?.staff || []), newStaff] });
             }
+             await batch.commit();
             toast({ title: 'User Approved', description: `${userToApprove.name} has been added and is now active.` });
         } else {
-            // Optionally, you might want to delete the user or mark as 'denied'
-             await updateDoc(userRef, { status: 'inactive' });
+             batch.update(userRef, { status: 'inactive' });
+             await batch.commit();
             toast({ variant: 'destructive', title: 'User Denied', description: `${userToApprove.name}'s request has been denied.` });
         }
     } catch (error) {
+        console.error("Approval error:", error);
         toast({ variant: 'destructive', title: 'Action Failed', description: 'Could not update user status.'});
     }
   };
@@ -352,18 +343,18 @@ export default function AppPage() {
         <Card className="mb-8 shadow-lg">
           <CardHeader><CardTitle>Configuration</CardTitle><CardDescription>Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.</CardDescription></CardHeader>
           <CardContent className="space-y-8">
-            <AiPrepopulation setAppState={updateFirestoreState} appState={appState} />
+            <AiPrepopulation setAppState={setAppState as any} appState={appState} />
             <Separator />
-            <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={appState} setAppState={updateFirestoreState} /><ResidentsConfig appState={appState} setAppState={updateFirestoreState as any} /></div>
+            <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={appState} setAppState={updateFirestoreState} /><ResidentsConfig appState={appState} setAppState={setAppState as any} /></div>
             <Accordion type="single" collapsible className="w-full space-y-4"><StaffConfig appState={appState} setAppState={updateFirestoreState} /><OrClinicConfig appState={appState} setAppState={updateFirestoreState} /><HolidayCoverage appState={appState} setAppState={updateFirestoreState} /></Accordion>
           </CardContent>
         </Card>
       )}
 
-      <ActionButtons onGenerate={handleGenerateClick} appState={appState} setAppState={updateFirestoreState as any} isLoading={isGenerating} hasGenerated={hasGenerated} onEpaClick={() => setEpaModalOpen(true)} onProcedureLogClick={() => setProcedureLogModalOpen(true)} onYearlyRotationClick={() => setYearlyRotationModalOpen(true)} onAnalysisClick={() => setAnalysisModalOpen(true)} onOptimizerClick={() => setOptimizerModalOpen(true)} onHandoverClick={() => setHandoverModalOpen(true)} onChatClick={() => setChatModalOpen(true)} onLongTermAnalysisClick={() => setLongTermAnalysisModalOpen(true)} onSurgicalBriefingClick={() => setSurgicalBriefingModalOpen(true)}/>
+      <ActionButtons onGenerate={handleGenerateClick} appState={appState} setAppState={setAppState as any} isLoading={isGenerating} hasGenerated={hasGenerated} onEpaClick={() => setEpaModalOpen(true)} onProcedureLogClick={() => setProcedureLogModalOpen(true)} onYearlyRotationClick={() => setYearlyRotationModalOpen(true)} onAnalysisClick={() => setAnalysisModalOpen(true)} onOptimizerClick={() => setOptimizerModalOpen(true)} onHandoverClick={() => setHandoverModalOpen(true)} onChatClick={() => setChatModalOpen(true)} onLongTermAnalysisClick={() => setLongTermAnalysisModalOpen(true)} onSurgicalBriefingClick={() => setSurgicalBriefingModalOpen(true)}/>
       
       {isGenerating ? (<div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8"><div className="flex flex-col items-center gap-2"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div><p>Generating schedules...</p></div></div>) 
-      : hasGenerated ? (<ScheduleDisplay appState={appState} setAppState={updateFirestoreState as any} />) 
+      : hasGenerated ? (<ScheduleDisplay appState={appState} setAppState={setAppState as any} />) 
       : (<div className="flex items-center justify-center h-48 text-muted-foreground bg-card rounded-2xl shadow-lg mt-8"><p>Generate schedules to view them here.</p></div>)}
     </>
   );
@@ -381,7 +372,6 @@ export default function AppPage() {
           return renderFullDashboard();
       }
     }
-    // All roles see full dashboard on desktop
     return renderFullDashboard(); 
   };
 
@@ -393,15 +383,15 @@ export default function AppPage() {
         <AboutSection />
       </main>
 
-      <EpaModal isOpen={isEpaModalOpen} onOpenChange={setEpaModalOpen} appState={appState} setAppState={updateFirestoreState as any} />
-      <ProcedureLogModal isOpen={isProcedureLogModalOpen} onOpenChange={setProcedureLogModalOpen} appState={appState} setAppState={updateFirestoreState} />
-      <YearlyRotationModal isOpen={isYearlyRotationModalOpen} onOpenChange={setYearlyRotationModalOpen} appState={appState} setAppState={updateFirestoreState} />
+      <EpaModal isOpen={isEpaModalOpen} onOpenChange={setEpaModalOpen} appState={appState} setAppState={setAppState as any} />
+      <ProcedureLogModal isOpen={isProcedureLogModalOpen} onOpenChange={setProcedureLogModalOpen} appState={appState} setAppState={setAppState as any} />
+      <YearlyRotationModal isOpen={isYearlyRotationModalOpen} onOpenChange={setYearlyRotationModalOpen} appState={appState} setAppState={setAppState as any} />
       
       {hasGenerated && (
         <>
           <AnalysisModal isOpen={isAnalysisModalOpen} onOpenChange={setAnalysisModalOpen} appState={appState} />
           <HandoverModal isOpen={isHandoverModalOpen} onOpenChange={setHandoverModalOpen} appState={appState} />
-          <OptimizerModal isOpen={isOptimizerModalOpen} onOpenChange={setOptimizerModalOpen} appState={appState} setAppState={updateFirestoreState} />
+          <OptimizerModal isOpen={isOptimizerModalOpen} onOpenChange={setOptimizerModalOpen} appState={appState} setAppState={setAppState as any} />
           <ChatModal isOpen={isChatModalOpen} onOpenChange={setChatModalOpen} appState={appState} />
           <LongTermAnalysisModal isOpen={isLongTermAnalysisModalOpen} onOpenChange={setLongTermAnalysisModalOpen} appState={appState} />
           <SurgicalBriefingModal isOpen={isSurgicalBriefingModalOpen} onOpenChange={setSurgicalBriefingModalOpen} appState={appState} />

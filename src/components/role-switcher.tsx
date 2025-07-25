@@ -8,6 +8,7 @@ import { LogOut } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from './ui/button';
 
 interface RoleSwitcherProps {
     allUsers: UserProfile[];
