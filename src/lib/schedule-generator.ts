@@ -121,7 +121,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
       const getEligibleCandidates = (isBackupCheck = false) => {
         return processedResidents.filter(res => {
-          if (res.schedule[dayIndex].length > 0) return false;
+          if (res.schedule[dayIndex].some(act => ['Vacation', 'Holiday', 'Post-Call'].includes(act))) return false;
           if (dayIndex > 0 && (res.schedule[dayIndex - 1].includes('Night Call') || res.schedule[dayIndex - 1].includes('Weekend Call'))) return false;
           
           if(res.isChief && res.chiefTakesCall === false) return false;
@@ -288,15 +288,18 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     
     // No OR/Clinic on weekends
     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
-    // OR Assignments first
+    
+    // --- OR Assignments FIRST ---
     const dailyOrCases = orCases[dayIndex] || [];
     dailyOrCases.forEach(orCase => {
         let assignedResidentsToCase: Resident[] = [];
         
+        // A resident is available for OR if they are on service and not on vacation, post-call, night-call or weekend-call
+        const isUnavailable = (schedule: string[]) => schedule.some(act => ['Vacation', 'Post-Call', 'Night Call', 'Weekend Call'].includes(act));
+
         const orCandidates = processedResidents
-            .filter(r => r.onService && r.schedule[dayIndex].length === 0)
-            .sort((a, b) => b.level - a.level);
+            .filter(r => r.onService && !isUnavailable(r.schedule[dayIndex]))
+            .sort((a, b) => b.level - a.level); // Prioritize by seniority
 
         if (assignedResidentsToCase.length >= 2) return;
 
@@ -338,18 +341,22 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
     const chiefs = processedResidents.filter(r => r.isChief);
     chiefs.forEach(chief => {
-      if (chief.chiefOrDays.includes(dayIndex + 1) && chief.schedule[dayIndex].length === 0) {
+      const isUnavailable = chief.schedule[dayIndex].some(act => ['Vacation', 'Post-Call', 'Night Call', 'Weekend Call'].includes(act));
+      if (chief.chiefOrDays.includes(dayIndex + 1) && !isUnavailable && !chief.schedule[dayIndex].includes('OR')) {
         chief.schedule[dayIndex].push('OR');
         chief.orDays++;
       }
     });
 
 
-    // Clinic Assignments
+    // --- Clinic Assignments SECOND ---
     const dailyClinics = clinicAssignments.filter(c => c.day === dayIndex + 1);
     if (dailyClinics.length > 0) {
+        // A resident is available for clinic if they are on service, not otherwise engaged, and not already in an OR
+        const isUnavailable = (schedule: string[]) => schedule.some(act => ['Vacation', 'Post-Call', 'Night Call', 'Weekend Call', 'OR'].includes(act));
+
         let clinicCandidates = processedResidents.filter(r =>
-          r.onService && r.schedule[dayIndex].length === 0 && r.level < 4
+          r.onService && !isUnavailable(r.schedule[dayIndex]) && r.level < 4
         ).sort((a, b) => a.level - b.level);
         
         for(let i=0; i < dailyClinics.length && clinicCandidates.length > 0; i++){
@@ -399,3 +406,5 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     errors: generationErrors,
   };
 }
+
+
