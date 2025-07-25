@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -25,9 +25,18 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const programDirectorEmails = useMemo(() => {
+    const emails = process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAILS || '';
+    return emails.split(',').map(e => e.trim().toLowerCase()).filter(e => e);
+  }, []);
+
+  const isProgramDirectorSignup = useMemo(() => {
+    return email && programDirectorEmails.includes(email.toLowerCase());
+  }, [email, programDirectorEmails]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!role && email !== process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL) {
+    if (!isProgramDirectorSignup && !role) {
         toast({ variant: 'destructive', title: 'Please select a role.' });
         return;
     }
@@ -39,8 +48,7 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
-        const isProgramDirector = email === process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL;
-        const finalRole = isProgramDirector ? 'program-director' : role;
+        const finalRole = isProgramDirectorSignup ? 'program-director' : role;
         
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -52,13 +60,13 @@ export default function SignupPage() {
             lastName,
             name: `${firstName} ${lastName}`,
             role: finalRole as UserProfile['role'],
-            status: isProgramDirector ? 'active' : 'pending',
+            status: isProgramDirectorSignup ? 'active' : 'pending',
             pgyLevel: finalRole === 'resident' ? pgyLevel : undefined,
         };
 
         await setDoc(doc(db, "users", user.uid), userProfile);
 
-        if (isProgramDirector) {
+        if (isProgramDirectorSignup) {
             toast({
                 title: "Admin Account Created",
                 description: "Your Program Director account is active. Please log in."
@@ -112,8 +120,6 @@ export default function SignupPage() {
         </div>
     );
   }
-
-  const isProgramDirectorSignup = email === process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL;
 
   return (
     <div>

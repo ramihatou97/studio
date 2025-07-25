@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,12 @@ import { Loader2 } from 'lucide-react';
 
 
 export default function LoginPage() {
-  const [email, setEmail] = useState(process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAIL || '');
+  const primaryProgramDirectorEmail = useMemo(() => {
+    const emails = process.env.NEXT_PUBLIC_PROGRAM_DIRECTOR_EMAILS || '';
+    return emails.split(',')[0].trim();
+  }, []);
+
+  const [email, setEmail] = useState(primaryProgramDirectorEmail);
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
