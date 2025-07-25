@@ -1,10 +1,10 @@
 
+
 import { z } from 'zod';
 
-export type UserRole = 'program-director' | 'staff' | 'resident';
+export type UserRole = 'program-director' | 'staff' | 'resident' | 'developer';
 
 // This represents the user currently being viewed or managed.
-// In the simplified, no-auth version, it's always the Program Director.
 export interface CurrentUser {
   id: string;
   role: UserRole;

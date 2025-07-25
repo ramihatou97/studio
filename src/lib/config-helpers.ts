@@ -1,7 +1,15 @@
 
 
-import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest, PendingUser } from './types';
+import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest, CurrentUser } from './types';
 import { v4 as uuidv4 } from 'uuid';
+
+
+export const ALL_USERS: CurrentUser[] = [
+    { id: 'program-director', role: 'program-director', name: 'Program Director' },
+    { id: 'developer', role: 'developer', name: 'Developer' },
+    { id: 's1', role: 'staff', name: 'Dr. Sterling Archer' },
+    { id: '1', role: 'resident', name: 'Dr. Evelyn Reed' },
+];
 
 export function getInitialAppState(): AppState {
   const today = new Date();
@@ -61,12 +69,7 @@ export function getInitialAppState(): AppState {
     ],
     manualProcedures: [],
     evaluations: [],
-    pendingUsers: [],
-    currentUser: {
-        id: 'program-director',
-        role: 'program-director',
-        name: 'Program Director',
-    }
+    currentUser: ALL_USERS[0], // Default to Program Director
   };
   
   return initialState;

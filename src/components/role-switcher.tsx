@@ -1,73 +1,44 @@
 
 "use client";
 
-import { useRouter } from 'next/navigation';
-import type { UserProfile } from "@/lib/types";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, SelectSeparator } from "./ui/select";
-import { LogOut } from 'lucide-react';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import type { CurrentUser } from "@/lib/types";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "./ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { Button } from './ui/button';
 
 interface RoleSwitcherProps {
-    allUsers: UserProfile[];
-    currentUser: UserProfile;
-    setSwitchedUser: (user: UserProfile) => void;
+    allUsers: CurrentUser[];
+    currentUser: CurrentUser;
+    onUserSwitch: (user: CurrentUser) => void;
 }
 
-export function RoleSwitcher({ allUsers, currentUser, setSwitchedUser }: RoleSwitcherProps) {
-    const router = useRouter();
+export function RoleSwitcher({ allUsers, currentUser, onUserSwitch }: RoleSwitcherProps) {
     const { toast } = useToast();
 
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-            router.push('/login');
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Logout Failed', description: 'Could not log you out. Please try again.' });
-        }
-    };
-    
-    if (currentUser.role !== 'program-director') {
-        return (
-             <Button variant="ghost" onClick={handleLogout} className="text-sm">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-            </Button>
-        )
-    }
-
-    const handleRoleChange = (value: string) => {
-        if (value === 'logout') {
-            handleLogout();
-            return;
-        }
-        
-        const userToSwitchTo = allUsers.find(u => u.uid === value);
+    const handleRoleChange = (userId: string) => {
+        const userToSwitchTo = allUsers.find(u => u.id === userId);
         if (userToSwitchTo) {
-            setSwitchedUser(userToSwitchTo);
+            onUserSwitch(userToSwitchTo);
         }
     };
     
-    const staff = allUsers.filter(u => u.role === 'staff' && u.status === 'active');
-    const residents = allUsers.filter(u => u.role === 'resident' && u.status === 'active');
+    const staff = allUsers.filter(u => u.role === 'staff');
+    const residents = allUsers.filter(u => u.role === 'resident');
     const programDirector = allUsers.find(u => u.role === 'program-director');
-
+    const developer = allUsers.find(u => u.role === 'developer');
 
     return (
         <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground hidden sm:inline">Viewing as:</span>
-            <Select onValueChange={handleRoleChange} value={currentUser.uid}>
-                <SelectTrigger className="w-[180px]">
+            <Select onValueChange={handleRoleChange} value={currentUser.id}>
+                <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
                 <SelectContent>
-                    {programDirector && (
+                    {(programDirector || developer) && (
                         <SelectGroup>
-                            <SelectLabel>Roles</SelectLabel>
-                            <SelectItem value={programDirector.uid}>Program Director</SelectItem>
+                            <SelectLabel>Admin Roles</SelectLabel>
+                            {programDirector && <SelectItem value={programDirector.id}>Program Director</SelectItem>}
+                            {developer && <SelectItem value={developer.id}>Developer</SelectItem>}
                         </SelectGroup>
                     )}
                     
@@ -75,7 +46,7 @@ export function RoleSwitcher({ allUsers, currentUser, setSwitchedUser }: RoleSwi
                         <SelectGroup>
                             <SelectLabel>Staff</SelectLabel>
                             {staff.map(s => (
-                                <SelectItem key={s.uid} value={s.uid}>{s.name}</SelectItem>
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                             ))}
                         </SelectGroup>
                     )}
@@ -84,17 +55,10 @@ export function RoleSwitcher({ allUsers, currentUser, setSwitchedUser }: RoleSwi
                         <SelectGroup>
                             <SelectLabel>Residents</SelectLabel>
                             {residents.map(r => (
-                                <SelectItem key={r.uid} value={r.uid}>{r.name}</SelectItem>
+                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                             ))}
                         </SelectGroup>
                     )}
-                    <SelectSeparator />
-                     <SelectItem value="logout" className="text-destructive">
-                        <div className="flex items-center gap-2">
-                           <LogOut className="w-4 h-4" />
-                            <span>Logout</span>
-                        </div>
-                    </SelectItem>
                 </SelectContent>
             </Select>
         </div>

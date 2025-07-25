@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import type { AppState } from '@/lib/types';
+import type { AppState, CurrentUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -20,7 +19,7 @@ import { OrClinicConfig } from '@/components/config-sections/or-clinic-config';
 import { HolidayCoverage } from '@/components/config-sections/holiday-coverage';
 import { ActionButtons } from '@/components/action-buttons';
 import { ScheduleDisplay } from '@/components/schedule-display';
-import { getInitialAppState } from '@/lib/config-helpers';
+import { getInitialAppState, ALL_USERS } from '@/lib/config-helpers';
 import { AboutSection } from '@/components/about-section';
 import { EpaModal } from '@/components/modals/epa-modal';
 import { ProcedureLogModal } from '@/components/modals/procedure-log-modal';
@@ -32,10 +31,10 @@ import { LongTermAnalysisModal } from '@/components/modals/long-term-analysis-mo
 import { SurgicalBriefingModal } from '@/components/modals/surgical-briefing-modal';
 import { YearlyRotationModal } from '@/components/modals/yearly-rotation-modal';
 import { Loader2, GraduationCap, BookUser, CalendarDays, ScrollText, Users } from 'lucide-react';
+import { RoleSwitcher } from '@/components/role-switcher';
 
 // A mock in-memory store.
 let memoryState: AppState | null = null;
-
 
 export default function AppPage() {
   const { toast } = useToast();
@@ -132,6 +131,14 @@ export default function AppPage() {
         </div>
     );
   }
+
+  const handleUserSwitch = (user: CurrentUser) => {
+    updateAppState(prev => prev ? { ...prev, currentUser: user } : null);
+    toast({
+        title: "View Switched",
+        description: `You are now viewing the app as ${user.name} (${user.role}).`
+    })
+  };
 
   const currentUserRole = appState.currentUser.role;
 
@@ -255,6 +262,9 @@ export default function AppPage() {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="container mx-auto p-4 md:p-8">
+        <div className="flex justify-end mb-4">
+            <RoleSwitcher allUsers={ALL_USERS} currentUser={appState.currentUser} onUserSwitch={handleUserSwitch} />
+        </div>
         {renderContent()}
         <AboutSection />
       </main>
