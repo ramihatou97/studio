@@ -21,7 +21,7 @@ interface YearlyRotationModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppState }: YearlyRotationModalProps) {
@@ -43,26 +43,26 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
       name: newRotationName.trim(),
       canTakeCall: false, // Default to not taking call
     };
-    setAppState(prev => ({
+    setAppState(prev => prev ? ({
       ...prev,
       offServiceRotations: [...(prev.offServiceRotations || []), newRotation],
-    }));
+    }) : null);
     setNewRotationName('');
   };
 
   const handleToggleRotationCall = (id: string, canTakeCall: boolean) => {
-    setAppState(prev => ({
+    setAppState(prev => prev ? ({
         ...prev,
         offServiceRotations: (prev.offServiceRotations || []).map(r => r.id === id ? { ...r, canTakeCall } : r),
-    }));
+    }) : null);
   };
 
   const handleRemoveRotationType = (id: string) => {
-    setAppState(prev => ({
+    setAppState(prev => prev ? ({
       ...prev,
       offServiceRotations: (prev.offServiceRotations || []).filter(r => r.id !== id),
       offServiceRequests: (prev.offServiceRequests || []).filter(req => req.rotationId !== id),
-    }));
+    }) : null);
   };
 
   const handleAddRequest = () => {
@@ -74,18 +74,18 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
       durationInBlocks: newRequest.durationInBlocks,
       timingPreference: newRequest.timingPreference || 'any',
     };
-    setAppState(prev => ({
+    setAppState(prev => prev ? ({
       ...prev,
       offServiceRequests: [...(prev.offServiceRequests || []), fullRequest],
-    }));
+    }) : null);
     setNewRequest({});
   };
 
   const handleRemoveRequest = (id: string) => {
-    setAppState(prev => ({
+    setAppState(prev => prev ? ({
       ...prev,
       offServiceRequests: (prev.offServiceRequests || []).filter(req => req.id !== id),
-    }));
+    }) : null);
   };
   
   const handleGenerateSchedule = async () => {
@@ -141,33 +141,35 @@ export function YearlyRotationModal({ isOpen, onOpenChange, appState, setAppStat
     }
 
     setAppState(prev => {
-        const newResidents = prev.residents.map(res => {
-            const yearlyScheduleEntry = generatedSchedule.yearlySchedule.find((s: any) => s.residentId === res.id);
-            if (yearlyScheduleEntry) {
-                const rotationForBlock = yearlyScheduleEntry.schedule[blockIndex];
-                const offServiceRotation = offServiceRotations.find(r => r.name === rotationForBlock);
+      if (!prev) return null;
+      
+      const newResidents = prev.residents.map(res => {
+          const yearlyScheduleEntry = generatedSchedule.yearlySchedule.find((s: any) => s.residentId === res.id);
+          if (yearlyScheduleEntry) {
+              const rotationForBlock = yearlyScheduleEntry.schedule[blockIndex];
+              const offServiceRotation = offServiceRotations.find(r => r.name === rotationForBlock);
 
-                const isOnService = rotationForBlock === 'Neurosurgery';
-                const isOffServiceCallTaker = !isOnService && offServiceRotation?.canTakeCall === true;
-                
-                // Off-service residents are exempt from DAY call but can do weekend/night fly-ins
-                // We mark them as onService=false, but the scheduler logic will know if they can take call.
-                const exemptFromCall = !isOnService && !isOffServiceCallTaker;
+              const isOnService = rotationForBlock === 'Neurosurgery';
+              const isOffServiceCallTaker = !isOnService && offServiceRotation?.canTakeCall === true;
+              
+              // Off-service residents are exempt from DAY call but can do weekend/night fly-ins
+              // We mark them as onService=false, but the scheduler logic will know if they can take call.
+              const exemptFromCall = !isOnService && !isOffServiceCallTaker;
 
-                return { ...res, onService: isOnService, exemptFromCall };
-            }
-            return res;
-        });
+              return { ...res, onService: isOnService, exemptFromCall };
+          }
+          return res;
+      });
 
-        return {
-            ...prev,
-            general: {
-                ...prev.general,
-                startDate: blockStartDate.toISOString().split('T')[0],
-                endDate: blockEndDate.toISOString().split('T')[0],
-            },
-            residents: newResidents
-        };
+      return {
+          ...prev,
+          general: {
+              ...prev.general,
+              startDate: blockStartDate.toISOString().split('T')[0],
+              endDate: blockEndDate.toISOString().split('T')[0],
+          },
+          residents: newResidents
+      };
     });
 
     toast({

@@ -7,7 +7,7 @@ import { Trash2, PlusCircle } from "lucide-react";
 
 interface OnServiceCallRulesProps {
   appState: AppState;
-  setAppState: (updates: Partial<AppState>) => Promise<void>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 export function OnServiceCallRules({ appState, setAppState }: OnServiceCallRulesProps) {
@@ -16,17 +16,17 @@ export function OnServiceCallRules({ appState, setAppState }: OnServiceCallRules
   const updateRule = (index: number, field: keyof OnServiceCallRule, value: number) => {
     const newRules = [...onServiceCallRules];
     newRules[index] = { ...newRules[index], [field]: value };
-    setAppState({ onServiceCallRules: newRules });
+    setAppState(prev => prev ? ({ ...prev, onServiceCallRules: newRules }) : null);
   };
 
   const addRule = () => {
     const newRule: OnServiceCallRule = { minDays: 35, maxDays: 35, calls: 9 };
-    setAppState({ onServiceCallRules: [...appState.onServiceCallRules, newRule] });
+    setAppState(prev => prev ? ({ ...prev, onServiceCallRules: [...prev.onServiceCallRules, newRule] }) : null);
   };
   
   const removeRule = (index: number) => {
     const newRules = onServiceCallRules.filter((_, i) => i !== index);
-    setAppState({ onServiceCallRules: newRules });
+    setAppState(prev => prev ? ({ ...prev, onServiceCallRules: newRules }) : null);
   };
 
   return (

@@ -12,7 +12,7 @@ interface OptimizerModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 interface Swap {
@@ -53,6 +53,7 @@ export function OptimizerModal({ isOpen, onOpenChange, appState, setAppState }: 
     if (!suggestion || typeof suggestion.suggestedSwaps === 'string') return;
 
     setAppState(prev => {
+        if (!prev) return null;
         let tempState = { ...prev };
         let newResidents = [...tempState.residents];
         

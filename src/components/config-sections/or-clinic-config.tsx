@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { prepopulateOrCasesAction } from "@/ai/actions";
 
 
-function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updates: Partial<AppState>) => Promise<void> }) {
+function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -42,28 +42,31 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
     const result = await prepopulateOrCasesAction(text, staffList);
 
     if (result.success && result.data) {
-      const newOrCases = { ...appState.orCases };
-      result.data.forEach(caseItem => {
-        // The flow returns 1-indexed day, but our app state is 0-indexed.
-        const dayIndex = caseItem.day - 1;
-        if (dayIndex >= 0) {
-            if (!newOrCases[dayIndex]) {
-                newOrCases[dayIndex] = [];
-            }
-            newOrCases[dayIndex].push({
-                surgeon: caseItem.surgeon,
-                diagnosis: caseItem.diagnosis,
-                procedure: caseItem.procedure,
-                procedureCode: caseItem.procedureCode,
-                complexity: 'routine', // Default to routine
-                patientMrn: caseItem.patientMrn,
-                patientSex: caseItem.patientSex,
-                age: caseItem.age,
-            });
-        }
+      setAppState(prev => {
+        if (!prev) return null;
+        const newOrCases = { ...prev.orCases };
+        result.data.forEach(caseItem => {
+          // The flow returns 1-indexed day, but our app state is 0-indexed.
+          const dayIndex = caseItem.day - 1;
+          if (dayIndex >= 0) {
+              if (!newOrCases[dayIndex]) {
+                  newOrCases[dayIndex] = [];
+              }
+              newOrCases[dayIndex].push({
+                  surgeon: caseItem.surgeon,
+                  diagnosis: caseItem.diagnosis,
+                  procedure: caseItem.procedure,
+                  procedureCode: caseItem.procedureCode,
+                  complexity: 'routine', // Default to routine
+                  patientMrn: caseItem.patientMrn,
+                  patientSex: caseItem.patientSex,
+                  age: caseItem.age,
+              });
+          }
+        });
+        return { ...prev, orCases: newOrCases };
       });
       
-      await setAppState({ orCases: newOrCases });
       toast({ title: 'Success', description: `Populated ${result.data.length} OR cases.` });
       setText('');
     } else {
@@ -100,7 +103,7 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
 
 interface OrClinicConfigProps {
   appState: AppState;
-  setAppState: (updates: Partial<AppState>) => Promise<void>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
@@ -137,21 +140,27 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const handleAddCase = () => {
     if (currentEditingDay === null || !selectedSurgeon || !newCase.procedure) return;
     const fullCase: OrCase = { surgeon: selectedSurgeon, ...newCase };
-    const newOrCases = { ...orCases };
-    const dayIndex = currentEditingDay;
-    if (!newOrCases[dayIndex]) {
-      newOrCases[dayIndex] = [];
-    }
-    newOrCases[dayIndex].push(fullCase);
-    setAppState({ orCases: newOrCases });
+    setAppState(prev => {
+        if (!prev) return null;
+        const newOrCases = { ...prev.orCases };
+        const dayIndex = currentEditingDay;
+        if (!newOrCases[dayIndex]) {
+          newOrCases[dayIndex] = [];
+        }
+        newOrCases[dayIndex].push(fullCase);
+        return { ...prev, orCases: newOrCases };
+    });
     setNewCase({ diagnosis: '', procedure: '', procedureCode: '', complexity: 'routine', patientMrn: '', patientSex: 'male', age: 0 });
     setSelectedSurgeon('');
   };
   
   const handleRemoveCase = (dayIndex: number, caseIndex: number) => {
-    const newOrCases = { ...orCases };
-    newOrCases[dayIndex].splice(caseIndex, 1);
-    setAppState({ orCases: newOrCases });
+    setAppState(prev => {
+        if (!prev) return null;
+        const newOrCases = { ...prev.orCases };
+        newOrCases[dayIndex].splice(caseIndex, 1);
+        return { ...prev, orCases: newOrCases };
+    });
   };
   
   const handleAddClinic = () => {
@@ -161,12 +170,12 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
         staffName: newClinic.staffName,
         clinicType: newClinic.clinicType
     };
-    setAppState({ clinicAssignments: [...appState.clinicAssignments, fullClinic]});
+    setAppState(prev => prev ? ({ ...prev, clinicAssignments: [...prev.clinicAssignments, fullClinic]}) : null);
     setNewClinic({});
   };
 
   const handleRemoveClinic = (day: number, staffName: string, clinicType: string) => {
-    setAppState({ clinicAssignments: appState.clinicAssignments.filter(c => !(c.day === day && c.staffName === staffName && c.clinicType === clinicType)) });
+    setAppState(prev => prev ? ({ ...prev, clinicAssignments: prev.clinicAssignments.filter(c => !(c.day === day && c.staffName === staffName && c.clinicType === clinicType)) }) : null);
   };
 
   const OrDayButton = ({ i }: { i: number }) => {

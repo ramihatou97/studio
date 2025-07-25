@@ -10,7 +10,7 @@ import { PlusCircle } from "lucide-react";
 
 interface ResidentsConfigProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps) {

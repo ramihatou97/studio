@@ -25,7 +25,7 @@ import { prepopulateStaffCallAction } from "@/ai/actions";
 
 interface StaffConfigProps {
   appState: AppState;
-  setAppState: (updates: Partial<AppState>) => Promise<void>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 interface StaffInputState {
@@ -34,7 +34,7 @@ interface StaffInputState {
   specialtyType: 'cranial' | 'spine' | 'other';
 }
 
-function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updates: Partial<AppState>) => Promise<void> }) {
+function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -60,7 +60,7 @@ function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppStat
         day: call.day, 
       }));
 
-      await setAppState({ staffCall: newStaffCall });
+      setAppState(prev => prev ? ({ ...prev, staffCall: newStaffCall }) : null);
       toast({ title: 'Success', description: `Populated ${result.data.length} staff call assignments.` });
       setText('');
     } else {
@@ -95,7 +95,7 @@ function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppStat
   )
 }
 
-function StaffCallScheduler({ appState, setAppState }: { appState: AppState, setAppState: (updates: Partial<AppState>) => Promise<void> }) {
+function StaffCallScheduler({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
   const { general, staff, staffCall } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
@@ -111,12 +111,15 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   })();
 
   const handleStaffCallChange = (day: number, callType: 'cranial' | 'spine', staffName: string) => {
-    const otherCalls = appState.staffCall.filter(c => !(c.day === day && c.callType === callType));
-    if (staffName && staffName !== 'none') {
-        setAppState({ staffCall: [...otherCalls, { day, callType, staffName }] });
-    } else {
-        setAppState({ staffCall: otherCalls });
-    }
+    setAppState(prev => {
+        if (!prev) return null;
+        const otherCalls = prev.staffCall.filter(c => !(c.day === day && c.callType === callType));
+        if (staffName && staffName !== 'none') {
+            return { ...prev, staffCall: [...otherCalls, { day, callType, staffName }] };
+        } else {
+            return { ...prev, staffCall: otherCalls };
+        }
+    });
   };
 
   const DayButton = ({ dayNumber }: { dayNumber: number }) => {
@@ -216,12 +219,12 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
         specialtyType: staffInput.specialtyType
     };
     
-    setAppState({ staff: [...appState.staff, newStaff] });
+    setAppState(prev => prev ? ({ ...prev, staff: [...prev.staff, newStaff] }) : null);
     setStaffInput({ name: '', subspecialty: '', specialtyType: 'other' });
   };
   
   const removeStaffMember = (id: string) => {
-    setAppState({ staff: appState.staff.filter(s => s.id !== id) });
+    setAppState(prev => prev ? ({ ...prev, staff: appState.staff.filter(s => s.id !== id) }) : null);
   };
   
   const getSpecialtyBadgeClass = (type: 'cranial' | 'spine' | 'other') => {

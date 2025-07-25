@@ -1,15 +1,7 @@
 
-import type { UserProfile } from '@/lib/types';
 import { MediShiftLogo } from './icons';
-import { RoleSwitcher } from './role-switcher';
 
-interface AppHeaderProps {
-  allUsers: UserProfile[];
-  currentUser: UserProfile;
-  setSwitchedUser: (user: UserProfile) => void;
-}
-
-export function AppHeader({ allUsers, currentUser, setSwitchedUser }: AppHeaderProps) {
+export function AppHeader() {
   return (
     <header className="container mx-auto px-4 py-6 md:px-8 md:py-8">
       <div className="flex justify-center items-center gap-4 relative">
@@ -22,9 +14,6 @@ export function AppHeader({ allUsers, currentUser, setSwitchedUser }: AppHeaderP
             AI Neurosurgery Resident Scheduler
           </p>
         </div>
-      </div>
-      <div className="absolute top-4 right-4 md:top-6 md:right-6">
-        <RoleSwitcher allUsers={allUsers} currentUser={currentUser} setSwitchedUser={setSwitchedUser} />
       </div>
     </header>
   );

@@ -10,12 +10,12 @@ import { Slider } from "../ui/slider";
 
 interface GeneralSettingsProps {
   appState: AppState;
-  setAppState: (updates: Partial<AppState>) => Promise<void>;
+  setAppState: (updater: React.SetStateAction<AppState | null>) => void;
 }
 
 export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps) {
   const handleGeneralChange = (field: string, value: any) => {
-    setAppState({ general: { ...appState.general, [field]: value } });
+    setAppState(prev => prev ? ({ ...prev, general: { ...prev.general, [field]: value } }) : null);
   };
   
   const { general } = appState;
