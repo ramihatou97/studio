@@ -12,7 +12,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, KeyRound } from "lucide-react";
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -141,6 +141,13 @@ export default function SignupPage() {
             <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} />
         </div>
         
+        {isProgramDirectorSignup && (
+          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md border border-amber-200 dark:border-amber-700">
+            <KeyRound className="h-4 w-4"/>
+            <p>Program Director email recognized. This will create an admin account.</p>
+          </div>
+        )}
+
         {!isProgramDirectorSignup && (
             <>
                 <div className="space-y-2">
