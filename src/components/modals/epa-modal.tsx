@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AppState, Evaluation } from '@/lib/types';
 import { ALL_EPAS, type EPA } from '@/lib/epa-data';
 import { EpaList } from '../epa/epa-list';
-import { EpaEvaluationForm } from '../epa/epa-evaluation-form';
+import { EpaEvaluationForm } from '../modals/epa-evaluation-form';
 import { Button } from '../ui/button';
 import { ArrowLeft, Inbox } from 'lucide-react';
 import { suggestEpaAction } from '@/ai/actions';
@@ -35,7 +35,7 @@ export function EpaModal({
   preselectedDayIndex,
   preselectedActivityDescription,
 }: EpaModalProps) {
-  const [view, setView] = useState<'list' | 'form' | 'dashboard'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'list' | 'form'>('dashboard');
   const [selectedEpa, setSelectedEpa] = useState<EPA | null>(null);
   const [activeEvaluation, setActiveEvaluation] = useState<Evaluation | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -93,6 +93,7 @@ export function EpaModal({
       }
     };
     suggestAndCreateEvaluation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, activityContext.activityDescription]);
 
 
@@ -192,7 +193,7 @@ export function EpaModal({
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="dashboard" className="flex-1 overflow-y-auto mt-2">
-                 <EpaDashboard appState={appState} setAppState={setAppState} onNewRequest={() => setView('list')} />
+                 <EpaDashboard appState={appState} setAppState={setAppState as any} onNewRequest={() => setView('list')} />
               </TabsContent>
               <TabsContent value="requests" className="flex-1 overflow-y-auto mt-2">
                 {pendingRequests.length > 0 ? (
@@ -220,7 +221,7 @@ export function EpaModal({
                   evaluation={activeEvaluation}
                   epa={selectedEpa}
                   appState={appState}
-                  setAppState={setAppState}
+                  setAppState={setAppState as any}
                   onComplete={() => setView('dashboard')}
                 />
             )
