@@ -79,7 +79,7 @@ const EpaPdfDocument = ({ epa, evaluation, appState }: { epa: EPA, evaluation: E
                 </View>
             </Page>
         </Document>
-    )
+    );
 };
 
 
