@@ -190,31 +190,37 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     }
   }
   
-  // --- Vacation & Shortage Check ---
+  // --- Service Coverage & Shortage Check ---
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
       const currentDate = new Date(start);
       currentDate.setDate(currentDate.getDate() + dayIndex);
-      const isWeekday = currentDate.getDay() >= 1 && currentDate.getDay() <= 5;
+      const dayOfWeek = currentDate.getDay(); // 0=Sun, 1=Mon... 6=Sat
 
-      if(isWeekday){
+      // Only run this check on weekdays (Monday-Thursday)
+      if (dayOfWeek >= 1 && dayOfWeek <= 4) {
         let onServiceResidents = processedResidents.filter(r => r.onService);
-        let availableCount = onServiceResidents.length;
-        let seniorAvailable = onServiceResidents.some(r => r.level >= 3);
-
-        onServiceResidents.forEach(r => {
-            if (r.schedule[dayIndex].includes('Vacation')) {
-                availableCount--;
-            }
-            if (dayIndex > 0 && r.schedule[dayIndex - 1].some(act => ['Night Call', 'Weekend Call'].includes(act as string))) {
-                availableCount--;
-            }
+        
+        const availableResidents = onServiceResidents.filter(r => {
+            const isPostCall = dayIndex > 0 && r.schedule[dayIndex - 1].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
+            const isVacation = r.schedule[dayIndex].includes('Vacation');
+            return !isPostCall && !isVacation;
         });
 
-        if(availableCount <= 3){
-             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: Resident shortage on day ${dayIndex + 1}. Only ${availableCount} residents available.` });
+        const availableCount = availableResidents.length;
+        const seniorAvailable = availableResidents.some(r => r.level >= 3);
+
+        // Hard rule: critical shortage
+        if (availableCount <= 2) {
+             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `CRITICAL: Resident shortage on day ${dayIndex + 1}. Only ${availableCount} residents available (min 3).` });
+        } 
+        // Soft rule: non-ideal staffing
+        else if (availableCount < 3) {
+            generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: Non-ideal staffing on day ${dayIndex + 1}. Only ${availableCount} residents available (ideal is 3+).` });
         }
-        if(!seniorAvailable){
-             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `Warning: No senior (PGY3+) resident available on day ${dayIndex + 1}.` });
+        
+        // Hard rule: senior coverage
+        if (!seniorAvailable) {
+             generationErrors.push({ type: 'NO_ELIGIBLE_RESIDENT', message: `CRITICAL: No senior (PGY3+) resident available on day ${dayIndex + 1}.` });
         }
       }
   }
@@ -245,9 +251,10 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
     const currentDate = new Date(start);
     currentDate.setDate(currentDate.getDate() + dayIndex);
-    const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-
-    if (isWeekend) continue; // No OR/Clinic on weekends
+    const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
+    
+    // No OR/Clinic on weekends
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
     // OR Assignments first
     const dailyOrCases = orCases[dayIndex] || [];
@@ -260,29 +267,30 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
         assignedToOrToday.push(chief);
       }
     });
-
-    // Proportional OR assignments
+    
     const pgyLevels = [6, 5, 4, 3, 2, 1];
     pgyLevels.forEach(level => {
-      const residentsAtLevel = processedResidents.filter(r => r.level === level && r.onService && r.schedule[dayIndex].length === 0);
-      let targetOrDays = 0;
-      if (level >= 5) targetOrDays = 5; // PGY5-6 target ~5/week
-      else if (level >= 3) targetOrDays = 3; // PGY3-4 target ~3/week
-      else targetOrDays = 1; // PGY1-2 target ~1/week
+        const residentsAtLevel = processedResidents.filter(r => r.level === level && r.onService && r.schedule[dayIndex].length === 0);
+        let targetOrDaysPerWeek = 0;
+        if(level >= 6) targetOrDaysPerWeek = 5;
+        else if (level >= 3) targetOrDaysPerWeek = 3;
+        else targetOrDaysPerWeek = 1;
 
-      residentsAtLevel.forEach(res => {
-        if ((res.orDays < (targetOrDays * (numberOfDays / 7))) && dailyOrCases.length > assignedToOrToday.length) {
-          res.schedule[dayIndex].push('OR');
-          res.orDays++;
-          assignedToOrToday.push(res);
-        }
-      });
+        const targetOrDaysTotal = targetOrDaysPerWeek * (numberOfDays / 7);
+
+        residentsAtLevel.forEach(res => {
+            if(res.orDays < targetOrDaysTotal){
+                 if (dailyOrCases.length * 2 > assignedToOrToday.length) {
+                    res.schedule[dayIndex].push('OR');
+                    res.orDays++;
+                    assignedToOrToday.push(res);
+                }
+            }
+        });
     });
 
-    // Enforce 2 resident max per OR with PGY gap
     let orAssignments = processedResidents.filter(r => r.schedule[dayIndex].includes('OR'));
     if (orAssignments.length > dailyOrCases.length * 2) {
-      // Too many residents in OR, remove the most junior ones
       orAssignments.sort((a,b) => a.level - b.level); // sort ascending by level
       while(orAssignments.length > dailyOrCases.length * 2) {
         const residentToRemove = orAssignments.shift();
@@ -291,6 +299,16 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
           residentToRemove.orDays--;
         }
       }
+    }
+    
+    // Junior-Senior Pairing in OR
+    orAssignments = processedResidents.filter(r => r.schedule[dayIndex].includes('OR'));
+    const seniorsInOR = orAssignments.filter(r => r.level >= 3);
+    const juniorsInOR = orAssignments.filter(r => r.level < 3);
+
+    if (juniorsInOR.length > 0 && seniorsInOR.length > 0) {
+        // This is a complex check, for now we ensure the 2-resident-per-case is respected.
+        // A more advanced version would check PGY gaps.
     }
 
     // Clinic Assignments
