@@ -8,77 +8,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import type { AppState, Resident, Staff, UserRole } from '@/lib/types';
-
-// This is a mock function to simulate "logging in" by updating the global state.
-// In a real app, this would involve server-side authentication.
-const updateUserInMockState = (foundUser: { role: UserRole, id: string, name: string }) => {
-  try {
-    const key = 'mock_app_state';
-    // We only update the currentUser part of the state
-    localStorage.setItem('currentUser', JSON.stringify(foundUser));
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to update mock state:", error);
-    return { success: false, error: "Could not save to mock state." };
-  }
-};
-
-const findUserInMockState = (email: string): { role: UserRole, id: string, name: string } | null => {
-    try {
-        const key = 'mock_app_state';
-        const storedStateJSON = localStorage.getItem(key);
-        if (!storedStateJSON) return null;
-        
-        const state: AppState = JSON.parse(storedStateJSON);
-
-        // Check program director (hardcoded)
-        if (email === 'pd@medishift.com') {
-            return { role: 'program-director', id: 'program-director', name: 'Program Director' };
-        }
-
-        // Check staff
-        const staffUser = state.staff.find((s: Staff) => s.email === email);
-        if (staffUser) {
-            return { role: 'staff', id: staffUser.id, name: staffUser.name };
-        }
-
-        // Check residents
-        const residentUser = state.residents.find((r: Resident) => r.email === email);
-        if (residentUser) {
-            return { role: 'resident', id: residentUser.id, name: residentUser.name };
-        }
-
-        return null;
-
-    } catch (error) {
-        console.error("Could not read mock state:", error);
-        return null;
-    }
-}
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
 
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    const foundUser = findUserInMockState(email);
-    
-    if (foundUser) {
-      const result = updateUserInMockState(foundUser);
-      if (result.success) {
-        toast({ title: 'Login Successful', description: `Welcome back, ${foundUser.name}!` });
-        router.push('/app');
-      } else {
-        toast({ variant: 'destructive', title: 'Login Failed', description: result.error });
-      }
-    } else {
-      toast({ variant: 'destructive', title: 'Login Failed', description: 'User not found or credentials incorrect.' });
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Login Successful', description: `Welcome back!` });
+      router.push('/app');
+    } catch (error: any) {
+        let errorMessage = 'An unknown error occurred.';
+        if (error.code) {
+            switch (error.code) {
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorMessage = 'Invalid email or password.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                default:
+                    errorMessage = 'Failed to log in. Please try again later.';
+                    break;
+            }
+        }
+        toast({ variant: 'destructive', title: 'Login Failed', description: errorMessage });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -91,7 +60,7 @@ export default function LoginPage() {
       <form className="space-y-4" onSubmit={handleLogin}>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+          <Input id="email" type="email" placeholder="pd@medishift.com" required value={email} onChange={e => setEmail(e.target.value)} disabled={isLoading} />
         </div>
         <div className="space-y-2">
             <div className="flex items-center">
@@ -100,9 +69,10 @@ export default function LoginPage() {
                     Forgot your password?
                 </Link>
             </div>
-          <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+          <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} />
         </div>
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Login
         </Button>
       </form>

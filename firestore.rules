@@ -1,0 +1,44 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if a user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user has the 'program-director' role
+    function isProgramDirector() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'program-director';
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Any authenticated user can create their own profile during signup
+      allow create: if isSignedIn();
+      
+      // A user can read their own profile
+      // A program director can read any user's profile
+      allow get: if isSignedIn() && (request.auth.uid == userId || isProgramDirector());
+      
+      // A user can update their own profile
+      // A program director can update any user's profile (e.g., to approve them)
+      allow update: if isSignedIn() && (request.auth.uid == userId || isProgramDirector());
+      
+      // Only a program director can delete users
+      allow delete: if isProgramDirector();
+    }
+
+    // The entire application state is stored in a single document for simplicity.
+    // In a more complex app, you might break this into separate collections.
+    match /appState/{docId} {
+      // Any authenticated user can read the app state
+      allow read: if isSignedIn();
+      
+      // Only the program director can write to the app state
+      allow write: if isProgramDirector();
+    }
+  }
+}

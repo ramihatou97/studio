@@ -8,38 +8,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from "uuid";
-
-// This is a mock function to simulate adding a pending user to a global state.
-// In a real app, this would be a server action calling a database.
-const addPendingUserToMockState = (newUser: any) => {
-  try {
-    const key = 'mock_app_state';
-    const existingState = JSON.parse(localStorage.getItem(key) || '{}');
-    if (!existingState.pendingUsers) {
-      existingState.pendingUsers = [];
-    }
-    existingState.pendingUsers.push(newUser);
-    localStorage.setItem(key, JSON.stringify(existingState));
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to update mock state:", error);
-    return { success: false, error: "Could not save to mock state." };
-  }
-};
-
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import type { UserProfile } from "@/lib/types";
+import { Loader2 } from "lucide-react";
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState<'resident' | 'staff' | ''>('');
   const [pgyLevel, setPgyLevel] = useState<number | undefined>();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!role) {
         toast({ variant: 'destructive', title: 'Please select a role.' });
@@ -50,28 +36,53 @@ export default function SignupPage() {
         return;
     }
     
-    // In a real app, this would be a server action.
-    // For now, we simulate adding to a "pendingUsers" list in localStorage.
-    const newUser = {
-      id: uuidv4(),
-      firstName,
-      lastName,
-      email,
-      role,
-      pgyLevel: role === 'resident' ? pgyLevel : undefined,
-      status: 'pending',
-    };
+    setIsLoading(true);
+    
+    try {
+        // Step 1: Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-    const result = addPendingUserToMockState(newUser);
+        // Step 2: Create a user profile document in Firestore
+        const userProfile: UserProfile = {
+            uid: user.uid,
+            email: user.email!,
+            firstName,
+            lastName,
+            name: `${firstName} ${lastName}`,
+            role,
+            status: 'pending', // All new users are pending approval
+            pgyLevel: role === 'resident' ? pgyLevel : undefined,
+        };
 
-    if (result.success) {
+        await setDoc(doc(db, "users", user.uid), userProfile);
+
         setIsSubmitted(true);
         toast({
             title: "Sign-up Request Submitted",
             description: "Your request has been sent to the Program Director for approval."
         });
-    } else {
-        toast({ variant: 'destructive', title: 'Submission Failed', description: result.error });
+
+    } catch (error: any) {
+        let errorMessage = 'An unknown error occurred.';
+        if (error.code) {
+            switch(error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = 'This email address is already in use.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'The password is too weak. Please choose a stronger password.';
+                    break;
+                default:
+                    errorMessage = 'An error occurred during sign up. Please try again.';
+            }
+        }
+        toast({ variant: 'destructive', title: 'Sign-up Failed', description: errorMessage });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -80,7 +91,7 @@ export default function SignupPage() {
         <div>
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold">Request Submitted</h2>
-                <p className="text-muted-foreground mt-2">Your sign-up request has been sent for approval. You will be notified once the Program Director has reviewed it. You may now close this page.</p>
+                <p className="text-muted-foreground mt-2">Your sign-up request has been sent for approval. You will be notified by email once the Program Director has reviewed it. You may now close this page.</p>
             </div>
             <div className="mt-6 text-center text-sm">
                 <Link href="/login" className="underline font-medium hover:text-primary">
@@ -101,24 +112,24 @@ export default function SignupPage() {
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="first-name">First Name</Label>
-                <Input id="first-name" placeholder="Max" required value={firstName} onChange={e => setFirstName(e.target.value)} />
+                <Input id="first-name" placeholder="Max" required value={firstName} onChange={e => setFirstName(e.target.value)} disabled={isLoading} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="last-name">Last Name</Label>
-                <Input id="last-name" placeholder="Robinson" required value={lastName} onChange={e => setLastName(e.target.value)} />
+                <Input id="last-name" placeholder="Robinson" required value={lastName} onChange={e => setLastName(e.target.value)} disabled={isLoading} />
             </div>
         </div>
         <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} disabled={isLoading} />
         </div>
         <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+            <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} />
         </div>
         <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
-            <Select onValueChange={setRole} required>
+            <Select onValueChange={(v) => setRole(v as 'resident' | 'staff')} required disabled={isLoading}>
                 <SelectTrigger id="role">
                     <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
@@ -132,7 +143,7 @@ export default function SignupPage() {
         {role === 'resident' && (
              <div className="space-y-2">
                 <Label htmlFor="pgy-level">PGY Level</Label>
-                <Select onValueChange={(val) => setPgyLevel(Number(val))} required>
+                <Select onValueChange={(val) => setPgyLevel(Number(val))} required disabled={isLoading}>
                     <SelectTrigger id="pgy-level">
                         <SelectValue placeholder="Select PGY Level" />
                     </SelectTrigger>
@@ -143,7 +154,8 @@ export default function SignupPage() {
             </div>
         )}
 
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Request Account
         </Button>
       </form>
@@ -156,4 +168,3 @@ export default function SignupPage() {
     </div>
   );
 }
-

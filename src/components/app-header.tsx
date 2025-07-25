@@ -1,14 +1,15 @@
 
-import type { AppState } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { MediShiftLogo } from './icons';
 import { RoleSwitcher } from './role-switcher';
 
 interface AppHeaderProps {
-  appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState | null>>;
+  allUsers: UserProfile[];
+  currentUser: UserProfile;
+  setSwitchedUser: (user: UserProfile) => void;
 }
 
-export function AppHeader({ appState, setAppState }: AppHeaderProps) {
+export function AppHeader({ allUsers, currentUser, setSwitchedUser }: AppHeaderProps) {
   return (
     <header className="container mx-auto px-4 py-6 md:px-8 md:py-8">
       <div className="flex justify-center items-center gap-4 relative">
@@ -23,7 +24,7 @@ export function AppHeader({ appState, setAppState }: AppHeaderProps) {
         </div>
       </div>
       <div className="absolute top-4 right-4 md:top-6 md:right-6">
-        <RoleSwitcher appState={appState} setAppState={setAppState} />
+        <RoleSwitcher allUsers={allUsers} currentUser={currentUser} setSwitchedUser={setSwitchedUser} />
       </div>
     </header>
   );
