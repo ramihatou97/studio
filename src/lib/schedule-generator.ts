@@ -1,3 +1,4 @@
+
 import type { AppState, ScheduleOutput, Resident, MedicalStudent, OtherLearner, ScheduleActivity, ScheduleError } from './types';
 
 
@@ -91,11 +92,15 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
         score -= res.callDays.length * 100;
         // Seniority (lower PGY is higher priority)
         score += (7 - res.level) * 85;
-        // Call Recency Penalty
+        
+        // Call Recency Penalty (Proportional)
         const lastCall = res.callDays.length > 0 ? Math.max(...res.callDays) : -Infinity;
-        if (dayIndex - lastCall <= 3) {
-            score -= 5000;
+        const daysSinceLastCall = dayIndex - lastCall;
+        if (daysSinceLastCall <= 3) {
+            // A call 1 day ago gets a -6000 penalty, 2 days ago -4000, 3 days ago -2000.
+            score -= (4 - daysSinceLastCall) * 2000;
         }
+
         // Double Call Fairness (Soft Rule)
         if (isDoubleCallDay) {
           score -= res.doubleCallDays * 20;
