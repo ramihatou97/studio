@@ -74,63 +74,70 @@ export default function AppPage() {
     }
   }, [user, authLoading, router]);
 
-  // Effect to load all user profiles and determine the current user's profile
+  // Step 1: Load all user profiles and determine the current user's profile
   useEffect(() => {
-      if (!user) return;
-      const q = query(collection(db, "users"));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const usersData = querySnapshot.docs.map(doc => doc.data() as UserProfile);
-          setAllUsers(usersData);
-          
-          const currentUserProfile = usersData.find(u => u.uid === user.uid);
-          if (currentUserProfile) {
-              setUserProfile(currentUserProfile);
-              if (!viewAsUser) {
-                  setViewAsUser(currentUserProfile);
-              }
-          }
-      }, (error) => {
-        console.error("Error fetching user profiles:", error);
-        toast({ variant: 'destructive', title: 'Permission Error', description: 'Could not fetch user data.' });
-      });
+    if (!user) return; // Only run if Firebase auth state is loaded and a user exists
 
-      return () => unsubscribe();
-  }, [user, toast, viewAsUser]);
+    // Listener for all user profiles (for role switcher)
+    const usersQuery = query(collection(db, "users"));
+    const unsubscribeUsers = onSnapshot(usersQuery, (querySnapshot) => {
+      const usersData = querySnapshot.docs.map(doc => doc.data() as UserProfile);
+      setAllUsers(usersData);
 
+      // Find the currently authenticated user's profile
+      const currentUserProfile = usersData.find(u => u.uid === user.uid);
+      if (currentUserProfile) {
+        setUserProfile(currentUserProfile);
+        // If we are not impersonating, set the viewAsUser to the current user
+        if (!viewAsUser) {
+          setViewAsUser(currentUserProfile);
+        }
+      } else {
+         // This can happen briefly on first login if the user doc isn't created yet
+         console.log("Waiting for user profile to be created...");
+      }
+    }, (error) => {
+      console.error("Error fetching user profiles:", error);
+      toast({ variant: 'destructive', title: 'Permission Error', description: 'Could not fetch user data.' });
+    });
 
-  // Effect to subscribe to the main app state from Firestore, depends on viewAsUser
+    return () => unsubscribeUsers();
+  }, [user, viewAsUser, toast]);
+
+  // Step 2: Subscribe to the main app state, but ONLY after we know who we are viewing as.
   useEffect(() => {
-    if (!viewAsUser) return;
+    if (!viewAsUser) return; // Do not run this effect until viewAsUser is set
 
     const appStateRef = doc(db, "appState", APP_STATE_DOC_ID);
 
-    const unsubscribe = onSnapshot(appStateRef, (docSnap) => {
-        if (docSnap.exists()) {
-            setAppState({
-                ...(docSnap.data() as Omit<AppState, 'currentUser'>),
-                currentUser: viewAsUser,
-            });
-        } else {
-            console.log("No app state found in Firestore, creating initial state...");
-            const initialState = getInitialAppState();
-            setDoc(appStateRef, initialState)
-                .then(() => {
-                    setAppState({ ...initialState, currentUser: viewAsUser });
-                    console.log("Initial app state created successfully.");
-                })
-                .catch(error => {
-                    console.error("Error creating initial app state:", error);
-                    toast({ variant: 'destructive', title: 'Initialization Error', description: 'Could not create initial app state.' });
-                });
-        }
+    const unsubscribeAppState = onSnapshot(appStateRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const dbState = docSnap.data() as Omit<AppState, 'currentUser'>;
+        setAppState({ ...dbState, currentUser: viewAsUser });
+      } else {
+        console.log("No app state found in Firestore, creating initial state...");
+        const initialState = getInitialAppState();
+        // Remove the default currentUser from the initial state before saving
+        const { currentUser, ...stateToSave } = initialState;
+        setDoc(appStateRef, stateToSave)
+          .then(() => {
+            setAppState({ ...initialState, currentUser: viewAsUser }); // Set the local state with the correct user
+            console.log("Initial app state created successfully.");
+          })
+          .catch(error => {
+            console.error("Error creating initial app state:", error);
+            toast({ variant: 'destructive', title: 'Initialization Error', description: 'Could not create initial app state.' });
+          });
+      }
     }, (error) => {
-        console.error("Error subscribing to app state:", error);
-        toast({ variant: 'destructive', title: 'Connection Error', description: 'Could not connect to the database.' });
+      console.error("Error subscribing to app state:", error);
+      toast({ variant: 'destructive', title: 'Connection Error', description: 'Could not connect to the database.' });
     });
 
-    return () => unsubscribe();
-  }, [toast, viewAsUser]);
+    return () => unsubscribeAppState();
+  }, [viewAsUser, toast]);
   
+  // Step 3: If the `viewAsUser` changes (e.g., via role switcher), update the currentUser in the local appState
   useEffect(() => {
     if (appState && viewAsUser && appState.currentUser.uid !== viewAsUser.uid) {
       setAppState(prev => prev ? ({ ...prev, currentUser: viewAsUser }) : null);
@@ -202,18 +209,24 @@ export default function AppPage() {
         if (approve) {
             batch.update(userRef, { status: 'active' });
 
-            if (userToApprove.role === 'resident') {
-                const newResident: Resident = {
-                    id: userToApprove.uid, type: 'neuro', name: userToApprove.name, email: userToApprove.email || '', level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0,
-                };
-                 updateFirestoreState({ residents: [...(appState?.residents || []), newResident] });
-            } else if (userToApprove.role === 'staff') {
-                const newStaff: Staff = {
-                    id: userToApprove.uid, name: userToApprove.name, email: userToApprove.email || '', specialtyType: 'other', subspecialty: 'General',
-                };
-                updateFirestoreState({ staff: [...(appState?.staff || []), newStaff] });
+            // Ensure appState is loaded before trying to modify it
+            const currentAppState = await getDoc(doc(db, "appState", APP_STATE_DOC_ID));
+            if (currentAppState.exists()) {
+                const stateData = currentAppState.data();
+                if (userToApprove.role === 'resident') {
+                    const newResident: Resident = {
+                        id: userToApprove.uid, type: 'neuro', name: userToApprove.name, email: userToApprove.email || '', level: userToApprove.pgyLevel || 1, onService: true, isChief: false, chiefOrDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0,
+                    };
+                     batch.update(doc(db, "appState", APP_STATE_DOC_ID), { residents: [...(stateData.residents || []), newResident] });
+                } else if (userToApprove.role === 'staff') {
+                    const newStaff: Staff = {
+                        id: userToApprove.uid, name: userToApprove.name, email: userToApprove.email || '', specialtyType: 'other', subspecialty: 'General',
+                    };
+                    batch.update(doc(db, "appState", APP_STATE_DOC_ID), { staff: [...(stateData.staff || []), newStaff] });
+                }
             }
-             await batch.commit();
+             
+            await batch.commit();
             toast({ title: 'User Approved', description: `${userToApprove.name} has been added and is now active.` });
         } else {
              batch.update(userRef, { status: 'inactive' });
@@ -228,7 +241,7 @@ export default function AppPage() {
 
   const hasGenerated = appState?.residents.some(r => r.schedule && r.schedule.length > 0) || false;
   
-  if (authLoading || !appState || !viewAsUser) {
+  if (authLoading || !appState || !viewAsUser || !userProfile) {
     return (
         <div className="flex items-center justify-center h-screen text-muted-foreground bg-background">
             <div className="flex flex-col items-center gap-2">
@@ -400,3 +413,5 @@ export default function AppPage() {
     </div>
   );
 }
+
+    
