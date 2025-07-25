@@ -20,7 +20,7 @@ export function EpaDashboard({ appState, setAppState, onNewRequest }: EpaDashboa
   const { currentUser, evaluations } = appState;
   
   const relevantEvaluations = useMemo(() => {
-    return evaluations.filter(e => {
+    return (evaluations || []).filter(e => {
         if (currentUser.role === 'program-director') return true;
         if (currentUser.role === 'resident') return e.residentId === currentUser.id;
         if (currentUser.role === 'staff') return e.evaluatorId === currentUser.id;
