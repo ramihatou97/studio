@@ -17,6 +17,7 @@ import { Input } from '../ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { v4 as uuidv4 } from 'uuid';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import * as React from 'react';
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontFamily: 'Helvetica', fontSize: 11, color: '#333' },
@@ -113,7 +114,7 @@ export function EpaEvaluationForm({
 
   const juniorResidents = React.useMemo(() => {
     if (!isResidentInitiator) return [];
-    const currentUserLevel = residents.find(r => r.id === currentUser.id)?.level || 0;
+    const currentUserLevel = residents.find(r => r.id === currentUser.id)?.level || 0
     return residents.filter(r => r.id !== currentUser.id && r.level < currentUserLevel);
   }, [isResidentInitiator, currentUser.id, residents]);
 
