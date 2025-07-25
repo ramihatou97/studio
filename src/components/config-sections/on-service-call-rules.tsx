@@ -1,3 +1,4 @@
+
 import type { AppState, OnServiceCallRule } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Trash2, PlusCircle } from "lucide-react";
 
 interface OnServiceCallRulesProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updates: Partial<AppState>) => Promise<void>;
 }
 
 export function OnServiceCallRules({ appState, setAppState }: OnServiceCallRulesProps) {
@@ -15,17 +16,17 @@ export function OnServiceCallRules({ appState, setAppState }: OnServiceCallRules
   const updateRule = (index: number, field: keyof OnServiceCallRule, value: number) => {
     const newRules = [...onServiceCallRules];
     newRules[index] = { ...newRules[index], [field]: value };
-    setAppState(prev => ({ ...prev, onServiceCallRules: newRules }));
+    setAppState({ onServiceCallRules: newRules });
   };
 
   const addRule = () => {
     const newRule: OnServiceCallRule = { minDays: 35, maxDays: 35, calls: 9 };
-    setAppState(prev => ({ ...prev, onServiceCallRules: [...prev.onServiceCallRules, newRule] }));
+    setAppState({ onServiceCallRules: [...appState.onServiceCallRules, newRule] });
   };
   
   const removeRule = (index: number) => {
     const newRules = onServiceCallRules.filter((_, i) => i !== index);
-    setAppState(prev => ({ ...prev, onServiceCallRules: newRules }));
+    setAppState({ onServiceCallRules: newRules });
   };
 
   return (

@@ -19,21 +19,20 @@ import { Button } from '../ui/button';
 
 interface HolidayCoverageProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updates: Partial<AppState>) => Promise<void>;
 }
 
 export function HolidayCoverage({ appState, setAppState }: HolidayCoverageProps) {
   const { general, residents } = appState;
 
   const handleGeneralChange = (field: string, value: any) => {
-    setAppState(prev => ({ ...prev, general: { ...prev.general, [field]: value } }));
+    setAppState({ general: { ...appState.general, [field]: value } });
   };
 
   const handleHolidayGroupChange = (residentId: string, value: 'christmas' | 'new_year' | 'neither') => {
-    setAppState(prev => ({
-      ...prev,
-      residents: prev.residents.map(r => r.id === residentId ? { ...r, holidayGroup: value } : r)
-    }));
+    setAppState({
+      residents: appState.residents.map(r => r.id === residentId ? { ...r, holidayGroup: value } : r)
+    });
   };
   
   const eligibleResidents = residents.filter(r => r.type === 'neuro' && r.onService && r.level >= 2);

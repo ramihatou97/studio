@@ -1,3 +1,4 @@
+
 import type { AppState } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -9,12 +10,12 @@ import { Slider } from "../ui/slider";
 
 interface GeneralSettingsProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updates: Partial<AppState>) => Promise<void>;
 }
 
 export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps) {
   const handleGeneralChange = (field: string, value: any) => {
-    setAppState(prev => prev ? ({ ...prev, general: { ...prev.general, [field]: value } }) : null);
+    setAppState({ general: { ...appState.general, [field]: value } });
   };
   
   const { general } = appState;

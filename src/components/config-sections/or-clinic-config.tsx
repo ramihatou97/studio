@@ -1,5 +1,4 @@
 
-
 import type { AppState, OrCase, ClinicAssignment } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { prepopulateOrCasesAction } from "@/ai/actions";
 
 
-function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState>> }) {
+function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updates: Partial<AppState>) => Promise<void> }) {
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -64,7 +63,7 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
         }
       });
       
-      setAppState(prev => ({ ...prev, orCases: newOrCases }));
+      await setAppState({ orCases: newOrCases });
       toast({ title: 'Success', description: `Populated ${result.data.length} OR cases.` });
       setText('');
     } else {
@@ -101,7 +100,7 @@ function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, 
 
 interface OrClinicConfigProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updates: Partial<AppState>) => Promise<void>;
 }
 
 export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
@@ -144,7 +143,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
       newOrCases[dayIndex] = [];
     }
     newOrCases[dayIndex].push(fullCase);
-    setAppState(prev => ({ ...prev, orCases: newOrCases }));
+    setAppState({ orCases: newOrCases });
     setNewCase({ diagnosis: '', procedure: '', procedureCode: '', complexity: 'routine', patientMrn: '', patientSex: 'male', age: 0 });
     setSelectedSurgeon('');
   };
@@ -152,7 +151,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const handleRemoveCase = (dayIndex: number, caseIndex: number) => {
     const newOrCases = { ...orCases };
     newOrCases[dayIndex].splice(caseIndex, 1);
-    setAppState(prev => ({ ...prev, orCases: newOrCases }));
+    setAppState({ orCases: newOrCases });
   };
   
   const handleAddClinic = () => {
@@ -162,12 +161,12 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
         staffName: newClinic.staffName,
         clinicType: newClinic.clinicType
     };
-    setAppState(prev => ({...prev, clinicAssignments: [...prev.clinicAssignments, fullClinic]}));
+    setAppState({ clinicAssignments: [...appState.clinicAssignments, fullClinic]});
     setNewClinic({});
   };
 
   const handleRemoveClinic = (day: number, staffName: string, clinicType: string) => {
-    setAppState(prev => ({...prev, clinicAssignments: prev.clinicAssignments.filter(c => !(c.day === day && c.staffName === staffName && c.clinicType === clinicType))}))
+    setAppState({ clinicAssignments: appState.clinicAssignments.filter(c => !(c.day === day && c.staffName === staffName && c.clinicType === clinicType)) });
   };
 
   const OrDayButton = ({ i }: { i: number }) => {

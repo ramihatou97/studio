@@ -25,7 +25,7 @@ import { prepopulateStaffCallAction } from "@/ai/actions";
 
 interface StaffConfigProps {
   appState: AppState;
-  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAppState: (updates: Partial<AppState>) => Promise<void>;
 }
 
 interface StaffInputState {
@@ -34,7 +34,7 @@ interface StaffInputState {
   specialtyType: 'cranial' | 'spine' | 'other';
 }
 
-function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState>> }) {
+function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updates: Partial<AppState>) => Promise<void> }) {
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -60,10 +60,7 @@ function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppStat
         day: call.day, 
       }));
 
-      setAppState(prev => ({
-        ...prev,
-        staffCall: newStaffCall
-      }));
+      await setAppState({ staffCall: newStaffCall });
       toast({ title: 'Success', description: `Populated ${result.data.length} staff call assignments.` });
       setText('');
     } else {
@@ -98,7 +95,7 @@ function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppStat
   )
 }
 
-function StaffCallScheduler({ appState, setAppState }: { appState: AppState, setAppState: React.Dispatch<React.SetStateAction<AppState>> }) {
+function StaffCallScheduler({ appState, setAppState }: { appState: AppState, setAppState: (updates: Partial<AppState>) => Promise<void> }) {
   const { general, staff, staffCall } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
@@ -114,13 +111,12 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   })();
 
   const handleStaffCallChange = (day: number, callType: 'cranial' | 'spine', staffName: string) => {
-    setAppState(prev => {
-        const otherCalls = prev.staffCall.filter(c => !(c.day === day && c.callType === callType));
-        if (staffName && staffName !== 'none') {
-            return { ...prev, staffCall: [...otherCalls, { day, callType, staffName }]};
-        }
-        return { ...prev, staffCall: otherCalls };
-    });
+    const otherCalls = appState.staffCall.filter(c => !(c.day === day && c.callType === callType));
+    if (staffName && staffName !== 'none') {
+        setAppState({ staffCall: [...otherCalls, { day, callType, staffName }] });
+    } else {
+        setAppState({ staffCall: otherCalls });
+    }
   };
 
   const DayButton = ({ dayNumber }: { dayNumber: number }) => {
@@ -140,7 +136,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
                         <Brain className="w-4 h-4 flex-shrink-0" />
                         <span className="font-medium truncate" title={cranialCall.staffName}>{cranialCall.staffName}</span>
                     </div>}
-                {spineCall && <div className="flex items-center gap-1.5 text-blue-500 dark:text-blue-400">
+                 {spineCall && <div className="flex items-center gap-1.5 text-blue-500 dark:text-blue-400">
                         <Bone className="w-4 h-4 flex-shrink-0" />
                         <span className="font-medium truncate" title={spineCall.staffName}>{spineCall.staffName}</span>
                     </div>}
@@ -220,18 +216,12 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
         specialtyType: staffInput.specialtyType
     };
     
-    setAppState(prev => ({
-      ...prev,
-      staff: [...prev.staff, newStaff]
-    }));
+    setAppState({ staff: [...appState.staff, newStaff] });
     setStaffInput({ name: '', subspecialty: '', specialtyType: 'other' });
   };
   
   const removeStaffMember = (id: string) => {
-    setAppState(prev => ({
-      ...prev,
-      staff: prev.staff.filter(s => s.id !== id)
-    }));
+    setAppState({ staff: appState.staff.filter(s => s.id !== id) });
   };
   
   const getSpecialtyBadgeClass = (type: 'cranial' | 'spine' | 'other') => {
