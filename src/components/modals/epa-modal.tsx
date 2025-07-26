@@ -2,19 +2,32 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AppState, Evaluation } from '@/lib/types';
 import { ALL_EPAS, type EPA } from '@/lib/epa-data';
 import { EpaList } from '../epa/epa-list';
-import { EpaEvaluationForm } from '../modals/epa-evaluation-form';
 import { Button } from '../ui/button';
-import { ArrowLeft, Inbox } from 'lucide-react';
+import { ArrowLeft, Inbox, Loader2 } from 'lucide-react';
 import { suggestEpaAction } from '@/ai/actions';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { EpaDashboard } from '../epa/epa-dashboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { EpaRequestList } from '../epa/epa-request-list';
+
+const EpaEvaluationForm = dynamic(
+  () => import('../modals/epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+);
+
 
 interface EpaModalProps {
   isOpen: boolean;
