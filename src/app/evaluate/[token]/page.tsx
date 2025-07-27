@@ -4,10 +4,25 @@
 import { useState, useEffect } from 'react';
 import type { AppState, Evaluation } from '@/lib/types';
 import { ALL_EPAS, type EPA } from '@/lib/epa-data';
-import { EpaEvaluationForm } from '@/components/modals/epa-evaluation-form';
-import { getInitialAppState } from '@/lib/config-helpers'; // Adjust path
+import { getInitialAppState } from '@/lib/config-helpers';
 import { Button } from '@/components/ui/button';
 import { MediShiftLogo } from '@/components/icons';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+
+const EpaEvaluationForm = dynamic(
+  () => import('@/components/modals/epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex flex-col items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="mt-2">Loading Form...</p>
+      </div>
+    )
+  }
+);
+
 
 const MOCK_STATE_KEY = 'mock_app_state';
 

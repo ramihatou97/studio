@@ -31,14 +31,20 @@ export interface OrCase {
   patientMrn: string;
   patientSex: 'male' | 'female' | 'other';
   age: number;
-  residentRole?: ResidentRole;
-  comments?: string;
 }
 
-export interface ManualProcedure extends Omit<OrCase, 'diagnosis' | 'complexity'> {
+export interface ManualProcedure {
     id: string;
     residentId: string;
     date: string; // YYYY-MM-DD
+    surgeon: string;
+    procedure: string;
+    procedureCode: string;
+    patientMrn: string;
+    patientSex: 'male' | 'female' | 'other';
+    age: number;
+    residentRole: ResidentRole;
+    comments: string;
     basedOn?: string; // Optional: ID of the original OR case it was based on
 }
 

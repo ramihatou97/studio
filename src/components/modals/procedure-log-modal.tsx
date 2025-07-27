@@ -103,7 +103,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
 
   const handleOpenForm = (entry?: ProcedureLogEntry, isCopy = false) => {
     if (entry) {
-        const baseState = {
+        const baseState: ManualProcedureFormState = {
             date: entry.date,
             surgeon: entry.surgeon,
             procedure: isCopy ? `Copy of: ${entry.procedure}` : entry.procedure,
@@ -111,9 +111,9 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
             patientMrn: entry.patientMrn,
             patientSex: entry.patientSex,
             age: entry.age,
-            residentRole: entry.residentRole || 'assistant',
-            comments: entry.comments || '',
-            basedOn: entry.isManual ? undefined : entry.id, // Link to original OR case
+            residentRole: (entry as ManualProcedure).residentRole || 'assistant',
+            comments: (entry as ManualProcedure).comments || '',
+            basedOn: entry.isManual ? (entry as ManualProcedure).basedOn : entry.id,
         };
         setFormState(baseState);
         setEditingEntryId(isCopy ? null : entry.id); // If copying, it's a new entry, so no editingId
@@ -128,9 +128,14 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
       if (!prev) return null;
       let manualProcs = [...(prev.manualProcedures || [])];
       
-      if (editingEntryId && !editingEntryId.startsWith('or-')) { // Editing an existing manual entry
-          manualProcs = manualProcs.map(p => p.id === editingEntryId ? { ...p, ...formState } : p);
-      } else { // New entry or converting an OR case
+      if (editingEntryId && editingEntryId.startsWith('or-')) {
+          // This was an OR case, now it's being converted to a manual entry
+          const procToAdd: ManualProcedure = { ...formState, id: uuidv4(), residentId: selectedResidentId, basedOn: editingEntryId };
+          manualProcs.push(procToAdd);
+      }
+      else if (editingEntryId) { // Editing an existing manual entry
+          manualProcs = manualProcs.map(p => p.id === editingEntryId ? { ...p, ...formState, id: editingEntryId, residentId: selectedResidentId } : p);
+      } else { // New entry 
           const procToAdd: ManualProcedure = { ...formState, id: uuidv4(), residentId: selectedResidentId };
           manualProcs.push(procToAdd);
       }
@@ -169,8 +174,8 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
         `"${item.patientMrn}"`,
         item.age,
         `"${item.patientSex}"`,
-        `"${item.residentRole || ''}"`,
-        `"${(item.comments || '').replace(/"/g, '""')}"`
+        `"${(item as ManualProcedure).residentRole || ''}"`,
+        `"${((item as ManualProcedure).comments || '').replace(/"/g, '""')}"`
       ].join(','))
     ].join('\n');
 
@@ -240,7 +245,7 @@ export function ProcedureLogModal({ isOpen, onOpenChange, appState, setAppState 
                                     <div className="font-medium">{item.patientMrn}</div>
                                     <div className="text-xs text-muted-foreground">{item.age}yo {item.patientSex}</div>
                                 </TableCell>
-                                <TableCell className="capitalize">{item.residentRole || 'N/A'}</TableCell>
+                                <TableCell className="capitalize">{(item as ManualProcedure).residentRole || 'N/A'}</TableCell>
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenForm(item)}>
                                         <Edit className="h-4 w-4" />
