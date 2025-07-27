@@ -1,6 +1,5 @@
 
-
-import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRotation, OffServiceRequest, CurrentUser } from './types';
+import type { AppState, Resident, MedicalStudent, OtherLearner, Staff, OnServiceCallRule, OffServiceRequest, CurrentUser } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -67,6 +66,9 @@ export function getInitialAppState(): AppState {
         {id: 'req1', residentId: '4', rotationId: 'r2', durationInBlocks: 1, timingPreference: 'early'},
         {id: 'req2', residentId: '5', rotationId: 'r1', durationInBlocks: 1, timingPreference: 'any'},
     ],
+    caseRounds: [],
+    articleDiscussions: [],
+    mmRounds: [],
     manualProcedures: [],
     evaluations: [],
     currentUser: ALL_USERS[0], // Default to Program Director

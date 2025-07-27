@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import type { AppState, Resident, PossibleActivity } from '@/lib/types';
 import { POSSIBLE_ACTIVITIES } from '@/lib/types';
@@ -55,12 +56,13 @@ export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError
 
   const getCellClass = (activity: string) => {
     if (activity.includes('Call')) return "bg-destructive/80 text-destructive-foreground";
-    if (activity.includes('Vacation')) return "bg-gray-400/80 text-background";
+    if (activity.includes('Vacation') || activity.includes('Holiday')) return "bg-gray-400/80 text-background";
     if (activity.includes('OR')) return "bg-primary/80 text-primary-foreground";
     if (activity.includes('Clinic')) return "bg-accent/80 text-accent-foreground";
     if (activity.includes('Post-Call')) return "bg-yellow-500/80 text-yellow-900";
     if (activity.includes('Backup')) return "bg-orange-500/80 text-orange-900";
     if (activity.includes('Pager Holder')) return "bg-sky-500/80 text-sky-900";
+    if (activity.includes('Rounds') || activity.includes('Club')) return "bg-green-500/80 text-green-900";
     return "bg-secondary text-secondary-foreground";
   };
   

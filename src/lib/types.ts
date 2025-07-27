@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 
 export type UserRole = 'program-director' | 'staff' | 'resident' | 'developer';
@@ -68,6 +67,9 @@ export const POSSIBLE_ACTIVITIES = [
   'Pager Holder',
   'Backup',
   'Holiday',
+  'Case Rounds',
+  'Journal Club',
+  'M&M Rounds',
 ] as const;
 
 export type PossibleActivity = typeof POSSIBLE_ACTIVITIES[number];
@@ -136,6 +138,24 @@ export interface ScheduleOutput {
   medicalStudents: MedicalStudent[];
   otherLearners: OtherLearner[];
   errors: ScheduleError[];
+}
+
+export interface CaseRoundAssignment {
+  dayIndex: number;
+  residentId: string;
+}
+
+export interface ArticleDiscussion {
+  dayIndex: number;
+  staffId: string;
+  article1: string;
+  article2: string;
+  zoomLink?: string;
+}
+
+export interface MMRound {
+  dayIndex: number;
+  zoomLink?: string;
 }
 
 export interface GeneralSettings {
@@ -277,6 +297,9 @@ export interface AppState {
   onServiceCallRules: OnServiceCallRule[];
   offServiceRotations: OffServiceRotation[];
   offServiceRequests: OffServiceRequest[];
+  caseRounds: CaseRoundAssignment[];
+  articleDiscussions: ArticleDiscussion[];
+  mmRounds: MMRound[];
   errors?: ScheduleError[];
   evaluations: Evaluation[];
   manualProcedures: ManualProcedure[];

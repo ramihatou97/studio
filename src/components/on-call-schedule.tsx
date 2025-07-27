@@ -1,13 +1,13 @@
 
 import type { AppState } from '@/lib/types';
-import { Brain, Bone, UserCheck, Sun, Moon, Shield } from 'lucide-react';
+import { Brain, Bone, UserCheck, Sun, Moon, Shield, Stethoscope, BookOpen, Users } from 'lucide-react';
 
 interface OnCallScheduleProps {
   appState: AppState;
 }
 
 export function OnCallSchedule({ appState }: OnCallScheduleProps) {
-  const { general, residents, staffCall } = appState;
+  const { general, residents, staffCall, caseRounds, articleDiscussions, mmRounds } = appState;
   const { startDate, endDate } = general;
   if (!startDate || !endDate) return null;
 
@@ -23,8 +23,11 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
     const dayCallResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Day Call'));
     const nightCallResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Night Call'));
     const weekendCallResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Weekend Call'));
-    
     const backupResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Backup'));
+
+    const caseRoundPresenter = caseRounds.find(cr => cr.dayIndex === dayIndex);
+    const articleDiscussion = articleDiscussions.find(ad => ad.dayIndex === dayIndex);
+    const mmRound = mmRounds.find(mm => mm.dayIndex === dayIndex);
 
     const cranialCallStaff = staffCall.find(c => c.day === (dayIndex + 1) && c.callType === 'cranial')?.staffName;
     const spineCallStaff = staffCall.find(c => c.day === (dayIndex + 1) && c.callType === 'spine')?.staffName;
@@ -38,7 +41,10 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
       weekendCallResidents,
       backupResidents,
       cranialCallStaff,
-      spineCallStaff
+      spineCallStaff,
+      caseRoundPresenter,
+      articleDiscussion,
+      mmRound,
     };
   });
   
@@ -57,7 +63,31 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
         {dailyRoster.map((day, index) => (
           <div key={index} className={`p-2 min-h-[160px] flex flex-col ${day.isWeekend ? 'bg-card' : 'bg-card/70'} relative`}>
             <div className="font-bold text-lg">{day.dayNumber}</div>
-            <div className="flex-grow space-y-2 mt-2 text-xs">
+            <div className="flex-grow space-y-1.5 mt-2 text-xs">
+                {/* Academic Events */}
+                {day.caseRoundPresenter && (
+                    <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
+                        <Stethoscope className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium truncate" title={residents.find(r=>r.id === day.caseRoundPresenter?.residentId)?.name}>
+                            Rounds: {residents.find(r=>r.id === day.caseRoundPresenter?.residentId)?.name}
+                        </span>
+                    </div>
+                )}
+                {day.articleDiscussion && (
+                     <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
+                        <BookOpen className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium truncate" title={staffCall.find(s=>s.staffName === day.articleDiscussion?.staffId)?.staffName}>
+                           Journal Club
+                        </span>
+                    </div>
+                )}
+                 {day.mmRound && (
+                     <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium">M&M Rounds</span>
+                    </div>
+                )}
+                
                 {/* Staff Call */}
                 {day.cranialCallStaff && (
                     <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
