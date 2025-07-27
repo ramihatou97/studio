@@ -44,20 +44,6 @@ export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps)
               <Switch id="use-predefined-call-toggle" checked={general.usePredefinedCall} onCheckedChange={(checked) => handleGeneralChange('usePredefinedCall', checked)} />
               <Label htmlFor="use-predefined-call-toggle">Use Pre-defined Monthly On-Call Schedule</Label>
             </div>
-             <div>
-                <Label htmlFor="reminder-frequency">EPA Reminder Frequency (days)</Label>
-                <div className="flex items-center gap-4 pt-2">
-                    <Slider
-                        id="reminder-frequency"
-                        min={1}
-                        max={7}
-                        step={1}
-                        value={[general.reminderFrequency || 3]}
-                        onValueChange={(value) => handleGeneralChange('reminderFrequency', value[0])}
-                    />
-                    <span className="font-bold text-lg w-12 text-center">{general.reminderFrequency}</span>
-                </div>
-            </div>
           </div>
         </CardContent>
       </Card>

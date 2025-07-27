@@ -8,6 +8,8 @@ import { useMemo } from 'react';
 import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ALL_EPAS } from '@/lib/epa-data';
+import { Label } from '../ui/label';
+import { Slider } from '../ui/slider';
 
 
 interface EpaDashboardProps {
@@ -17,7 +19,7 @@ interface EpaDashboardProps {
 }
 
 export function EpaDashboard({ appState, setAppState, onNewRequest }: EpaDashboardProps) {
-  const { currentUser, evaluations } = appState;
+  const { currentUser, evaluations, general } = appState;
   
   const relevantEvaluations = useMemo(() => {
     return (evaluations || []).filter(e => {
@@ -56,6 +58,10 @@ export function EpaDashboard({ appState, setAppState, onNewRequest }: EpaDashboa
     }));
   }, [completedEvaluations]);
 
+  const handleGeneralChange = (field: string, value: any) => {
+    setAppState(prev => prev ? ({ ...prev, general: { ...prev.general, [field]: value } }) : null);
+  };
+
 
   return (
     <div className="space-y-6 p-1">
@@ -66,12 +72,28 @@ export function EpaDashboard({ appState, setAppState, onNewRequest }: EpaDashboa
               <CardDescription>
                 {currentUser.role === 'resident'
                   ? 'Track your progress and request new evaluations.'
-                  : 'View evaluation statistics.'
+                  : 'View evaluation statistics and settings.'
                 }
               </CardDescription>
             </div>
             {currentUser.role === 'resident' && (
               <Button onClick={onNewRequest}><PlusCircle className="mr-2 h-4 w-4"/> New Evaluation Request</Button>
+            )}
+             {currentUser.role === 'program-director' && (
+                <div className="w-1/3">
+                    <Label htmlFor="reminder-frequency">Reminder Frequency (days)</Label>
+                    <div className="flex items-center gap-4 pt-2">
+                        <Slider
+                            id="reminder-frequency"
+                            min={1}
+                            max={7}
+                            step={1}
+                            value={[general.reminderFrequency || 3]}
+                            onValueChange={(value) => handleGeneralChange('reminderFrequency', value[0])}
+                        />
+                        <span className="font-bold text-lg w-12 text-center">{general.reminderFrequency}</span>
+                    </div>
+                </div>
             )}
         </CardHeader>
          <CardContent>
