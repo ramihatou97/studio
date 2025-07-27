@@ -88,6 +88,14 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
     setMmRound({});
   };
 
+  const recurringEvents = [
+    { day: "Monday", event: "INR Rounds" },
+    { day: "Tuesday", event: "Spine Rounds, Red Team Rounds" },
+    { day: "Wednesday", event: "Blue Team Rounds, SF" },
+    { day: "Thursday", event: "Neuro-oncology Tumour Rounds" },
+    { day: "Friday", event: "Academic Half-Day" },
+  ];
+
   return (
       <Accordion type="single" collapsible className="w-full space-y-4 mt-6">
         <AccordionItem value="academic-events">
@@ -138,6 +146,22 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
                         </div>
                     </CardContent>
                 </Card>
+
+                 {/* Other Recurring Events */}
+                <Card className="mt-4">
+                  <CardHeader><CardTitle className="flex items-center gap-2">Other Recurring Events</CardTitle><CardDescription>These are fixed weekly academic events automatically added to the schedule for all on-service residents.</CardDescription></CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 text-sm">
+                      {recurringEvents.map(event => (
+                        <li key={event.day} className="flex justify-between p-2 bg-muted/50 rounded-md">
+                          <span className="font-semibold">{event.day}</span>
+                          <span className="text-muted-foreground">{event.event}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+
             </AccordionContent>
         </AccordionItem>
       </Accordion>
