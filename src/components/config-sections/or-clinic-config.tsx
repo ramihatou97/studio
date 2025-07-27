@@ -1,4 +1,5 @@
 
+
 import type { AppState, OrCase, ClinicAssignment } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const [newCase, setNewCase] = useState<Omit<OrCase, 'surgeon'>>({ diagnosis: '', procedure: '', procedureCode: '', complexity: 'routine', patientMrn: '', patientSex: 'male', age: 0 });
   const [selectedSurgeon, setSelectedSurgeon] = useState<string>('');
   
-  const [newClinic, setNewClinic] = useState<Partial<ClinicAssignment>>({});
+  const [newClinic, setNewClinic] = useState<Partial<ClinicAssignment>>({ appointments: 10, virtualAppointments: 0 });
 
 
   const { numberOfDays } = (() => {
@@ -168,10 +169,12 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     const fullClinic: ClinicAssignment = {
         day: currentEditingDay + 1, // Store as 1-indexed
         staffName: newClinic.staffName,
-        clinicType: newClinic.clinicType
+        clinicType: newClinic.clinicType,
+        appointments: newClinic.appointments || 0,
+        virtualAppointments: newClinic.virtualAppointments || 0
     };
     setAppState(prev => prev ? ({ ...prev, clinicAssignments: [...prev.clinicAssignments, fullClinic]}) : null);
-    setNewClinic({});
+    setNewClinic({ appointments: 10, virtualAppointments: 0 });
   };
 
   const handleRemoveClinic = (day: number, staffName: string, clinicType: string) => {
@@ -231,8 +234,8 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                       {currentEditingDay !== null && clinicAssignments.filter(c => c.day === currentEditingDay + 1).map((c, i) => (
                           <div key={i} className="p-2 bg-muted rounded-md flex justify-between items-center">
                               <div>
-                                  <p className="font-semibold">{c.staffName}</p>
-                                  <p className="text-sm text-muted-foreground capitalize">{c.clinicType} Clinic</p>
+                                  <p className="font-semibold">{c.staffName} ({c.clinicType})</p>
+                                  <p className="text-sm text-muted-foreground">Appts: {c.appointments} (Virtual: {c.virtualAppointments})</p>
                               </div>
                               <Button variant="ghost" size="icon" onClick={() => handleRemoveClinic(c.day, c.staffName, c.clinicType)}><Trash2 className="h-4 w-4"/></Button>
                           </div>
@@ -263,6 +266,14 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                                         <SelectItem value="general">General</SelectItem>
                                     </SelectContent>
                                 </Select>
+                            </div>
+                             <div>
+                                <Label>Total Appointments</Label>
+                                <Input type="number" value={newClinic.appointments} onChange={e => setNewClinic(c => ({ ...c, appointments: parseInt(e.target.value, 10) || 0 }))}/>
+                            </div>
+                             <div>
+                                <Label>Virtual Appointments</Label>
+                                <Input type="number" value={newClinic.virtualAppointments} onChange={e => setNewClinic(c => ({ ...c, virtualAppointments: parseInt(e.target.value, 10) || 0 }))}/>
                             </div>
                         </div>
                         <Button onClick={handleAddClinic} className="w-full mt-2">Add Clinic</Button>

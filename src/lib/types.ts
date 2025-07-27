@@ -52,6 +52,8 @@ export interface ClinicAssignment {
   day: number; // 1-indexed
   staffName: string;
   clinicType: 'cranial' | 'spine' | 'general';
+  appointments: number;
+  virtualAppointments: number;
 }
 
 export const POSSIBLE_ACTIVITIES = [
