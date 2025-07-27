@@ -349,50 +349,57 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     });
 
 
-    // --- Clinic Assignments SECOND ---
+    // --- Clinic Assignments SECOND (with new rules) ---
     const dailyClinics = clinicAssignments.filter(c => c.day === dayIndex + 1);
     dailyClinics.forEach(clinic => {
-        const physicalAppointments = clinic.appointments - (clinic.virtualAppointments || 0);
+      const physicalAppointments = clinic.appointments - (clinic.virtualAppointments || 0);
 
-        if (physicalAppointments < 5) return; // No resident needed for low volume.
+      const isUnavailable = (schedule: string[]) => schedule.some(act => ['Vacation', 'Post-Call', 'Night Call', 'Weekend Call', 'OR', 'Clinic'].includes(act));
 
-        const requiredResidents = physicalAppointments > 25 ? 2 : 1;
-        let assignedCount = 0;
-
-        const isUnavailable = (schedule: string[]) => schedule.some(act => ['Vacation', 'Post-Call', 'Night Call', 'Weekend Call', 'OR', 'Clinic'].includes(act));
-        
-        // Junior resident pass (prioritizing those not in OR)
-        const juniorCandidates = processedResidents.filter(r => 
-            r.level <= 3 && r.onService && !isUnavailable(r.schedule[dayIndex])
-        ).sort((a,b) => {
-            const aIsInOR = a.schedule[dayIndex].includes('OR');
-            const bIsInOR = b.schedule[dayIndex].includes('OR');
-            if(aIsInOR !== bIsInOR) return aIsInOR ? 1 : -1; // Residents not in OR come first
-            return a.level - b.level; // Then most junior
-        });
-
-        while(assignedCount < requiredResidents && juniorCandidates.length > 0) {
-            const residentToAssign = juniorCandidates.shift();
-            if(residentToAssign) {
-                residentToAssign.schedule[dayIndex].push('Clinic');
-                assignedCount++;
-            }
+      if (physicalAppointments < 5) {
+        // Low volume: only assign a floating resident.
+        const floatingResident = processedResidents.find(r => r.schedule[dayIndex].length === 0 && r.onService);
+        if (floatingResident) {
+          floatingResident.schedule[dayIndex].push('Clinic');
         }
+        return; // Stop processing this clinic
+      }
 
-        // Senior resident pass (only if floating)
-        if (assignedCount < requiredResidents) {
-            const seniorCandidates = processedResidents.filter(r => 
-                r.level >= 4 && r.onService && r.schedule[dayIndex].length === 0 // Check if they are floating (empty schedule)
-            ).sort((a, b) => a.level - b.level); // Prioritize most junior of the seniors
+      const requiredResidents = physicalAppointments > 25 ? 2 : 1;
+      let assignedCount = 0;
 
-            while(assignedCount < requiredResidents && seniorCandidates.length > 0) {
-                const residentToAssign = seniorCandidates.shift();
-                if(residentToAssign) {
-                    residentToAssign.schedule[dayIndex].push('Clinic');
-                    assignedCount++;
-                }
-            }
+      // Junior resident pass (prioritizing those NOT in OR)
+      const juniorCandidates = processedResidents.filter(r =>
+        r.level <= 3 && r.onService && !isUnavailable(r.schedule[dayIndex])
+      ).sort((a, b) => {
+        const aIsInOR = a.schedule[dayIndex].includes('OR');
+        const bIsInOR = b.schedule[dayIndex].includes('OR');
+        if (aIsInOR !== bIsInOR) return aIsInOR ? 1 : -1; // Residents not in OR come first
+        return a.level - b.level; // Then most junior
+      });
+
+      while (assignedCount < requiredResidents && juniorCandidates.length > 0) {
+        const residentToAssign = juniorCandidates.shift();
+        if (residentToAssign) {
+          residentToAssign.schedule[dayIndex].push('Clinic');
+          assignedCount++;
         }
+      }
+
+      // Senior resident pass (only if floating and slots still need filling)
+      if (assignedCount < requiredResidents) {
+        const seniorCandidates = processedResidents.filter(r =>
+          r.level >= 4 && r.onService && r.schedule[dayIndex].length === 0 // Check if they are floating
+        ).sort((a, b) => a.level - b.level); // Prioritize most junior of the seniors
+
+        while (assignedCount < requiredResidents && seniorCandidates.length > 0) {
+          const residentToAssign = seniorCandidates.shift();
+          if (residentToAssign) {
+            residentToAssign.schedule[dayIndex].push('Clinic');
+            assignedCount++;
+          }
+        }
+      }
     });
   }
   
@@ -434,3 +441,4 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     errors: generationErrors,
   };
 }
+
