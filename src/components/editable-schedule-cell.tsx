@@ -62,7 +62,7 @@ export function EditableScheduleCell({ resident, dayIndex, setAppState, hasError
     if (activity.includes('Post-Call')) return "bg-yellow-500/80 text-yellow-900";
     if (activity.includes('Backup')) return "bg-orange-500/80 text-orange-900";
     if (activity.includes('Pager Holder')) return "bg-sky-500/80 text-sky-900";
-    if (activity.includes('Rounds') || activity.includes('Club')) return "bg-green-500/80 text-green-900";
+    if (activity.includes('Rounds') || activity.includes('Club') || activity.includes('Day')) return "bg-green-500/80 text-green-900";
     return "bg-secondary text-secondary-foreground";
   };
   

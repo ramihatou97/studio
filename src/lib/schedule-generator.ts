@@ -77,16 +77,51 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   // --- Pass 1.5: Academic Events ---
   // These are placed before call assignment so call can be assigned around them if needed,
   // but they don't block clinical duties in later passes. They are considered "soft" assignments.
+   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+    const currentDate = new Date(start);
+    currentDate.setDate(currentDate.getDate() + dayIndex);
+    const dayOfWeek = currentDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+    const onServiceNeuroResidents = processedResidents.filter(r => r.type === 'neuro' && r.onService);
+
+    onServiceNeuroResidents.forEach(res => {
+      // If the day is empty (no vacation/holiday)
+      if (res.schedule[dayIndex].length === 0) {
+        let academicActivity: ScheduleActivity | null = null;
+        switch (dayOfWeek) {
+          case 1: // Monday
+            academicActivity = 'INR Rounds';
+            break;
+          case 2: // Tuesday
+            academicActivity = 'Spine/Red Rounds';
+            break;
+          case 3: // Wednesday
+            academicActivity = 'Blue/SF Rounds';
+            break;
+          case 4: // Thursday
+            academicActivity = 'Tumour Rounds';
+            break;
+          case 5: // Friday
+            academicActivity = 'Academic Half-Day';
+            break;
+        }
+        if (academicActivity) {
+          res.schedule[dayIndex].push(academicActivity);
+        }
+      }
+    });
+  }
+  
   caseRounds.forEach(cr => {
       const resident = processedResidents.find(r => r.id === cr.residentId);
-      if (resident && resident.schedule[cr.dayIndex].length === 0) {
+      if (resident && !resident.schedule[cr.dayIndex].includes('Vacation')) {
           resident.schedule[cr.dayIndex].push(`Case Rounds`);
       }
   });
   
   articleDiscussions.forEach(ad => {
     processedResidents.forEach(res => {
-        if (res.onService && res.schedule[ad.dayIndex].length === 0) {
+        if (res.onService && !res.schedule[ad.dayIndex].includes('Vacation')) {
             res.schedule[ad.dayIndex].push('Journal Club');
         }
     });
@@ -94,7 +129,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
   mmRounds.forEach(mm => {
     processedResidents.forEach(res => {
-        if (res.onService && res.schedule[mm.dayIndex].length === 0) {
+        if (res.onService && !res.schedule[mm.dayIndex].includes('Vacation')) {
             res.schedule[mm.dayIndex].push('M&M Rounds');
         }
     });
@@ -176,11 +211,11 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
       
       const assignCall = (resident: Resident, call: string) => {
           // Call duties overwrite academic duties
-          if (resident.schedule[dayIndex].some(act => ['Case Rounds', 'Journal Club', 'M&M Rounds'].includes(act))) {
-              resident.schedule[dayIndex] = [call];
-          } else {
-              resident.schedule[dayIndex].push(call);
-          }
+          const academicEvents = ['Case Rounds', 'Journal Club', 'M&M Rounds', 'INR Rounds', 'Spine/Red Rounds', 'Blue/SF Rounds', 'Tumour Rounds', 'Academic Half-Day'];
+          const nonCallDuties = resident.schedule[dayIndex].filter(act => !academicEvents.includes(act as string));
+          
+          resident.schedule[dayIndex] = [...nonCallDuties, call];
+
           if (call !== 'Backup') {
             resident.callDays.push(dayIndex);
             if (isWeekend || isStatHoliday) resident.weekendCalls++;
@@ -289,7 +324,8 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
     for (let dayIndex = 0; dayIndex < numberOfDays - 1; dayIndex++) {
         const hasNightOrWeekendCall = res.schedule[dayIndex].some(act => ['Night Call', 'Weekend Call'].includes(act as string));
         if (hasNightOrWeekendCall) {
-            if (res.schedule[dayIndex + 1].length === 0 || res.schedule[dayIndex + 1].some(act => ['Case Rounds', 'Journal Club', 'M&M Rounds'].includes(act))) {
+            const academicEvents = ['Case Rounds', 'Journal Club', 'M&M Rounds', 'INR Rounds', 'Spine/Red Rounds', 'Blue/SF Rounds', 'Tumour Rounds', 'Academic Half-Day'];
+            if (res.schedule[dayIndex + 1].length === 0 || res.schedule[dayIndex + 1].every(act => academicEvents.includes(act as string))) {
                 res.schedule[dayIndex + 1] = ['Post-Call'];
             } else if (!res.schedule[dayIndex + 1].includes('Vacation')) {
                 generationErrors.push({
@@ -409,7 +445,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
 
       if (assignedCount < requiredResidents) {
         const seniorCandidates = processedResidents.filter(r =>
-          r.level >= 4 && r.onService && r.schedule[dayIndex].length === 0
+          r.level >= 4 && r.onService && r.schedule[dayIndex].every(act => !['Vacation', 'Post-Call', 'Night Call', 'Weekend Call', 'OR', 'Clinic'].includes(act as string))
         ).sort((a, b) => a.level - b.level);
 
         while (assignedCount < requiredResidents && seniorCandidates.length > 0) {
@@ -426,7 +462,7 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
   // --- Pass 5: Finalization Passes ---
   for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
     const candidates = processedResidents
-      .filter(r => r.schedule[dayIndex].length === 0 && !r.exemptFromCall)
+      .filter(r => r.schedule[dayIndex].every(act => !POSSIBLE_ACTIVITIES.includes(act as any) || ['INR Rounds', 'Spine/Red Rounds', 'Blue/SF Rounds', 'Tumour Rounds', 'Academic Half-Day'].includes(act as string)) && !r.exemptFromCall)
       .sort((a,b) => a.level - b.level);
       
     if (candidates.length > 0) {
@@ -434,9 +470,9 @@ export function generateSchedules(appState: AppState): ScheduleOutput {
         const seniorsInOR = assignedResidentsInOR.filter(r => r.level >= 3);
 
         if (seniorsInOR.length > 0 && candidates[0].level <=2) {
-            candidates[0].schedule[dayIndex] = ['OR']; // Pair with senior
+            candidates[0].schedule[dayIndex].push('OR'); // Pair with senior
         } else {
-            candidates[0].schedule[dayIndex] = ['Pager Holder'];
+            candidates[0].schedule[dayIndex].push('Pager Holder');
         }
     }
   }

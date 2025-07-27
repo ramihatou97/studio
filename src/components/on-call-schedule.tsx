@@ -1,6 +1,6 @@
 
 import type { AppState } from '@/lib/types';
-import { Brain, Bone, UserCheck, Sun, Moon, Shield, Stethoscope, BookOpen, Users } from 'lucide-react';
+import { Brain, Bone, UserCheck, Sun, Moon, Shield, Stethoscope, BookOpen, Users, GraduationCap, Briefcase, Minus } from 'lucide-react';
 
 interface OnCallScheduleProps {
   appState: AppState;
@@ -31,6 +31,15 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
 
     const cranialCallStaff = staffCall.find(c => c.day === (dayIndex + 1) && c.callType === 'cranial')?.staffName;
     const spineCallStaff = staffCall.find(c => c.day === (dayIndex + 1) && c.callType === 'spine')?.staffName;
+    
+    let academicActivity: string | null = null;
+    switch (dayDate.getDay()) {
+      case 1: academicActivity = 'INR Rounds'; break;
+      case 2: academicActivity = 'Spine/Red'; break;
+      case 3: academicActivity = 'Blue/SF'; break;
+      case 4: academicActivity = 'Tumour Rounds'; break;
+      case 5: academicActivity = 'Half-Day'; break;
+    }
 
     return {
       date: dayDate,
@@ -45,6 +54,7 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
       caseRoundPresenter,
       articleDiscussion,
       mmRound,
+      academicActivity,
     };
   });
   
@@ -63,8 +73,13 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
         {dailyRoster.map((day, index) => (
           <div key={index} className={`p-2 min-h-[160px] flex flex-col ${day.isWeekend ? 'bg-card' : 'bg-card/70'} relative`}>
             <div className="font-bold text-lg">{day.dayNumber}</div>
-            <div className="flex-grow space-y-1.5 mt-2 text-xs">
-                {/* Academic Events */}
+            <div className="flex-grow space-y-1 mt-2 text-xs">
+                 {day.academicActivity && (
+                     <div className="flex items-center gap-1.5 text-purple-700 dark:text-purple-400">
+                        <GraduationCap className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-medium truncate">{day.academicActivity}</span>
+                    </div>
+                 )}
                 {day.caseRoundPresenter && (
                     <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
                         <Stethoscope className="w-4 h-4 flex-shrink-0" />

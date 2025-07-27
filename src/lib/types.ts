@@ -70,6 +70,11 @@ export const POSSIBLE_ACTIVITIES = [
   'Case Rounds',
   'Journal Club',
   'M&M Rounds',
+  'INR Rounds',
+  'Spine/Red Rounds',
+  'Blue/SF Rounds',
+  'Tumour Rounds',
+  'Academic Half-Day',
 ] as const;
 
 export type PossibleActivity = typeof POSSIBLE_ACTIVITIES[number];

@@ -17,6 +17,7 @@ interface ActivityCounts {
   'Float': number;
   'Pager Holder': number;
   'Backup': number;
+  'Academic Half-Day': number;
 }
 
 export function ScheduleSummaryTable({ appState }: ScheduleSummaryTableProps) {
@@ -34,6 +35,7 @@ export function ScheduleSummaryTable({ appState }: ScheduleSummaryTableProps) {
       'Float': 0,
       'Pager Holder': 0,
       'Backup': 0,
+      'Academic Half-Day': 0,
     };
     
     if (!resident.schedule) return counts;
@@ -49,7 +51,7 @@ export function ScheduleSummaryTable({ appState }: ScheduleSummaryTableProps) {
     return counts;
   };
   
-  const headers: (keyof ActivityCounts)[] = ['Day Call', 'Night Call', 'Weekend Call', 'Post-Call', 'Vacation', 'Clinic', 'OR', 'Float', 'Pager Holder', 'Backup'];
+  const headers: (keyof ActivityCounts)[] = ['Day Call', 'Night Call', 'Weekend Call', 'Post-Call', 'Vacation', 'Clinic', 'OR', 'Float', 'Pager Holder', 'Backup', 'Academic Half-Day'];
 
   return (
     <div className="mt-6">
