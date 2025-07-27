@@ -1,13 +1,19 @@
 
 import { useState, useRef, useMemo } from 'react';
-import type { AppState } from '@/lib/types';
+import type { AppState, GenerationScope } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Bot, FileText, Sparkles, Wand2, FileDown, FileUp, MessageCircle, BarChart, BookUser, BrainCircuit, GraduationCap, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface ActionButtonsProps {
-  onGenerate: () => void;
+  onGenerate: (scope: GenerationScope) => void;
   appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
   isLoading: boolean;
@@ -91,17 +97,35 @@ export function ActionButtons({
       <div className="my-8 flex flex-col items-center space-y-4">
         {currentUserRole === 'program-director' && (
             <>
-                <Button
-                onClick={onGenerate}
-                disabled={isLoading}
-                className="w-full md:w-1/2 text-lg py-6"
-                >
-                {isLoading ? (
-                    <><Bot className="mr-2 h-5 w-5 animate-spin" /> Generating...</>
-                ) : (
-                    <><Wand2 className="mr-2 h-5 w-5" /> {hasGenerated ? 'Re-generate Schedules' : 'Generate Schedules'}</>
-                )}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button disabled={isLoading} className="w-full md:w-1/2 text-lg py-6">
+                      {isLoading ? (
+                          <><Bot className="mr-2 h-5 w-5 animate-spin" /> Generating...</>
+                      ) : (
+                          <><Wand2 className="mr-2 h-5 w-5" /> {hasGenerated ? 'Re-generate Schedules' : 'Generate Schedules'}</>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-full md:w-1/2">
+                    <DropdownMenuItem onSelect={() => onGenerate({ type: 'all' })}>
+                      Generate Full Month
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onGenerate({ type: 'week', weekNumber: 1 })}>
+                      Generate Week 1 Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onGenerate({ type: 'week', weekNumber: 2 })}>
+                      Generate Week 2 Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onGenerate({ type: 'week', weekNumber: 3 })}>
+                      Generate Week 3 Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onGenerate({ type: 'week', weekNumber: 4 })}>
+                      Generate Week 4 Only
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <div className="w-full md:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-2">
                     <Button onClick={handleSave} variant="outline">
                         <FileDown className="mr-2 h-4 w-4" /> Save Config

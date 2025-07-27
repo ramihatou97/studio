@@ -289,6 +289,10 @@ export interface GenerateSurgicalBriefingInput {
   patientDetails: string;
 }
 
+export type GenerationScope = 
+  | { type: 'all' }
+  | { type: 'week'; weekNumber: number };
+
 export interface AppState {
   general: GeneralSettings;
   residents: Resident[];

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AppState, CurrentUser } from '@/lib/types';
+import type { AppState, CurrentUser, GenerationScope } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
@@ -74,13 +74,13 @@ export default function AppPage() {
     });
   };
 
-  const handleGenerateClick = () => {
+  const handleGenerateClick = (scope: GenerationScope) => {
     if (!appState) return;
     setIsGenerating(true);
 
     setTimeout(() => {
       try {
-        const output = generateSchedules(appState);
+        const output = generateSchedules(appState, scope);
         
         updateAppState(prev => prev ? ({
           ...prev,
