@@ -109,7 +109,7 @@ const prompt = ai.definePrompt({
   *   **For Rosters ("newResidents", "vacationDays"):**
       *   Look for names and associated PGY levels (e.g., R1, R2, R3, R4, R5, R6). You must convert the 'R' number to a simple integer level (e.g., "R4" becomes level: 4).
       *   **Neurosurgery vs. Non-Neurosurgery:**
-          *   If a name has a specialty in parentheses like '(Neurology)' or '(Plastics)', that person is a **non-neurosurgical** resident. Their specialty should be extracted (e.g., 'specialty: "Neurology"'). They are considered 'onService: true' to their own service, but you should set their specialty field.
+          *   If a name has a specialty in parentheses like '(Neurology)' or '(Plastics)', that person is a **non-neurosurgical** resident. Their specialty should be extracted (e.g., specialty: 'Neurology'). They are considered 'onService: true' to their own service, but you should set their specialty field.
           *   Anyone without a specialty in parentheses is a **neurosurgery resident**.
       *   **On-Service vs. Off-Service (for Neurosurgery Residents):**
           *   If a neurosurgery resident is listed under a header like "On service residents", they are 'onService: true'.
