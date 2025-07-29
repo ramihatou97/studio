@@ -7,17 +7,21 @@ import { useToast } from "@/hooks/use-toast";
 import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident, Staff } from "@/lib/types";
 import { Sparkles, Loader2 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import { getMonth, getYear } from 'date-fns';
+import { differenceInDays } from 'date-fns';
+import { calculateNumberOfDays } from '@/lib/utils';
+
 
 interface AiPrepopulationProps {
   appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
-  onDataParsed: (data: any) => void;
   dataType: 'roster' | 'on-call' | 'or-clinic' | 'academic';
   title: string;
   description: string;
 }
 
-export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType, title, description }: AiPrepopulationProps) {
+export function AiPrepopulation({ appState, setAppState, dataType, title, description }: AiPrepopulationProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -48,6 +52,200 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
+  };
+
+  const onDataParsed = (data: any) => {
+    setAppState(prev => {
+        if (!prev) return null;
+
+        let finalState = { ...prev };
+        let toastMessage = '';
+
+        // Roster parsing logic
+        if (dataType === 'roster' && (data.newResidents || data.vacationDays)) {
+            let updatedResidents = [...prev.residents];
+            const existingNames = new Set(updatedResidents.map(r => r.name.toLowerCase()));
+            let addedCount = 0;
+            let vacationCount = 0;
+
+            if (data.newResidents) {
+                data.newResidents.forEach((res: any) => {
+                    const trimmedName = res.name.trim();
+                    if (!existingNames.has(trimmedName.toLowerCase())) {
+                        addedCount++;
+                        existingNames.add(trimmedName.toLowerCase());
+                        const isNeuro = !res.specialty || res.specialty.toLowerCase().includes('neuro');
+                        updatedResidents.push({
+                            id: uuidv4(),
+                            type: isNeuro ? 'neuro' : 'non-neuro',
+                            name: trimmedName,
+                            email: `${trimmedName.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
+                            level: res.level,
+                            onService: res.onService,
+                            specialty: isNeuro ? undefined : res.specialty,
+                            vacationDays: [],
+                            isChief: false,
+                            chiefTakesCall: true,
+                            chiefOrDays: [],
+                            maxOnServiceCalls: 0,
+                            offServiceMaxCall: 4,
+                            schedule: [],
+                            weekendCalls: 0,
+                            callDays: [],
+                            doubleCallDays: 0,
+                            orDays: 0,
+                            holidayGroup: 'neither',
+                            allowSoloPgy1Call: false,
+                            canBeBackup: false,
+                        });
+                    }
+                });
+            }
+            
+            if (data.vacationDays) {
+                data.vacationDays.forEach((vacationInfo: { residentName: string; days: number[] }) => {
+                    const residentIndex = updatedResidents.findIndex(r => r.name === vacationInfo.residentName);
+                    if (residentIndex > -1) {
+                        vacationCount++;
+                        updatedResidents[residentIndex].vacationDays = vacationInfo.days;
+                    }
+                });
+            }
+            
+            if (addedCount > 0 || vacationCount > 0) {
+                toastMessage = `Added ${addedCount} new residents and updated ${vacationCount} vacation schedules.`;
+            } else if (!data.newResidents && !data.vacationDays) {
+                toastMessage = 'No usable data found. The AI could not extract resident or vacation information.';
+            }
+            else {
+                 toastMessage = 'No new residents added. All residents from the source already exist.';
+            }
+            finalState = { ...finalState, residents: updatedResidents };
+        }
+        
+        // On-Call parsing logic
+        if (dataType === 'on-call' && (data.staffCall || data.residentCall)) {
+            let newStaffCall = [...prev.staffCall];
+            let newResidentCall = [...prev.residentCall];
+            let staffCount = 0;
+            let residentCount = 0;
+            if (data.staffCall) {
+                data.staffCall.forEach((call: any) => {
+                    const dayIndex = call.day - 1;
+                    staffCount++;
+                    newStaffCall = newStaffCall.filter(c => !(c.day === (dayIndex + 1) && c.callType === call.callType));
+                    newStaffCall.push({ day: dayIndex + 1, callType: call.callType, staffName: call.staffName });
+                });
+            }
+            if (data.residentCall) {
+                data.residentCall.forEach((call: any) => {
+                    const dayIndex = call.day - 1;
+                    const resident = prev.residents.find(r => r.name === call.residentName);
+                    if (resident) {
+                        residentCount++;
+                        const callType = call.callType;
+                        if (callType) {
+                           newResidentCall = newResidentCall.filter(c => !(c.day === (dayIndex + 1) && c.residentId === resident.id));
+                           newResidentCall.push({ day: dayIndex + 1, callType, residentId: resident.id });
+                        }
+                    }
+                });
+            }
+            toastMessage = `Populated ${staffCount} staff and ${residentCount} resident call assignments.`;
+            finalState = { ...finalState, staffCall: newStaffCall, residentCall: newResidentCall };
+        }
+
+        // OR/Clinic parsing logic
+        if (dataType === 'or-clinic' && (data.orCases || data.clinicAssignments)) {
+            const numberOfDays = calculateNumberOfDays(prev.general.startDate, prev.general.endDate);
+            const newOrCases = { ...prev.orCases };
+            const newClinicAssignments = [...prev.clinicAssignments];
+            const rotationStartDate = new Date(prev.general.startDate);
+            const rotationYear = getYear(rotationStartDate);
+            
+            if (data.orCases) {
+                data.orCases.forEach((caseItem: any) => {
+                    const day = caseItem.day;
+                    const month = getMonth(new Date(caseItem.date || rotationStartDate));
+                    const date = new Date(rotationYear, month, day);
+                    const dayIndex = differenceInDays(date, rotationStartDate);
+
+                    if (dayIndex >= 0 && dayIndex < numberOfDays) {
+                        if (!newOrCases[dayIndex]) newOrCases[dayIndex] = [];
+                        newOrCases[dayIndex].push({
+                            surgeon: caseItem.surgeon,
+                            diagnosis: caseItem.diagnosis,
+                            procedure: caseItem.procedure,
+                            procedureCode: caseItem.procedureCode || '',
+                            complexity: 'routine',
+                            patientMrn: caseItem.patientMrn,
+                            patientSex: caseItem.patientSex,
+                            age: caseItem.age,
+                        });
+                    }
+                });
+            }
+
+            if (data.clinicAssignments) {
+                data.clinicAssignments.forEach((clinicItem: any) => {
+                     const day = clinicItem.day;
+                    const month = getMonth(new Date(clinicItem.date || rotationStartDate));
+                    const date = new Date(rotationYear, month, day);
+                    const dayIndex = differenceInDays(date, rotationStartDate);
+
+                    if (dayIndex >= 0 && dayIndex < numberOfDays) {
+                         newClinicAssignments.push({
+                            day: dayIndex + 1,
+                            staffName: clinicItem.staffName,
+                            clinicType: clinicItem.clinicType,
+                            appointments: clinicItem.appointments || 10,
+                            virtualAppointments: 0,
+                        });
+                    }
+                });
+            }
+            toastMessage = 'Populated OR and Clinic data.';
+            finalState = { ...finalState, orCases: newOrCases, clinicAssignments: newClinicAssignments };
+        }
+
+        // Academic event parsing logic
+        if (dataType === 'academic' && data.academicEvents?.length > 0) {
+            const numberOfDays = calculateNumberOfDays(prev.general.startDate, prev.general.endDate);
+            const newCaseRounds = [...prev.caseRounds];
+            const newArticleDiscussions = [...prev.articleDiscussions];
+            let count = 0;
+            data.academicEvents.forEach((event: any) => {
+                const dayIndex = event.day - 1;
+                if (dayIndex >= 0 && dayIndex < numberOfDays) {
+                  count++;
+                  if (event.eventType === 'Case Rounds') {
+                    const resident = prev.residents.find(r => r.name === event.presenter);
+                    if (resident) {
+                      newCaseRounds.push({ dayIndex, residentId: resident.id });
+                    }
+                  } else if (event.eventType === 'Journal Club') {
+                    const staffMember = prev.staff.find(s => s.name === event.presenter);
+                    if (staffMember) {
+                      newArticleDiscussions.push({
+                        dayIndex,
+                        staffId: staffMember.id,
+                        article1: 'TBD from upload',
+                        article2: 'TBD from upload',
+                      });
+                    }
+                  }
+                }
+            });
+            toastMessage = `Populated ${count} academic events.`;
+            finalState = { ...finalState, caseRounds: newCaseRounds, articleDiscussions: newArticleDiscussions };
+        }
+
+        if (toastMessage) {
+            toast({ title: 'AI Prepopulation', description: toastMessage });
+        }
+
+        return finalState;
+    });
   };
   
   const handleParse = async () => {
@@ -151,3 +349,5 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
     </div>
   );
 }
+
+    

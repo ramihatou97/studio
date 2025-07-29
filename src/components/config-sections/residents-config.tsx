@@ -13,7 +13,6 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid';
 import { AiPrepopulation } from "../ai-prepopulation";
 import { useToast } from "@/hooks/use-toast";
 import { calculateNumberOfDays } from "@/lib/utils";
@@ -27,8 +26,6 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
   const [caseRound, setCaseRound] = useState<Partial<CaseRoundAssignment>>({});
   const [articleDiscussion, setArticleDiscussion] = useState<Partial<ArticleDiscussion>>({});
   const [mmRound, setMmRound] = useState<Partial<MMRound>>({});
-  const { toast } = useToast();
-
 
   const { residents, staff, general } = appState;
   const { startDate, endDate } = general;
@@ -87,45 +84,6 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
     setMmRound({});
   };
 
-   const handleAcademicDataParsed = (data: any) => {
-    if (!data.academicEvents || data.academicEvents.length === 0) {
-      toast({ title: 'No academic events found in the document.' });
-      return;
-    }
-    setAppState(prev => {
-      if (!prev) return null;
-      const newCaseRounds = [...prev.caseRounds];
-      const newArticleDiscussions = [...prev.articleDiscussions];
-      const rotationStartDate = new Date(prev.general.startDate);
-      let count = 0;
-
-      data.academicEvents.forEach((event: any) => {
-        const dayIndex = event.day - 1; // Assuming 1-based day from AI
-        if (dayIndex >= 0 && dayIndex < numberOfDays) {
-          count++;
-          if (event.eventType === 'Case Rounds') {
-            const resident = prev.residents.find(r => r.name === event.presenter);
-            if (resident) {
-              newCaseRounds.push({ dayIndex, residentId: resident.id });
-            }
-          } else if (event.eventType === 'Journal Club') {
-            const staffMember = prev.staff.find(s => s.name === event.presenter);
-            if (staffMember) {
-              newArticleDiscussions.push({
-                dayIndex,
-                staffId: staffMember.id,
-                article1: 'TBD from upload',
-                article2: 'TBD from upload',
-              });
-            }
-          }
-        }
-      });
-      toast({ title: 'Success', description: `Populated ${count} academic events.` });
-      return { ...prev, caseRounds: newCaseRounds, articleDiscussions: newArticleDiscussions };
-    });
-  };
-
   const recurringEvents = [
     { day: "Monday", event: "INR Rounds" },
     { day: "Tuesday", event: "Spine Rounds, Red Team Rounds" },
@@ -142,7 +100,6 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
                 <AiPrepopulation
                   appState={appState}
                   setAppState={setAppState}
-                  onDataParsed={handleAcademicDataParsed}
                   dataType="academic"
                   title="Upload Academic Schedule"
                   description="Upload an image of the monthly academic calendar. The AI will extract Case Rounds and Journal Club assignments."
@@ -216,7 +173,6 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
 
 export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps) {
   const { residents, medicalStudents, otherLearners } = appState;
-  const { toast } = useToast();
   const neuroResidents = residents.filter(r => r.type === 'neuro');
   const nonNeuroResidents = residents.filter(r => r.type === 'non-neuro');
 
@@ -262,73 +218,6 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
     }) : null);
   };
 
-  const handleRosterParsed = (data: any) => {
-    if (!data.newResidents && !data.vacationDays) {
-      toast({ title: 'No usable data found', description: 'The AI could not extract resident or vacation information.' });
-      return;
-    }
-    
-    setAppState(prev => {
-        if (!prev) return null;
-        let updatedResidents = [...prev.residents];
-        const existingNames = new Set(updatedResidents.map(r => r.name.toLowerCase()));
-        let addedCount = 0;
-        let vacationCount = 0;
-
-        if (data.newResidents) {
-            data.newResidents.forEach((res: any) => {
-                const trimmedName = res.name.trim();
-                if (!existingNames.has(trimmedName.toLowerCase())) {
-                    addedCount++;
-                    existingNames.add(trimmedName.toLowerCase());
-                    const isNeuro = !res.specialty || res.specialty.toLowerCase().includes('neuro');
-                    updatedResidents.push({
-                        id: uuidv4(),
-                        type: isNeuro ? 'neuro' : 'non-neuro',
-                        name: trimmedName,
-                        email: `${trimmedName.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
-                        level: res.level,
-                        onService: res.onService,
-                        specialty: isNeuro ? undefined : res.specialty,
-                        vacationDays: [],
-                        isChief: false,
-                        chiefTakesCall: true,
-                        chiefOrDays: [],
-                        maxOnServiceCalls: 0,
-                        offServiceMaxCall: 4,
-                        schedule: [],
-                        weekendCalls: 0,
-                        callDays: [],
-                        doubleCallDays: 0,
-                        orDays: 0,
-                        holidayGroup: 'neither',
-                        allowSoloPgy1Call: false,
-                        canBeBackup: false,
-                    });
-                }
-            });
-        }
-        
-        if (data.vacationDays) {
-            data.vacationDays.forEach((vacationInfo: { residentName: string; days: number[] }) => {
-                const residentIndex = updatedResidents.findIndex(r => r.name === vacationInfo.residentName);
-                if (residentIndex > -1) {
-                    vacationCount++;
-                    updatedResidents[residentIndex].vacationDays = vacationInfo.days;
-                }
-            });
-        }
-
-        if (addedCount > 0 || vacationCount > 0) {
-            toast({ title: 'Success', description: `Added ${addedCount} new residents and updated ${vacationCount} vacation schedules.` });
-        } else {
-            toast({ title: 'No new residents added', description: 'All residents from the source already exist.' });
-        }
-        
-        return { ...prev, residents: updatedResidents };
-    });
-};
-
   return (
     <Card>
       <CardHeader>
@@ -339,7 +228,6 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
          <AiPrepopulation
             appState={appState}
             setAppState={setAppState}
-            onDataParsed={handleRosterParsed}
             dataType="roster"
             title="Upload Roster"
             description="Upload an image, PDF, or Word document of your team roster to automatically populate the lists below."
@@ -393,3 +281,5 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
     </Card>
   );
 }
+
+    

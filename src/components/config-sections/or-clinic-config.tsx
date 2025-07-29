@@ -19,7 +19,6 @@ import { Trash2, Sparkles, Wand2, BriefcaseMedical, Loader2 } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { suggestProcedureCodeAction } from "@/ai/actions";
 import { AiPrepopulation } from "../ai-prepopulation";
-import { differenceInDays, getMonth, getYear } from "date-fns";
 import { calculateNumberOfDays } from "@/lib/utils";
 
 interface OrClinicConfigProps {
@@ -112,61 +111,6 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     setIsSuggestingCode(false);
   };
 
-  const handleDataParsed = (data: any) => {
-    setAppState(prev => {
-        if (!prev) return null;
-        
-        const newOrCases = { ...prev.orCases };
-        const newClinicAssignments = [...prev.clinicAssignments];
-        const rotationStartDate = new Date(prev.general.startDate);
-        const rotationYear = getYear(rotationStartDate);
-        
-        if (data.orCases) {
-            data.orCases.forEach((caseItem: any) => {
-                const day = caseItem.day;
-                const month = getMonth(new Date(caseItem.date || rotationStartDate));
-                const date = new Date(rotationYear, month, day);
-                const dayIndex = differenceInDays(date, rotationStartDate);
-
-                if (dayIndex >= 0 && dayIndex < numberOfDays) {
-                    if (!newOrCases[dayIndex]) newOrCases[dayIndex] = [];
-                    newOrCases[dayIndex].push({
-                        surgeon: caseItem.surgeon,
-                        diagnosis: caseItem.diagnosis,
-                        procedure: caseItem.procedure,
-                        procedureCode: caseItem.procedureCode || '',
-                        complexity: 'routine',
-                        patientMrn: caseItem.patientMrn,
-                        patientSex: caseItem.patientSex,
-                        age: caseItem.age,
-                    });
-                }
-            });
-        }
-
-        if (data.clinicAssignments) {
-            data.clinicAssignments.forEach((clinicItem: any) => {
-                 const day = clinicItem.day;
-                const month = getMonth(new Date(clinicItem.date || rotationStartDate));
-                const date = new Date(rotationYear, month, day);
-                const dayIndex = differenceInDays(date, rotationStartDate);
-
-                if (dayIndex >= 0 && dayIndex < numberOfDays) {
-                     newClinicAssignments.push({
-                        day: dayIndex + 1,
-                        staffName: clinicItem.staffName,
-                        clinicType: clinicItem.clinicType,
-                        appointments: clinicItem.appointments || 10,
-                        virtualAppointments: 0,
-                    });
-                }
-            });
-        }
-
-        toast({ title: 'Success', description: `Populated OR and Clinic data.` });
-        return { ...prev, orCases: newOrCases, clinicAssignments: newClinicAssignments };
-    });
-  };
 
   const OrDayButton = ({ i }: { i: number }) => {
     const d = new Date(startDate);
@@ -275,7 +219,6 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
         <AiPrepopulation 
             appState={appState} 
             setAppState={setAppState} 
-            onDataParsed={handleDataParsed}
             dataType="or-clinic"
             title="Upload OR/Clinic Slate"
             description="Upload an image of the OR schedule for a specific day or week. Include surgeon, patient info, and procedure."
@@ -381,3 +324,5 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
     </AccordionItem>
   );
 }
+
+    

@@ -20,7 +20,6 @@ import { PlusCircle, Trash2, Brain, Bone, User, Sun, Moon, Shield } from "lucide
 import { useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
-import { differenceInDays, getMonth, getYear } from 'date-fns';
 import { AiPrepopulation } from "../ai-prepopulation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { cn } from "@/lib/utils";
@@ -246,7 +245,6 @@ function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, 
 export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
   const [staffInput, setStaffInput] = useState<StaffInputState>({ name: '', subspecialty: '', specialtyType: 'other' });
   const { staff } = appState;
-  const { toast } = useToast();
 
   const addStaffMember = () => {
     if (!staffInput.name) return;
@@ -274,43 +272,6 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
           default: return 'border-gray-400 text-gray-700 bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:bg-gray-900/50';
       }
   }
-
-  const handleCallDataParsed = (data: any) => {
-    setAppState(prev => {
-        if (!prev) return null;
-        let newStaffCall: StaffCall[] = [...prev.staffCall];
-        let newResidentCall: ResidentCall[] = [...prev.residentCall];
-        let staffCount = 0;
-        let residentCount = 0;
-
-        if (data.staffCall) {
-            data.staffCall.forEach((call: any) => {
-                const dayIndex = call.day - 1;
-                staffCount++;
-                newStaffCall = newStaffCall.filter(c => !(c.day === (dayIndex + 1) && c.callType === call.callType));
-                newStaffCall.push({ day: dayIndex + 1, callType: call.callType, staffName: call.staffName });
-            });
-        }
-        
-        if (data.residentCall) {
-            data.residentCall.forEach((call: any) => {
-                const dayIndex = call.day - 1;
-                const resident = prev.residents.find(r => r.name === call.residentName);
-                if (resident) {
-                    residentCount++;
-                    const callType = call.callType;
-                    if (callType) {
-                       newResidentCall = newResidentCall.filter(c => !(c.day === (dayIndex + 1) && c.residentId === resident.id));
-                       newResidentCall.push({ day: dayIndex + 1, callType, residentId: resident.id });
-                    }
-                }
-            });
-        }
-
-        toast({ title: "Success", description: `Populated ${staffCount} staff and ${residentCount} resident call assignments.` });
-        return { ...prev, staffCall: newStaffCall, residentCall: newResidentCall };
-    });
-  };
 
   return (
     <AccordionItem value="staff-config">
@@ -352,7 +313,6 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
         <AiPrepopulation
           appState={appState}
           setAppState={setAppState}
-          onDataParsed={handleCallDataParsed}
           dataType="on-call"
           title="Upload On-Call Schedule"
           description="Upload an image, PDF, or Word Doc of the hospital's official on-call list for the month. The AI will extract and place staff and resident call assignments."
@@ -367,3 +327,5 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
     </AccordionItem>
   );
 }
+
+    
