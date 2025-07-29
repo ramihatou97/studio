@@ -74,7 +74,7 @@ const PrepopulateDataOutputSchema = z.object({
       clinicType: z.enum(['cranial', 'spine', 'general']).describe('The type of clinic.'),
       appointments: z.number().optional().describe('The number of appointments scheduled.'),
     })
-  ).optional().describe('The extracted clinic assignments.'),
+  ).optional().describe('The extracted clinic event assignments.'),
 
   academicEvents: z.array(
     z.object({
@@ -113,9 +113,9 @@ const prompt = ai.definePrompt({
           *   Anyone without a specialty in parentheses is a **neurosurgery resident**.
       *   **On-Service vs. Off-Service (for Neurosurgery Residents):**
           *   If a neurosurgery resident is listed under a header like "On service residents", they are 'onService: true'.
-          *   If a neurosurgery resident is listed under a header like "Off service residents", they are doing a non-neurosurgical rotation. You must set 'onService: false' for them.
+          *   If a neurosurgery resident is listed under a header like "Off service residents" or "Fly-In Residents", they are doing a non-neurosurgical rotation. You must set 'onService: false' for them.
       *   If there is a "Vacation" column, you must parse the dates and associate them with the correct resident. The dates can be ranges (e.g., "August 14-20") or individual days (e.g., "25"). You must expand the ranges into individual day numbers (e.g., "14-20" becomes '[14, 15, 16, 17, 18, 19, 20]'). Populate the 'vacationDays' output field.
-      *   Ignore columns you do not understand, such as "Number of Calls". Do not attempt to parse them.
+      *   Ignore columns you do not understand, such as "Number of Calls" or "Teams". Do not attempt to parse them.
 
   *   **For On-Call Schedules ("staffCall", "residentCall"):**
       *   For each date, identify who is on call.
