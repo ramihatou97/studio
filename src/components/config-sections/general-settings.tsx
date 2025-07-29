@@ -3,10 +3,8 @@ import type { AppState } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion } from "@/components/ui/accordion";
 import { OnServiceCallRules } from "./on-service-call-rules";
-import { Slider } from "../ui/slider";
 
 interface GeneralSettingsProps {
   appState: AppState;
@@ -38,12 +36,6 @@ export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps)
           <div>
             <Label htmlFor="stat-holidays">Statutory Holidays (comma-separated date numbers)</Label>
             <Input type="text" id="stat-holidays" placeholder="e.g., 1, 25" value={general.statHolidays} onChange={(e) => handleGeneralChange('statHolidays', e.target.value)} />
-          </div>
-          <div className="pt-4 border-t space-y-4">
-            <div className="flex items-center space-x-3">
-              <Switch id="use-predefined-call-toggle" checked={general.usePredefinedCall} onCheckedChange={(checked) => handleGeneralChange('usePredefinedCall', checked)} />
-              <Label htmlFor="use-predefined-call-toggle">Use Pre-defined Monthly On-Call Schedule</Label>
-            </div>
           </div>
         </CardContent>
       </Card>

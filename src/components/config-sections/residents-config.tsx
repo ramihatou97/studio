@@ -10,10 +10,12 @@ import { addNeuroResident, addNonNeuroResident, addMedicalStudent, addOtherLearn
 import { PlusCircle, BookOpen, Stethoscope, Users } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { v4 as uuidv4 } from 'uuid';
+import { AiPrepopulation } from "../ai-prepopulation";
+import { useToast } from "@/hooks/use-toast";
 
 interface ResidentsConfigProps {
   appState: AppState;
@@ -24,6 +26,8 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
   const [caseRound, setCaseRound] = useState<Partial<CaseRoundAssignment>>({});
   const [articleDiscussion, setArticleDiscussion] = useState<Partial<ArticleDiscussion>>({});
   const [mmRound, setMmRound] = useState<Partial<MMRound>>({});
+  const { toast } = useToast();
+
 
   const { residents, staff, general } = appState;
   const { startDate, endDate } = general;
@@ -88,6 +92,45 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
     setMmRound({});
   };
 
+   const handleAcademicDataParsed = (data: any) => {
+    if (!data.academicEvents || data.academicEvents.length === 0) {
+      toast({ title: 'No academic events found in the document.' });
+      return;
+    }
+    setAppState(prev => {
+      if (!prev) return null;
+      const newCaseRounds = [...prev.caseRounds];
+      const newArticleDiscussions = [...prev.articleDiscussions];
+      const rotationStartDate = new Date(prev.general.startDate);
+      let count = 0;
+
+      data.academicEvents.forEach((event: any) => {
+        const dayIndex = event.day - 1; // Assuming 1-based day from AI
+        if (dayIndex >= 0 && dayIndex < numberOfDays) {
+          count++;
+          if (event.eventType === 'Case Rounds') {
+            const resident = prev.residents.find(r => r.name === event.presenter);
+            if (resident) {
+              newCaseRounds.push({ dayIndex, residentId: resident.id });
+            }
+          } else if (event.eventType === 'Journal Club') {
+            const staffMember = prev.staff.find(s => s.name === event.presenter);
+            if (staffMember) {
+              newArticleDiscussions.push({
+                dayIndex,
+                staffId: staffMember.id,
+                article1: 'TBD from upload',
+                article2: 'TBD from upload',
+              });
+            }
+          }
+        }
+      });
+      toast({ title: 'Success', description: `Populated ${count} academic events.` });
+      return { ...prev, caseRounds: newCaseRounds, articleDiscussions: newArticleDiscussions };
+    });
+  };
+
   const recurringEvents = [
     { day: "Monday", event: "INR Rounds" },
     { day: "Tuesday", event: "Spine Rounds, Red Team Rounds" },
@@ -101,8 +144,15 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
         <AccordionItem value="academic-events">
             <AccordionTrigger className="text-lg font-medium">Academic Events</AccordionTrigger>
             <AccordionContent>
-                {/* Case-Based Rounds */}
-                <Card className="mb-4">
+                <AiPrepopulation
+                  appState={appState}
+                  setAppState={setAppState}
+                  onDataParsed={handleAcademicDataParsed}
+                  dataType="academic"
+                  title="Upload Academic Schedule"
+                  description="Upload an image of the monthly academic calendar. The AI will extract Case Rounds and Journal Club assignments."
+                />
+                <Card className="my-4">
                     <CardHeader><CardTitle className="flex items-center gap-2"><Stethoscope/>Case-Based Rounds</CardTitle><CardDescription>Assign a resident to present a case every Friday morning.</CardDescription></CardHeader>
                     <CardContent className="space-y-2">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -171,6 +221,7 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
 
 export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps) {
   const { residents, medicalStudents, otherLearners } = appState;
+  const { toast } = useToast();
   const neuroResidents = residents.filter(r => r.type === 'neuro');
   const nonNeuroResidents = residents.filter(r => r.type === 'non-neuro');
 
@@ -216,6 +267,55 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
     }) : null);
   };
 
+  const handleRosterParsed = (data: any) => {
+    if (!data.newResidents || data.newResidents.length === 0) {
+      toast({ title: 'No new residents found in the document.' });
+      return;
+    }
+    setAppState(prev => {
+      if (!prev) return null;
+      const existingNames = new Set(prev.residents.map(r => r.name.toLowerCase()));
+      const newResidents: Resident[] = [];
+      data.newResidents.forEach((res: any) => {
+        if (!existingNames.has(res.name.toLowerCase())) {
+          existingNames.add(res.name.toLowerCase());
+          const isNeuro = !res.specialty || res.specialty.toLowerCase().includes('neuro');
+          newResidents.push({
+            id: uuidv4(),
+            type: isNeuro ? 'neuro' : 'non-neuro',
+            name: res.name,
+            email: `${res.name.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
+            level: res.level,
+            onService: res.onService,
+            specialty: isNeuro ? undefined : res.specialty,
+            vacationDays: [],
+            isChief: false,
+            chiefTakesCall: true,
+            chiefOrDays: [],
+            maxOnServiceCalls: 0,
+            offServiceMaxCall: 4,
+            schedule: [],
+            weekendCalls: 0,
+            callDays: [],
+            doubleCallDays: 0,
+            orDays: 0,
+            holidayGroup: 'neither',
+            allowSoloPgy1Call: false,
+            canBeBackup: false,
+          });
+        }
+      });
+
+      if (newResidents.length > 0) {
+        toast({ title: 'Success', description: `Added ${newResidents.length} new residents.` });
+        return { ...prev, residents: [...prev.residents, ...newResidents] };
+      } else {
+        toast({ title: 'No new residents added', description: 'All residents from the source already exist.' });
+        return prev;
+      }
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -223,7 +323,15 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
         <CardDescription>Add and manage all residents, learners, and academic events in the program.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="neuro" className="w-full">
+         <AiPrepopulation
+            appState={appState}
+            setAppState={setAppState}
+            onDataParsed={handleRosterParsed}
+            dataType="roster"
+            title="Upload Roster"
+            description="Upload an image, PDF, or Word document of your team roster to automatically populate the lists below."
+          />
+        <Tabs defaultValue="neuro" className="w-full mt-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="neuro">Neuro</TabsTrigger>
             <TabsTrigger value="non-neuro">Non-Neuro</TabsTrigger>

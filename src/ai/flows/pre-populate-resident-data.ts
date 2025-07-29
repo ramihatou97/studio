@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent that prepopulates resident data from text or an image.
@@ -13,6 +14,7 @@ import {z} from 'genkit';
 const PrepopulateResidentDataInputSchema = z.object({
   sourceType: z.enum(['text', 'image']).describe('The source type of the schedule data.'),
   sourceData: z.string().describe('The schedule data, either text or a data URI of an image.'),
+  startDate: z.string().describe('The rotation start date (YYYY-MM-DD) to provide context for the month and year.'),
 });
 export type PrepopulateResidentDataInput = z.infer<
   typeof PrepopulateResidentDataInputSchema
@@ -45,15 +47,11 @@ const prompt = ai.definePrompt({
   prompt: `You are an AI assistant that extracts resident data from a schedule.
 
   The schedule data is provided below. Extract the resident names, PGY level, on service status and vacation days.
+  The current rotation starts on {{{startDate}}}. Use this to determine the correct month and year for any dates mentioned.
 
   Source Type: {{{sourceType}}}
   Source Data: {{#ifEquals sourceType "image"}}{{media url=sourceData}}{{else}}{{{sourceData}}}{{/ifEquals}}
   `,
-  config: {
-    temperature: 0.3,
-    topP: 0.5,
-    maxOutputTokens: 1024,
-  },
 });
 
 const prepopulateResidentDataFlow = ai.defineFlow(
@@ -67,4 +65,3 @@ const prepopulateResidentDataFlow = ai.defineFlow(
     return output!;
   }
 );
-

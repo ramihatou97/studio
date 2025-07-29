@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -17,11 +16,12 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Brain, Bone, Sparkles, Wand2, User } from "lucide-react";
+import { PlusCircle, Trash2, Brain, Bone, User } from "lucide-react";
 import { useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
-import { prepopulateStaffCallAction } from "@/ai/actions";
+import { differenceInDays, getMonth, getYear } from 'date-fns';
+import { AiPrepopulation } from "../ai-prepopulation";
 
 interface StaffConfigProps {
   appState: AppState;
@@ -34,71 +34,11 @@ interface StaffInputState {
   specialtyType: 'cranial' | 'spine' | 'other';
 }
 
-function AiStaffCallPrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
-  const [text, setText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const allStaff = appState.staff;
-
-  const handleParse = async () => {
-    if (!text.trim()) {
-      toast({ variant: 'destructive', title: 'No text provided', description: 'Please paste the schedule text to parse.' });
-      return;
-    }
-    if (allStaff.length === 0) {
-        toast({ variant: 'destructive', title: 'No Staff', description: 'Please add staff members before parsing.' });
-        return;
-    }
-
-    setIsLoading(true);
-    const staffList = allStaff.map(s => s.name);
-    const result = await prepopulateStaffCallAction(text, staffList);
-
-    if (result.success && result.data) {
-      const newStaffCall: StaffCall[] = result.data.map(call => ({
-        ...call,
-        day: call.day, 
-      }));
-
-      setAppState(prev => prev ? ({ ...prev, staffCall: newStaffCall }) : null);
-      toast({ title: 'Success', description: `Populated ${result.data.length} staff call assignments.` });
-      setText('');
-    } else {
-      toast({ variant: 'destructive', title: 'Parsing Failed', description: result.error });
-    }
-    setIsLoading(false);
-  };
-  
-  return (
-      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700 mt-6">
-        <h4 className="text-md font-medium mb-2 text-purple-800 dark:text-purple-300 flex items-center gap-2">
-            <Sparkles className="w-5 h-5" />
-            AI Pre-population for Staff Call
-        </h4>
-        <p className="text-sm text-muted-foreground mb-4">
-            Paste the text of an existing staff call schedule to have the AI extract and populate the assignments.
-            Include day numbers, call types (cranial/spine), and names.
-        </p>
-        <Textarea
-            rows={4}
-            className="mt-1"
-            placeholder="e.g., 'July 1: Cranial - Dr. Smith, Spine - Dr. Jones. July 2...'"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-        />
-        <div className="mt-4 flex justify-end">
-            <Button onClick={handleParse} disabled={isLoading} className="bg-primary hover:bg-primary/90">
-                {isLoading ? 'Parsing...' : <><Wand2 className="mr-2 h-4 w-4" /> Parse & Populate</>}
-            </Button>
-        </div>
-      </div>
-  )
-}
-
 function StaffCallScheduler({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
   const { general, staff, staffCall } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
+  const { toast } = useToast();
   
   const allStaff = staff;
 
@@ -119,6 +59,37 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
         } else {
             return { ...prev, staffCall: otherCalls };
         }
+    });
+  };
+
+  const handleDataParsed = (data: any) => {
+    if (!data.staffCall || data.staffCall.length === 0) {
+      toast({ title: "No staff call data found." });
+      return;
+    }
+    setAppState(prev => {
+      if (!prev) return null;
+      let newStaffCall: StaffCall[] = [...prev.staffCall];
+      const rotationStartDate = new Date(prev.general.startDate);
+      const rotationYear = getYear(rotationStartDate);
+      let count = 0;
+
+      data.staffCall.forEach((call: any) => {
+        const day = call.day;
+        const month = call.month ? call.month - 1 : getMonth(rotationStartDate); // AI should return 1-based month
+        const date = new Date(rotationYear, month, day);
+        const dayIndex = differenceInDays(date, rotationStartDate);
+
+        if (dayIndex >= 0 && dayIndex < numberOfDays) {
+            count++;
+            // Remove existing call for this type and day to prevent duplicates
+            newStaffCall = newStaffCall.filter(c => !(c.day === (dayIndex + 1) && c.callType === call.callType));
+            newStaffCall.push({ day: dayIndex + 1, callType: call.callType, staffName: call.staffName });
+        }
+      });
+
+      toast({ title: "Success", description: `Populated ${count} staff call assignments.` });
+      return { ...prev, staffCall: newStaffCall };
     });
   };
 
@@ -154,53 +125,63 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   }
 
   return (
-    <Dialog>
-        <div className="mt-6 border-t pt-6">
-            <h3 className="text-lg font-medium mb-3">Staff On-Call Schedule</h3>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
-            </div>
-        </div>
+    <>
+      <AiPrepopulation
+        appState={appState}
+        setAppState={setAppState}
+        onDataParsed={handleDataParsed}
+        dataType="on-call"
+        title="Upload On-Call Schedule"
+        description="Upload an image, PDF, or Word Doc of the hospital's official on-call list for the month. The AI will extract and place staff call assignments."
+      />
+      <Dialog>
+          <div className="mt-6 border-t pt-6">
+              <h3 className="text-lg font-medium mb-3">Staff On-Call Schedule</h3>
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                  {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
+              </div>
+          </div>
 
-        <DialogContent className="max-w-md">
-            <DialogHeader>
-                <DialogTitle>Manage Staff Call for Day {currentEditingDay}</DialogTitle>
-            </DialogHeader>
-            {currentEditingDay !== null && (
-                <div className="space-y-4 pt-4">
-                    <div>
-                        <Label className="flex items-center gap-2 font-semibold"><Brain className="w-5 h-5 text-red-500"/> Cranial Call</Label>
-                        <Select 
-                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'cranial')?.staffName || 'none'}
-                            onValueChange={val => handleStaffCallChange(currentEditingDay, 'cranial', val)}
-                        >
-                            <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {allStaff.filter(s => s.specialtyType === 'cranial' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Label className="flex items-center gap-2 font-semibold"><Bone className="w-5 h-5 text-blue-500"/> Spine Call</Label>
-                         <Select
-                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'spine')?.staffName || 'none'}
-                            onValueChange={val => handleStaffCallChange(currentEditingDay, 'spine', val)}
-                        >
-                            <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {allStaff.filter(s => s.specialtyType === 'spine' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            )}
-            <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+          <DialogContent className="max-w-md">
+              <DialogHeader>
+                  <DialogTitle>Manage Staff Call for Day {currentEditingDay}</DialogTitle>
+              </DialogHeader>
+              {currentEditingDay !== null && (
+                  <div className="space-y-4 pt-4">
+                      <div>
+                          <Label className="flex items-center gap-2 font-semibold"><Brain className="w-5 h-5 text-red-500"/> Cranial Call</Label>
+                          <Select 
+                              value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'cranial')?.staffName || 'none'}
+                              onValueChange={val => handleStaffCallChange(currentEditingDay, 'cranial', val)}
+                          >
+                              <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  {allStaff.filter(s => s.specialtyType === 'cranial' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div>
+                          <Label className="flex items-center gap-2 font-semibold"><Bone className="w-5 h-5 text-blue-500"/> Spine Call</Label>
+                          <Select
+                              value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'spine')?.staffName || 'none'}
+                              onValueChange={val => handleStaffCallChange(currentEditingDay, 'spine', val)}
+                          >
+                              <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  {allStaff.filter(s => s.specialtyType === 'spine' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                  </div>
+              )}
+              <DialogFooter>
+                  <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -272,7 +253,6 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
             </CardContent>
           </Card>
         
-        <AiStaffCallPrepopulation appState={appState} setAppState={setAppState} />
         <StaffCallScheduler appState={appState} setAppState={setAppState} />
 
       </AccordionContent>

@@ -1,12 +1,10 @@
 
 'use server';
 
-import { prepopulateResidentData as prepopulateResidentDataFlow } from '@/ai/flows/pre-populate-resident-data';
-import { prepopulateStaffCall as prepopulateStaffCallFlow } from '@/ai/flows/pre-populate-staff-call';
+import { prepopulateDataAction as prepopulateDataActionFlow } from '@/ai/flows/pre-populate-from-image-or-text';
 import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/flows/analyze-schedule-conflicts';
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
-import { prepopulateOrCases as prepopulateOrCasesFlow } from '@/ai/flows/pre-populate-or-cases';
 import { chatWithSchedule as chatWithScheduleFlow, type ChatWithScheduleInput } from '@/ai/flows/chat-with-schedule';
 import { generateHistoricalData as generateHistoricalDataFlow } from '@/ai/flows/generate-historical-data';
 import { analyzeResidentPerformance as analyzeResidentPerformanceFlow } from '@/ai/flows/analyze-resident-performance';
@@ -15,36 +13,20 @@ import { generateYearlyRotationSchedule as generateYearlyRotationScheduleFlow } 
 import { suggestEpaForActivity as suggestEpaForActivityFlow } from '@/ai/flows/suggest-epa-for-activity';
 import { analyzeEpaPerformance as analyzeEpaPerformanceFlow } from '@/ai/flows/analyze-epa-performance';
 import { suggestProcedureCode as suggestProcedureCodeFlow } from '@/ai/flows/suggest-procedure-code';
-import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput, Evaluation } from '../lib/types';
+import type { AppState, StaffCall, Resident, GenerateYearlyRotationScheduleInput, AnalyzeResidentPerformanceInput, GenerateHistoricalDataInput, GenerateSurgicalBriefingInput, Evaluation, OrCase, ClinicAssignment, CaseRoundAssignment } from '../lib/types';
 
-export async function prepopulateDataAction(sourceType: 'text' | 'image', sourceData: string) {
+export async function prepopulateDataAction(
+  sourceType: 'image' | 'text',
+  sourceData: string,
+  instructions: string,
+  context: { residents: Partial<Resident>[], staff: Partial<Staff>[], startDate: string }
+) {
   try {
-    const result = await prepopulateResidentDataFlow({ sourceType, sourceData });
+    const result = await prepopulateDataActionFlow({ sourceType, sourceData, instructions, context });
     return { success: true, data: result };
   } catch (error) {
     console.error('Error in prepopulateDataAction:', error);
     return { success: false, error: 'Failed to parse data from source.' };
-  }
-}
-
-export async function prepopulateStaffCallAction(scheduleText: string, staffList: string[]) {
-    try {
-      const result = await prepopulateStaffCallFlow({ scheduleText, staffList });
-      return { success: true, data: result.staffCall };
-    } catch (error)
-    {
-      console.error('Error in prepopulateStaffCallAction:', error);
-      return { success: false, error: 'Failed to parse staff call data.' };
-    }
-}
-
-export async function prepopulateOrCasesAction(orScheduleText: string, staffList: string[]) {
-  try {
-    const result = await prepopulateOrCasesFlow({ orScheduleText, staffList });
-    return { success: true, data: result.orCases };
-  } catch (error) {
-    console.error('Error in prepopulateOrCasesAction:', error);
-    return { success: false, error: 'Failed to parse OR case data.' };
   }
 }
 

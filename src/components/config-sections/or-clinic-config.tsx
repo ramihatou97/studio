@@ -1,5 +1,4 @@
 
-
 import type { AppState, OrCase, ClinicAssignment } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -16,91 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Trash2, Sparkles, Wand2, BriefcaseMedical } from "lucide-react";
-import { Textarea } from "../ui/textarea";
+import { Trash2, Sparkles, Wand2, BriefcaseMedical, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { prepopulateOrCasesAction } from "@/ai/actions";
-
-
-function AiOrCasePrepopulation({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
-  const [text, setText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const allStaff = appState.staff;
-
-  const handleParse = async () => {
-    if (!text.trim()) {
-      toast({ variant: 'destructive', title: 'No text provided', description: 'Please paste the schedule text to parse.' });
-      return;
-    }
-    if (allStaff.length === 0) {
-        toast({ variant: 'destructive', title: 'No Staff', description: 'Please add staff members before parsing.' });
-        return;
-    }
-
-    setIsLoading(true);
-    const staffList = allStaff.map(s => s.name);
-    const result = await prepopulateOrCasesAction(text, staffList);
-
-    if (result.success && result.data) {
-      setAppState(prev => {
-        if (!prev) return null;
-        const newOrCases = { ...prev.orCases };
-        result.data.forEach(caseItem => {
-          // The flow returns 1-indexed day, but our app state is 0-indexed.
-          const dayIndex = caseItem.day - 1;
-          if (dayIndex >= 0) {
-              if (!newOrCases[dayIndex]) {
-                  newOrCases[dayIndex] = [];
-              }
-              newOrCases[dayIndex].push({
-                  surgeon: caseItem.surgeon,
-                  diagnosis: caseItem.diagnosis,
-                  procedure: caseItem.procedure,
-                  procedureCode: caseItem.procedureCode,
-                  complexity: 'routine', // Default to routine
-                  patientMrn: caseItem.patientMrn,
-                  patientSex: caseItem.patientSex,
-                  age: caseItem.age,
-              });
-          }
-        });
-        return { ...prev, orCases: newOrCases };
-      });
-      
-      toast({ title: 'Success', description: `Populated ${result.data.length} OR cases.` });
-      setText('');
-    } else {
-      toast({ variant: 'destructive', title: 'Parsing Failed', description: result.error });
-    }
-    setIsLoading(false);
-  };
-  
-  return (
-      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700 my-6">
-        <h4 className="text-md font-medium mb-2 text-purple-800 dark:text-purple-300 flex items-center gap-2">
-            <Sparkles className="w-5 h-5" />
-            AI Pre-population for OR Cases
-        </h4>
-        <p className="text-sm text-muted-foreground mb-4">
-            Paste the text of an existing OR schedule to have the AI extract and populate the assignments.
-            Include day numbers, surgeon names, case details, patient info (MRN, sex, age), and procedure codes.
-        </p>
-        <Textarea
-            rows={4}
-            className="mt-1"
-            placeholder="e.g., 'July 1: Dr. Smith - Craniotomy for tumor (61510) on patient MRN12345 (35yo male)...'"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-        />
-        <div className="mt-4 flex justify-end">
-            <Button onClick={handleParse} disabled={isLoading} className="bg-primary hover:bg-primary/90">
-                {isLoading ? 'Parsing...' : <><Wand2 className="mr-2 h-4 w-4" /> Parse & Populate</>}
-            </Button>
-        </div>
-      </div>
-  )
-}
+import { suggestProcedureCodeAction } from "@/ai/actions";
+import { AiPrepopulation } from "../ai-prepopulation";
+import { differenceInDays, getMonth, getYear } from "date-fns";
 
 interface OrClinicConfigProps {
   appState: AppState;
@@ -115,7 +34,8 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const [selectedSurgeon, setSelectedSurgeon] = useState<string>('');
   
   const [newClinic, setNewClinic] = useState<Partial<ClinicAssignment>>({ appointments: 10, virtualAppointments: 0 });
-
+  const [isSuggestingCode, setIsSuggestingCode] = useState(false);
+  const { toast } = useToast();
 
   const { numberOfDays } = (() => {
     if (!startDate || !endDate) return { numberOfDays: 0 };
@@ -179,6 +99,78 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
 
   const handleRemoveClinic = (day: number, staffName: string, clinicType: string) => {
     setAppState(prev => prev ? ({ ...prev, clinicAssignments: prev.clinicAssignments.filter(c => !(c.day === day && c.staffName === staffName && c.clinicType === clinicType)) }) : null);
+  };
+
+  const handleSuggestCode = async () => {
+    if (!newCase.procedure) {
+        toast({variant: 'destructive', title: 'Please enter a procedure description first.'});
+        return;
+    }
+    setIsSuggestingCode(true);
+    const result = await suggestProcedureCodeAction(newCase.procedure);
+    if (result.success && result.data) {
+        setNewCase(c => ({...c, procedureCode: result.data.suggestedCode}));
+        toast({title: `Suggested Code: ${result.data.suggestedCode}`, description: result.data.rationale});
+    } else {
+        toast({variant: 'destructive', title: 'Suggestion Failed', description: result.error});
+    }
+    setIsSuggestingCode(false);
+  };
+
+  const handleDataParsed = (data: any) => {
+    setAppState(prev => {
+        if (!prev) return null;
+        
+        const newOrCases = { ...prev.orCases };
+        const newClinicAssignments = [...prev.clinicAssignments];
+        const rotationStartDate = new Date(prev.general.startDate);
+        const rotationYear = getYear(rotationStartDate);
+        
+        if (data.orCases) {
+            data.orCases.forEach((caseItem: any) => {
+                const day = caseItem.day;
+                const month = getMonth(new Date(caseItem.date || rotationStartDate));
+                const date = new Date(rotationYear, month, day);
+                const dayIndex = differenceInDays(date, rotationStartDate);
+
+                if (dayIndex >= 0 && dayIndex < numberOfDays) {
+                    if (!newOrCases[dayIndex]) newOrCases[dayIndex] = [];
+                    newOrCases[dayIndex].push({
+                        surgeon: caseItem.surgeon,
+                        diagnosis: caseItem.diagnosis,
+                        procedure: caseItem.procedure,
+                        procedureCode: caseItem.procedureCode || '',
+                        complexity: 'routine',
+                        patientMrn: caseItem.patientMrn,
+                        patientSex: caseItem.patientSex,
+                        age: caseItem.age,
+                    });
+                }
+            });
+        }
+
+        if (data.clinicAssignments) {
+            data.clinicAssignments.forEach((clinicItem: any) => {
+                 const day = clinicItem.day;
+                const month = getMonth(new Date(clinicItem.date || rotationStartDate));
+                const date = new Date(rotationYear, month, day);
+                const dayIndex = differenceInDays(date, rotationStartDate);
+
+                if (dayIndex >= 0 && dayIndex < numberOfDays) {
+                     newClinicAssignments.push({
+                        day: dayIndex + 1,
+                        staffName: clinicItem.staffName,
+                        clinicType: clinicItem.clinicType,
+                        appointments: clinicItem.appointments || 10,
+                        virtualAppointments: 0,
+                    });
+                }
+            });
+        }
+
+        toast({ title: 'Success', description: `Populated OR and Clinic data.` });
+        return { ...prev, orCases: newOrCases, clinicAssignments: newClinicAssignments };
+    });
   };
 
   const OrDayButton = ({ i }: { i: number }) => {
@@ -285,7 +277,14 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
             </Dialog>
         </div>
       
-        <AiOrCasePrepopulation appState={appState} setAppState={setAppState} />
+        <AiPrepopulation 
+            appState={appState} 
+            setAppState={setAppState} 
+            onDataParsed={handleDataParsed}
+            dataType="or-clinic"
+            title="Upload OR/Clinic Slate"
+            description="Upload an image of the OR schedule for a specific day or week. Include surgeon, patient info, and procedure."
+        />
         
         <div className="mt-6 border-t pt-6">
             <h3 className="text-lg font-medium mb-3">Daily OR Case Schedule</h3>
@@ -344,8 +343,13 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
                                <Input value={newCase.procedure} onChange={e => setNewCase(c => ({...c, procedure: e.target.value}))} />
                             </div>
                              <div>
-                               <Label>Procedure Code</Label>
-                               <Input value={newCase.procedureCode} onChange={e => setNewCase(c => ({...c, procedureCode: e.target.value}))} />
+                               <Label>CPT Code</Label>
+                               <div className="flex gap-2">
+                                <Input value={newCase.procedureCode} onChange={e => setNewCase(c => ({...c, procedureCode: e.target.value}))} />
+                                <Button variant="outline" size="icon" onClick={handleSuggestCode} disabled={isSuggestingCode}>
+                                    {isSuggestingCode ? <Loader2 className="animate-spin"/> : <Wand2 />}
+                                </Button>
+                               </div>
                             </div>
                         </div>
                         <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2">

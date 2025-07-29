@@ -6,17 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { prepopulateDataAction } from "@/ai/actions";
-import type { AppState, Resident } from "@/lib/types";
+import type { AppState, Resident, Staff } from "@/lib/types";
 import { Sparkles } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface AiPrepopulationProps {
   appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  onDataParsed: (data: any) => void;
+  dataType: 'roster' | 'on-call' | 'or-clinic' | 'academic';
+  title: string;
+  description: string;
 }
 
-export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps) {
-  const [text, setText] = useState('');
+export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType, title, description }: AiPrepopulationProps) {
+  const [instructions, setInstructions] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -52,83 +55,51 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
   
   const handleParse = async () => {
     setIsLoading(true);
-    let sourceType: 'text' | 'image' | null = null;
+    let sourceType: 'text' | 'image' | null = 'image';
     let sourceData: string | null = null;
+    let textInstructions = instructions;
 
     try {
-        if (file) {
-            if (file.type.startsWith('image/')) {
-                sourceType = 'image';
-                sourceData = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            } else if (file.type === 'application/pdf') {
-                sourceType = 'text';
-                sourceData = await parsePdf(file);
-            } else if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                sourceType = 'text';
-                sourceData = await parseDocx(file);
-            } else {
-                 toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload an image, PDF, or .docx file.' });
-                 setIsLoading(false);
-                 return;
-            }
-        } else if (text.trim()) {
-          sourceType = 'text';
-          sourceData = text;
+        if (!file) {
+            toast({ variant: 'destructive', title: 'No file uploaded', description: 'Please upload a file to parse.' });
+            setIsLoading(false);
+            return;
         }
 
-        if (!sourceType || !sourceData) {
-          toast({ variant: 'destructive', title: 'No data provided', description: 'Please upload a file or paste text to parse.' });
-          setIsLoading(false);
-          return;
+        if (file.type.startsWith('image/')) {
+            sourceType = 'image';
+            sourceData = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        } else if (file.type === 'application/pdf') {
+            sourceType = 'text';
+            sourceData = await parsePdf(file);
+            // Use the extracted text as instructions if none are provided
+            if (!textInstructions) textInstructions = sourceData;
+        } else if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            sourceType = 'text';
+            sourceData = await parseDocx(file);
+             // Use the extracted text as instructions if none are provided
+            if (!textInstructions) textInstructions = sourceData;
+        } else {
+            toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload an image, PDF, or .docx file.' });
+            setIsLoading(false);
+            return;
         }
 
-        const result = await prepopulateDataAction(sourceType, sourceData);
+        const context = {
+            residents: appState.residents.map(r => ({ name: r.name, id: r.id })),
+            staff: appState.staff.map(s => ({ name: s.name, id: s.id })),
+            startDate: appState.general.startDate,
+        };
+
+        const result = await prepopulateDataAction(sourceType, sourceData, textInstructions, context);
 
         if (result.success && result.data) {
-          const existingResidentNames = new Set(appState.residents.map(r => r.name.toLowerCase()));
-          const newResidents: Resident[] = [];
-          
-          result.data.residents.forEach(r => {
-            if (!existingResidentNames.has(r.name.toLowerCase())) {
-               newResidents.push({
-                id: uuidv4(),
-                type: 'neuro',
-                name: r.name,
-                email: `${r.name.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
-                level: r.level,
-                onService: r.onService,
-                vacationDays: r.vacationDays,
-                isChief: false,
-                chiefOrDays: [],
-                maxOnServiceCalls: 0,
-                offServiceMaxCall: 4,
-                schedule: [],
-                weekendCalls: 0,
-                callDays: [],
-                holidayGroup: 'neither',
-                canBeBackup: false,
-                allowSoloPgy1Call: false,
-                doubleCallDays: 0,
-                orDays: 0,
-              });
-            }
-          });
-
-          if (newResidents.length > 0) {
-            setAppState(prev => ({
-              ...prev,
-              residents: [...prev.residents, ...newResidents]
-            }));
-            toast({ title: 'Success', description: `${newResidents.length} new residents have been populated from the source.` });
-          } else {
-            toast({ title: 'No new residents added', description: 'All residents from the source already exist in the configuration.' });
-          }
-
+          onDataParsed(result.data);
         } else {
           toast({ variant: 'destructive', title: 'Parsing Failed', description: result.error });
         }
@@ -144,31 +115,31 @@ export function AiPrepopulation({ appState, setAppState }: AiPrepopulationProps)
     <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
       <h3 className="text-lg font-medium mb-2 text-purple-800 dark:text-purple-300 flex items-center gap-2">
         <Sparkles className="w-5 h-5" />
-        AI-Powered Pre-population
+        {title}
       </h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Upload an image, PDF, or DOCX file of an existing schedule to have the AI extract and populate resident data. Duplicates will be ignored.
+        {description}
       </p>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div>
-          <Label htmlFor="schedule-file-upload">Upload Schedule File</Label>
-          <Input id="schedule-file-upload" type="file" accept="image/*,.pdf,.docx" onChange={handleFileChange} className="mt-1" />
+          <Label htmlFor={`file-upload-${dataType}`}>Upload Roster/Schedule File</Label>
+          <Input id={`file-upload-${dataType}`} type="file" accept="image/*,.pdf,.docx" onChange={handleFileChange} className="mt-1" />
         </div>
         <div>
-          <Label htmlFor="schedule-text-paste">Or Paste Schedule Text</Label>
+          <Label htmlFor={`instructions-${dataType}`}>Or Paste Instructions/Text</Label>
           <Textarea
-            id="schedule-text-paste"
+            id={`instructions-${dataType}`}
             rows={3}
             className="mt-1"
-            placeholder="Paste call schedule, resident list, or vacation schedule here..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            placeholder="Provide specific instructions for the AI, or paste the text directly here..."
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
           />
         </div>
       </div>
       <div className="mt-4 flex justify-end">
         <Button onClick={handleParse} disabled={isLoading} className="bg-primary hover:bg-primary/90">
-          {isLoading ? 'Parsing...' : 'Parse and Populate Form'}
+          {isLoading ? 'Parsing...' : 'Upload and Parse'}
         </Button>
       </div>
     </div>

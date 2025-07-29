@@ -3,10 +3,6 @@
 
 /**
  * @fileOverview An AI agent that prepopulates OR case data from text.
- *
- * - prepopulateOrCases - A function that handles the OR case data prepopulation process.
- * - PrepopulateOrCasesInput - The input type for the prepopulateOrCases function.
- * - PrepopulateOrCasesOutput - The return type for the prepopulateOrCases function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -15,6 +11,7 @@ import {z} from 'genkit';
 const PrepopulateOrCasesInputSchema = z.object({
   orScheduleText: z.string().describe('The OR schedule text, including day numbers, surgeon names, and case details.'),
   staffList: z.array(z.string()).describe('A list of valid staff surgeon names to match against.'),
+  startDate: z.string().describe('The rotation start date (YYYY-MM-DD) to provide context for the month and year.'),
 });
 export type PrepopulateOrCasesInput = z.infer<typeof PrepopulateOrCasesInputSchema>;
 
@@ -44,6 +41,7 @@ const prompt = ai.definePrompt({
   output: {schema: PrepopulateOrCasesOutputSchema},
   prompt: `You are an AI assistant that extracts an OR case schedule from a block of text.
   The user will provide text representing a monthly OR schedule and a list of valid staff surgeon names.
+  The current rotation starts on {{{startDate}}}. Use this to determine the correct month and year for any dates mentioned.
   Parse the text to identify the day number, the surgeon, patient MRN, patient sex, patient age, the diagnosis, the procedure, and the procedure code for each case mentioned.
   If the MRN, sex, or age is not provided, generate a plausible placeholder (e.g., "MRN-UNKNOWN", "other", 0).
   Match the surgeon names from the text to the provided staff list. The output must only contain names from the provided staff list.
@@ -57,9 +55,6 @@ const prompt = ai.definePrompt({
   - {{{this}}}
   {{/each}}
   `,
-  config: {
-    temperature: 0.1,
-  },
 });
 
 const prepopulateOrCasesFlow = ai.defineFlow(

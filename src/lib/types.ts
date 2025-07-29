@@ -184,7 +184,7 @@ export interface StaffCall {
 export interface ResidentCall {
   day: number;
   residentId: string;
-  call: 'D' | 'N' | 'W';
+  call: 'D' | 'N' | 'W' | 'B';
 }
 
 export interface HistoricalCase {

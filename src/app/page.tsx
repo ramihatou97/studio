@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import type { AppState, CurrentUser, GenerationScope } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
@@ -11,7 +10,6 @@ import { generateSchedules } from '@/lib/schedule-generator';
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AppHeader } from '@/components/app-header';
-import { AiPrepopulation } from '@/components/ai-prepopulation';
 import { GeneralSettings } from '@/components/config-sections/general-settings';
 import { ResidentsConfig } from '@/components/config-sections/residents-config';
 import { StaffConfig } from '@/components/config-sections/staff-config';
@@ -229,7 +227,6 @@ export default function AppPage() {
       <Card className="mb-8 shadow-lg">
         <CardHeader><CardTitle>Configuration</CardTitle><CardDescription>Configure residents, staff, vacations, and activities to generate a fair, balanced schedule.</CardDescription></CardHeader>
         <CardContent className="space-y-8">
-          <AiPrepopulation setAppState={updateAppState} appState={appState} />
           <Separator />
           <div className="grid md:grid-cols-2 gap-8"><GeneralSettings appState={appState} setAppState={updateAppState} /><ResidentsConfig appState={appState} setAppState={updateAppState} /></div>
           <Accordion type="single" collapsible className="w-full space-y-4"><StaffConfig appState={appState} setAppState={updateAppState} /><OrClinicConfig appState={appState} setAppState={updateAppState} /><HolidayCoverage appState={appState} setAppState={updateAppState} /></Accordion>
