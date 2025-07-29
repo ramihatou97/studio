@@ -6,8 +6,6 @@ import { v4 as uuidv4 } from 'uuid';
 export const ALL_USERS: CurrentUser[] = [
     { id: 'program-director', role: 'program-director', name: 'Program Director' },
     { id: 'developer', role: 'developer', name: 'Developer' },
-    { id: 's1', role: 'staff', name: 'Dr. Sterling Archer' },
-    { id: '1', role: 'resident', name: 'Dr. Evelyn Reed' },
 ];
 
 export function getInitialAppState(): AppState {
@@ -22,22 +20,6 @@ export function getInitialAppState(): AppState {
   const lastDayOfRotation = new Date(firstDayOfRotation);
   lastDayOfRotation.setDate(lastDayOfRotation.getDate() + 27); // 28 days inclusive
   
-  const sampleResidents: Resident[] = [
-      { id: '1', type: 'neuro', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@medishift.com', level: 6, onService: true, isChief: true, chiefTakesCall: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
-      { id: '2', type: 'neuro', name: 'Dr. Ben Carter', email: 'ben.carter@medishift.com', level: 4, onService: true, isChief: false, chiefOrDays: [], vacationDays: [8, 9, 10, 11, 12], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'new_year', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
-      { id: '3', type: 'neuro', name: 'Dr. Olivia Chen', email: 'olivia.chen@medishift.com', level: 3, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
-      { id: '4', type: 'neuro', name: 'Dr. Leo Martinez', email: 'leo.martinez@medishift.com', level: 2, onService: false, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
-      { id: '5', type: 'neuro', name: 'Dr. Sofia Khan', email: 'sofia.khan@medishift.com', level: 1, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 },
-      { id: '6', type: 'non-neuro', name: 'Dr. Sam Jones', email: 'sam.jones@medishift.com', specialty: 'Plastics', level: 2, onService: true, isChief: false, chiefOrDays: [], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 3, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'neither', allowSoloPgy1Call: false, canBeBackup: false, doubleCallDays: 0, orDays: 0 }
-    ];
-    
-  const sampleStaff: Staff[] = [
-        { id: 's1', name: 'Dr. Sterling Archer', email: 'sterling.archer@medishift.com', subspecialty: 'Vascular', specialtyType: 'cranial' },
-        { id: 's2', name: 'Dr. Lana Kane', email: 'lana.kane@medishift.com', subspecialty: 'Tumor', specialtyType: 'cranial' },
-        { id: 's3', name: 'Dr. Cyril Figgis', email: 'cyril.figgis@medishift.com', subspecialty: 'Complex Spine', specialtyType: 'spine' },
-        { id: 's4', name: 'Dr. Pam Poovey', email: 'pam.poovey@medishift.com', subspecialty: 'General', specialtyType: 'other' }
-    ];
-
   const initialState: AppState = {
     general: {
       startDate: firstDayOfRotation.toISOString().split('T')[0],
@@ -50,10 +32,10 @@ export function getInitialAppState(): AppState {
       newYearEnd: '',
       reminderFrequency: 3,
     },
-    residents: sampleResidents,
+    residents: [],
     medicalStudents: [],
     otherLearners: [],
-    staff: sampleStaff,
+    staff: [],
     staffCall: [],
     orCases: {},
     clinicAssignments: [],
@@ -64,15 +46,8 @@ export function getInitialAppState(): AppState {
       { minDays: 27, maxDays: 29, calls: 7 },
       { minDays: 30, maxDays: 31, calls: 8 },
     ],
-    offServiceRotations: [
-        {id: 'r1', name: 'Neuroradiology', canTakeCall: false},
-        {id: 'r2', name: 'Plastics', canTakeCall: true},
-        {id: 'r3', name: 'Research', canTakeCall: false},
-    ],
-    offServiceRequests: [
-        {id: 'req1', residentId: '4', rotationId: 'r2', durationInBlocks: 1, timingPreference: 'early'},
-        {id: 'req2', residentId: '5', rotationId: 'r1', durationInBlocks: 1, timingPreference: 'any'},
-    ],
+    offServiceRotations: [],
+    offServiceRequests: [],
     caseRounds: [],
     articleDiscussions: [],
     mmRounds: [],
