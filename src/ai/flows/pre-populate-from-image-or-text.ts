@@ -7,7 +7,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { Resident, Staff, OrCase, StaffCall, ClinicAssignment, CaseRoundAssignment } from '@/lib/types';
+import { parseRosterTool } from '../tools/parse-roster-tool';
 
 const PrepopulateDataInputSchema = z.object({
   sourceType: z.enum(['text', 'image']).describe('The source type of the data.'),
@@ -86,7 +86,7 @@ const PrepopulateDataOutputSchema = z.object({
 });
 export type PrepopulateDataOutput = z.infer<typeof PrepopulateDataOutputSchema>;
 
-export async function prepopulateDataAction(
+export async function prepopulateData(
   input: PrepopulateDataInput
 ): Promise<PrepopulateDataOutput> {
   return prepopulateDataFlow(input);
@@ -152,8 +152,18 @@ const prepopulateDataFlow = ai.defineFlow(
     name: 'prepopulateDataFlow',
     inputSchema: PrepopulateDataInputSchema,
     outputSchema: PrepopulateDataOutputSchema,
+    tools: [parseRosterTool],
   },
-  async input => {
+  async (input) => {
+    // Determine which tool to call based on instructions
+    if (input.instructions.toLowerCase().includes('roster')) {
+      const toolResult = await parseRosterTool(input);
+      // The tool's output schema matches what we need, so we can return it directly.
+      return toolResult;
+    }
+    
+    // Fallback to the general prompt if no specific tool is triggered.
+    // This part can be expanded with more tools (e.g., parseCallScheduleTool).
     const {output} = await prompt(input);
     return output!;
   }

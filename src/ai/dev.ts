@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/pre-populate-from-image-or-text-with-tools.ts';
+import '@/ai/flows/pre-populate-from-image-or-text.ts';
 import '@/ai/flows/generate-handover-email.ts';
 import '@/ai/flows/analyze-schedule-conflicts.ts';
 import '@/ai/flows/optimize-on-call-schedule.ts';

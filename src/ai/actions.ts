@@ -1,7 +1,7 @@
 
 'use server';
 
-import { prepopulateDataWithTools as prepopulateDataActionFlow } from '@/ai/flows/pre-populate-from-image-or-text-with-tools';
+import { prepopulateData as prepopulateDataActionFlow } from '@/ai/flows/pre-populate-from-image-or-text';
 import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/flows/analyze-schedule-conflicts';
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
