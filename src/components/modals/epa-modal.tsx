@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { EpaRequestList } from '../epa/epa-request-list';
 
 const EpaEvaluationForm = dynamic(
-  () => import('../modals/epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
+  () => import('./epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
   { 
     ssr: false,
     loading: () => (

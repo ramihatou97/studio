@@ -74,7 +74,7 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
   const { toast } = useToast();
   
   const [isEpaModalOpen, setEpaModalOpen] = useState(false);
-  const [epaModalState, setEpaModalState] = useState<{residentId: string, dayIndex: number}>({residentId: '', dayIndex: 0});
+  const [epaModalState, setEpaModalState] = useState<{residentId: string, dayIndex: number, activityDescription: string}>({residentId: '', dayIndex: 0, activityDescription: ''});
 
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -150,7 +150,7 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
   };
   
   const handleEpaClick = (residentId: string, dayIndex: number, activity: string) => {
-    setEpaModalState({ residentId, dayIndex });
+    setEpaModalState({ residentId, dayIndex, activityDescription: activity });
     setEpaModalOpen(true);
   };
 
@@ -186,8 +186,10 @@ export function WeeklyScheduleView({ appState, setAppState }: WeeklyScheduleView
         isOpen={isEpaModalOpen} 
         onOpenChange={setEpaModalOpen} 
         appState={appState} 
+        setAppState={setAppState}
         preselectedResidentId={epaModalState.residentId}
         preselectedDayIndex={epaModalState.dayIndex}
+        preselectedActivityDescription={epaModalState.activityDescription}
       />
     </DndContext>
   );
