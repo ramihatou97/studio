@@ -24,6 +24,7 @@ import { AiPrepopulation } from "../ai-prepopulation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { cn } from "@/lib/utils";
 import { calculateNumberOfDays } from "@/lib/utils";
+import { Switch } from "../ui/switch";
 
 interface StaffConfigProps {
   appState: AppState;
@@ -247,7 +248,11 @@ function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, 
 
 export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
   const [staffInput, setStaffInput] = useState<StaffInputState>({ name: '', subspecialty: '', specialtyType: 'other' });
-  const { staff } = appState;
+  const { staff, general } = appState;
+
+  const handleGeneralChange = (field: string, value: any) => {
+    setAppState(prev => prev ? ({ ...prev, general: { ...prev.general, [field]: value } }) : null);
+  };
 
   const addStaffMember = () => {
     if (!staffInput.name) return;
@@ -282,6 +287,16 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
     <AccordionItem value="staff-config">
       <AccordionTrigger className="text-lg font-medium flex items-center gap-2"><User />Staffing & On-Call Configuration</AccordionTrigger>
       <AccordionContent>
+        <div className="flex items-center space-x-2 mb-4 p-2 bg-muted/50 rounded-lg">
+            <Switch
+              id="use-predefined-call"
+              checked={general.usePredefinedCall}
+              onCheckedChange={(checked) => handleGeneralChange('usePredefinedCall', checked)}
+            />
+            <Label htmlFor="use-predefined-call" className="text-base font-medium">
+              Use Pre-defined On-Call Schedule
+            </Label>
+        </div>
         <Card>
             <CardHeader><CardTitle>Manage Staff Members</CardTitle></CardHeader>
             <CardContent className="space-y-4">

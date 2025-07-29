@@ -26,16 +26,6 @@ export function GeneralSettings({ appState, setAppState }: GeneralSettingsProps)
           <CardTitle>General Settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="use-predefined-call"
-              checked={general.usePredefinedCall}
-              onCheckedChange={(checked) => handleGeneralChange('usePredefinedCall', checked)}
-            />
-            <Label htmlFor="use-predefined-call" className="text-base">
-              Use Pre-defined On-Call Schedule
-            </Label>
-          </div>
           <div>
             <Label htmlFor="rotation-start-date">Rotation Start Date</Label>
             <Input type="date" id="rotation-start-date" value={general.startDate} onChange={(e) => handleGeneralChange('startDate', e.target.value)} />
