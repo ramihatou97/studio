@@ -1,8 +1,8 @@
 
 "use client";
-import { useState, useRef } from 'react';
-import type { EPA } from '@/lib/epa-data';
-import type { AppState, Evaluation, ResidentRole } from '@/lib/types';
+import { useState, useRef, useMemo, useEffect } from 'react';
+import type { EPA, Milestone } from '@/lib/epa-data';
+import type { AppState, Evaluation, ResidentRole, CurrentUser } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '../ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { v4 as uuidv4 } from 'uuid';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import * as React from 'react';
 
 const styles = StyleSheet.create({
@@ -90,6 +89,8 @@ interface EpaEvaluationFormProps {
   appState: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
   onComplete: () => void;
+  currentUser: CurrentUser;
+  evaluationMode: 'request' | 'evaluate';
 }
 
 export function EpaEvaluationForm({ 
@@ -98,14 +99,15 @@ export function EpaEvaluationForm({
   appState, 
   setAppState,
   onComplete,
+  currentUser,
+  evaluationMode,
 }: EpaEvaluationFormProps) {
   const [evalData, setEvalData] = useState<Evaluation>(evaluation);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [evaluationMode, setEvaluationMode] = useState<'request' | 'evaluate_junior'>('request');
   
   const { toast } = useToast();
-  const { currentUser, staff, residents } = appState;
-  
+  const { staff, residents } = appState;
+
   const handleUpdate = (field: keyof Evaluation, value: any) => {
     setEvalData(prev => ({ ...prev, [field]: value }));
   };
@@ -117,21 +119,7 @@ export function EpaEvaluationForm({
     const currentUserLevel = residents.find(r => r.id === currentUser.id)?.level || 0;
     return residents.filter(r => r.id !== currentUser.id && r.level < currentUserLevel);
   }, [isResidentInitiator, currentUser.id, residents]);
-
-  React.useEffect(() => {
-    // If resident is initiating a request, the residentId is themself.
-    if (isResidentInitiator && evaluationMode === 'request' && evalData.residentId !== currentUser.id) {
-        setEvalData(prev => ({ ...prev, residentId: currentUser.id }));
-    }
-    // If staff/PD evaluating, or resident evaluating junior, the evaluatorId is themself.
-    if (!isResidentInitiator || (isResidentInitiator && evaluationMode === 'evaluate_junior')) {
-        if (evalData.evaluatorId !== currentUser.id) {
-            setEvalData(prev => ({ ...prev, evaluatorId: currentUser.id }));
-        }
-    }
-  }, [isResidentInitiator, evaluationMode, currentUser.id, evalData.residentId, evalData.evaluatorId]);
-
-
+  
   const handleRequest = () => {
     if (!evalData.evaluatorId) {
         toast({ variant: 'destructive', title: "Validation Error", description: "Please select a supervising staff member." });
@@ -146,7 +134,7 @@ export function EpaEvaluationForm({
     // In a real app, this would trigger a backend process to send an email.
     // Here, we'll simulate it by creating a "pending" evaluation in the state.
     const requestToken = uuidv4(); // Unique token for the magic link
-    const updatedEval: Evaluation = { ...evalData, status: 'pending', requestToken, evaluatorId: evalData.evaluatorId };
+    const updatedEval: Evaluation = { ...evalData, status: 'pending', requestToken };
     
     setAppState(prev => {
         const otherEvals = prev.evaluations.filter(e => e.id !== updatedEval.id);
@@ -171,7 +159,7 @@ export function EpaEvaluationForm({
         toast({ variant: 'destructive', title: "Validation Error", description: "Please select a resident." });
         return;
     }
-    if (evaluationMode !== 'evaluate_junior' && (!evalData.activityDescription || evalData.activityDescription.trim() === '')) {
+    if (!evalData.activityDescription || evalData.activityDescription.trim() === '') {
         toast({ variant: 'destructive', title: "Validation Error", description: "Please provide a description of the clinical activity." });
         return;
     }
@@ -194,8 +182,6 @@ export function EpaEvaluationForm({
         ...evalData, 
         status: 'completed', 
         evaluationDate: new Date().toISOString(),
-        // If a resident is evaluating, set the evaluatorId to the current user.
-        evaluatorId: evaluationMode === 'evaluate_junior' ? currentUser.id : evalData.evaluatorId,
     };
     
     setAppState(prev => {
@@ -210,23 +196,15 @@ export function EpaEvaluationForm({
   };
 
   const getActionButtons = () => {
-    if (isResidentInitiator) {
-        if (evaluationMode === 'request') {
-            return (
-                <Button className="w-full" onClick={handleRequest} disabled={isProcessing}>
-                    {isProcessing ? 'Sending...' : <><Send className="mr-2 h-4 w-4" /> Send Request to Staff</>}
-                </Button>
-            );
-        } else { // 'evaluate_junior'
-            return (
-                <Button className="w-full" onClick={handleSubmit} disabled={isProcessing}>
-                    {isProcessing ? 'Submitting...' : 'Submit Junior Evaluation'}
-                </Button>
-            );
-        }
-    } else { // Staff or PD
+    if (evaluationMode === 'request') {
         return (
-             <Button className="w-full" onClick={handleSubmit} disabled={isProcessing}>
+            <Button className="w-full" onClick={handleRequest} disabled={isProcessing}>
+                {isProcessing ? 'Sending...' : <><Send className="mr-2 h-4 w-4" /> Send Request to Staff</>}
+            </Button>
+        );
+    } else { // 'evaluate'
+        return (
+            <Button className="w-full" onClick={handleSubmit} disabled={isProcessing}>
                 {isProcessing ? 'Submitting...' : 'Submit Evaluation'}
             </Button>
         );
@@ -237,6 +215,9 @@ export function EpaEvaluationForm({
     <EpaPdfDocument epa={epa} evaluation={evalData} appState={appState} />
   ), [epa, evalData, appState]);
   
+  const isResidentSelectionDisabled = isResidentInitiator && evaluationMode === 'request';
+  const isEvaluatorSelectionDisabled = !isResidentInitiator;
+
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
@@ -246,66 +227,43 @@ export function EpaEvaluationForm({
               <CardTitle>Evaluation Details</CardTitle>
             </CardHeader>
             <CardContent>
-             {isResidentInitiator && (
-                <div className="mb-4">
-                  <Label>What would you like to do?</Label>
-                  <RadioGroup value={evaluationMode} onValueChange={(val: 'request' | 'evaluate_junior') => setEvaluationMode(val)} className="flex gap-4 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="request" id="mode-request" />
-                      <Label htmlFor="mode-request">Request Evaluation from Staff</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="evaluate_junior" id="mode-evaluate" />
-                      <Label htmlFor="mode-evaluate">Evaluate a Junior Resident</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
               <div className="grid md:grid-cols-2 gap-4">
                   {/* Resident selection */}
                   <div>
                       <Label>Resident</Label>
-                      {(isResidentInitiator && evaluationMode === 'request') ? (
-                          // Resident requesting an evaluation for themselves
-                          <Input value={currentUser.name} disabled />
-                      ) : (
-                          // Staff/PD evaluating a resident OR Resident evaluating a junior
-                          <Select 
-                              value={evalData.residentId} 
-                              onValueChange={(val) => handleUpdate('residentId', val)} 
-                              disabled={!!evaluation.activityDescription} // Disable if activityDescription already exists (existing eval)
-                          >
-                              <SelectTrigger><SelectValue placeholder="Choose a resident..." /></SelectTrigger>
-                              <SelectContent>
-                                  {evaluationMode === 'evaluate_junior' ? (
-                                      juniorResidents.map(r => (
-                                          <SelectItem key={r.id} value={r.id}>{r.name} (PGY-{r.level})</SelectItem>
-                                      ))
-                                  ) : (
-                                      appState.residents.filter(r => r.type === 'neuro').map(r => (
-                                          <SelectItem key={r.id} value={r.id}>{r.name} (PGY-{r.level})</SelectItem>
-                                      ))
-                                  )}
-                              </SelectContent>
-                          </Select>
-                      )}
+                       <Select 
+                          value={evalData.residentId} 
+                          onValueChange={(val) => handleUpdate('residentId', val)} 
+                          disabled={isResidentSelectionDisabled}
+                      >
+                          <SelectTrigger><SelectValue placeholder="Choose a resident..." /></SelectTrigger>
+                          <SelectContent>
+                              {isResidentInitiator && evaluationMode === 'evaluate' ? (
+                                  juniorResidents.map(r => (
+                                      <SelectItem key={r.id} value={r.id}>{r.name} (PGY-{r.level})</SelectItem>
+                                  ))
+                              ) : (
+                                  appState.residents.filter(r => r.type === 'neuro').map(r => (
+                                      <SelectItem key={r.id} value={r.id}>{r.name} (PGY-{r.level})</SelectItem>
+                                  ))
+                              )}
+                          </SelectContent>
+                      </Select>
                   </div>
 
                   {/* Evaluator selection */}
                   <div>
                       <Label>Evaluator</Label>
-                      {(isResidentInitiator && evaluationMode === 'request') ? (
-                          // Resident requesting an evaluation, so they select the staff evaluator
-                          <Select value={evalData.evaluatorId} onValueChange={(val) => handleUpdate('evaluatorId', val)}>
-                              <SelectTrigger><SelectValue placeholder="Choose staff for this request..." /></SelectTrigger>
-                              <SelectContent>
-                                  {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                      ) : (
-                          // Staff/PD evaluating OR Resident evaluating a junior, so evaluator is current user
-                          <Input value={currentUser.name} disabled />
-                      )}
+                      <Select 
+                        value={evalData.evaluatorId} 
+                        onValueChange={(val) => handleUpdate('evaluatorId', val)}
+                        disabled={isEvaluatorSelectionDisabled}
+                      >
+                          <SelectTrigger><SelectValue placeholder="Choose an evaluator..." /></SelectTrigger>
+                          <SelectContent>
+                              {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
                   </div>
               </div>
                <div className="mt-4"> 
@@ -314,8 +272,6 @@ export function EpaEvaluationForm({
                       placeholder="Describe the activity being evaluated..." 
                       value={evalData.activityDescription} 
                       onChange={(e) => handleUpdate('activityDescription', e.target.value)} 
-                      // Disable if resident is not selected, for new evaluations. 
-                      // For existing evaluations, it will be pre-filled and remains editable unless explicitly decided otherwise.
                       disabled={!evalData.residentId}
                   />
               </div>

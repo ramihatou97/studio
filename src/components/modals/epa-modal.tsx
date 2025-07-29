@@ -15,6 +15,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { EpaDashboard } from '../epa/epa-dashboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { EpaRequestList } from '../epa/epa-request-list';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Label } from '../ui/label';
 
 const EpaEvaluationForm = dynamic(
   () => import('./epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
@@ -52,9 +54,11 @@ export function EpaModal({
   const [selectedEpa, setSelectedEpa] = useState<EPA | null>(null);
   const [activeEvaluation, setActiveEvaluation] = useState<Evaluation | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [evaluationMode, setEvaluationMode] = useState<'request' | 'evaluate'>('request');
   
   const { currentUser } = appState;
   const { toast } = useToast();
+  const isResidentInitiator = currentUser.role === 'resident';
 
   const activityContext = useMemo(() => {
     if (!preselectedResidentId || preselectedDayIndex === undefined) {
@@ -114,8 +118,9 @@ export function EpaModal({
     const newEvaluation: Evaluation = {
         id: uuidv4(),
         epaId: epa.id,
-        residentId: activityContext.residentId || (currentUser.role === 'resident' ? currentUser.id : ''),
-        evaluatorId: currentUser.role === 'staff' ? currentUser.id : '',
+        // Set resident/evaluator based on the mode
+        residentId: (isResidentInitiator && evaluationMode === 'request') ? currentUser.id : (activityContext.residentId || ''),
+        evaluatorId: (isResidentInitiator) ? '' : currentUser.id,
         status: 'draft',
         activityDescription: activityContext.activityDescription,
         activityDate: activityContext.activityDate,
@@ -150,10 +155,10 @@ export function EpaModal({
   const getTitle = () => {
       switch(view) {
           case 'dashboard': return "EPA Dashboard & Requests";
-          case 'list': return "Select an EPA to Evaluate";
+          case 'list': return "Select an EPA";
           case 'form': 
             if (!selectedEpa) return "EPA Evaluation";
-            if (currentUser.role === 'resident') return `Request: ${selectedEpa.title}`;
+            if (isResidentInitiator && evaluationMode === 'request') return `Request: ${selectedEpa.title}`;
             return `Evaluate: ${selectedEpa.title}`;
           default: return "EPA Management";
       }
@@ -162,9 +167,9 @@ export function EpaModal({
   const getDescription = () => {
     switch(view) {
         case 'dashboard': return "View your progress, statistics, and pending evaluation requests.";
-        case 'list': return "Browse all Entrustable Professional Activities.";
+        case 'list': return isResidentInitiator ? "Choose an action, then select an EPA to begin." : "Browse all Entrustable Professional Activities.";
         case 'form':
-          if (currentUser.role === 'resident') return "Select supervising staff and export a PDF request for this evaluation.";
+          if (isResidentInitiator && evaluationMode === 'request') return "Select supervising staff and export a PDF request for this evaluation.";
           return "Fill out the evaluation form for the selected resident and activity.";
         default: return "Manage EPA evaluations.";
     }
@@ -219,12 +224,29 @@ export function EpaModal({
               </TabsContent>
            </Tabs>
         ) : view === 'list' ? (
+          <>
+            {isResidentInitiator && (
+              <div className="my-4 p-4 border rounded-lg bg-muted/50">
+                <Label className="font-semibold">What would you like to do?</Label>
+                <RadioGroup value={evaluationMode} onValueChange={(val: 'request' | 'evaluate') => setEvaluationMode(val)} className="flex gap-4 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="request" id="mode-request" />
+                    <Label htmlFor="mode-request">Request Evaluation from Staff</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="evaluate" id="mode-evaluate" />
+                    <Label htmlFor="mode-evaluate">Evaluate a Junior Resident</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
             <EpaList 
                 epas={ALL_EPAS} 
                 onSelectEpa={handleSelectEpa} 
                 currentUserRole={currentUser.role} 
                 isLoading={isSuggesting} 
             />
+          </>
         ) : (
             activeEvaluation && selectedEpa && (
                 <EpaEvaluationForm
@@ -234,6 +256,8 @@ export function EpaModal({
                   appState={appState}
                   setAppState={setAppState as any}
                   onComplete={() => setView('dashboard')}
+                  currentUser={currentUser}
+                  evaluationMode={evaluationMode}
                 />
             )
         )}
