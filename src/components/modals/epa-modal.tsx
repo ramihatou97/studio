@@ -9,7 +9,7 @@ import { ALL_EPAS, type EPA } from '@/lib/epa-data';
 import { EpaList } from '../epa/epa-list';
 import { Button } from '../ui/button';
 import { ArrowLeft, Inbox, Loader2 } from 'lucide-react';
-import { suggestEpaAction } from '@/ai/actions';
+import { suggestEpaForActivityAction } from '@/ai/actions';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { EpaDashboard } from '../epa/epa-dashboard';
@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 
 const EpaEvaluationForm = dynamic(
-  () => import('./epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
+  () => import('../epa/epa-evaluation-form').then(mod => mod.EpaEvaluationForm),
   { 
     ssr: false,
     loading: () => (
@@ -89,7 +89,7 @@ export function EpaModal({
     const suggestAndCreateEvaluation = async () => {
       if (isOpen && activityContext.activityDescription && view !== 'form') {
         setIsSuggesting(true);
-        const result = await suggestEpaAction(activityContext.activityDescription);
+        const result = await suggestEpaForActivityAction(activityContext.activityDescription);
         let foundEpa: EPA | null = null;
         if (result.success && result.data) {
           foundEpa = ALL_EPAS.find(e => e.id === result.data.suggestedEpaId) || null;

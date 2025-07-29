@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident, Staff } from "@/lib/types";
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 interface AiPrepopulationProps {
   appState: AppState;
@@ -138,7 +138,14 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
       </div>
       <div className="mt-4 flex justify-end">
         <Button onClick={handleParse} disabled={isLoading || !file} className="bg-primary hover:bg-primary/90">
-          {isLoading ? 'Parsing...' : 'Upload and Parse'}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Parsing...
+            </>
+          ) : (
+            'Upload and Parse'
+          )}
         </Button>
       </div>
     </div>

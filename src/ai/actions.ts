@@ -1,7 +1,7 @@
 
 'use server';
 
-import { prepopulateDataAction as prepopulateDataActionFlow } from '@/ai/flows/pre-populate-from-image-or-text';
+import { prepopulateDataWithTools as prepopulateDataActionFlow } from '@/ai/flows/pre-populate-from-image-or-text-with-tools';
 import { analyzeScheduleConflicts as analyzeScheduleConflictsFlow } from '@/ai/flows/analyze-schedule-conflicts';
 import { generateHandoverEmail as generateHandoverEmailFlow } from '@/ai/flows/generate-handover-email';
 import { optimizeOnCallSchedule as optimizeOnCallScheduleFlow } from '@/ai/flows/optimize-on-call-schedule';
@@ -164,7 +164,7 @@ export async function generateYearlyRotationScheduleAction(input: GenerateYearly
     }
 }
 
-export async function suggestEpaAction(activityDescription: string) {
+export async function suggestEpaForActivityAction(activityDescription: string) {
     try {
         const result = await suggestEpaForActivityFlow({ activityDescription });
         return { success: true, data: result };
