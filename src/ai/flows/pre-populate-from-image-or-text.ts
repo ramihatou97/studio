@@ -31,6 +31,13 @@ const PrepopulateDataOutputSchema = z.object({
     })
   ).optional().describe('A list of newly identified residents from a roster.'),
 
+  vacationDays: z.array(
+    z.object({
+        residentName: z.string().describe('The name of the resident on vacation.'),
+        days: z.array(z.number()).describe('An array of the specific days of the month the resident is on vacation.'),
+    })
+  ).optional().describe('A list of resident vacation days.'),
+
   staffCall: z.array(
     z.object({
       day: z.number().describe('The day of the month (1-indexed).'),
@@ -99,18 +106,25 @@ const prompt = ai.definePrompt({
 
   **Parsing Guide by Task:**
 
-  *   **For Rosters ("newResidents"):**
-      *   Look for names and associated PGY levels (e.g., PGY-1, PGY-2).
-      *   Use the user's instructions to determine "onService" status and "specialty" for non-neurosurgery residents. If not specified, default "onService" to 'true'.
+  *   **For Rosters ("newResidents", "vacationDays"):**
+      *   Look for names and associated PGY levels (e.g., R1, R2, R3, R4, R5, R6). You must convert the 'R' number to a simple integer level (e.g., "R4" becomes level: 4).
+      *   If a name has text in parentheses like "(Neurology off service)", that person is **off service** (\`onService: false\`) and their specialty should be extracted (e.g., \`specialty: "Neurology"\`). All other neurosurgery residents are on service (\`onService: true\`).
+      *   The "On service residents" are on service. The "Off service residents" are not.
+      *   If there is a "Vacation" column, you must parse the dates and associate them with the correct resident. The dates can be ranges (e.g., "August 14-20") or individual days (e.g., "25"). You must expand the ranges into individual day numbers (e.g., "14-20" becomes \`[14, 15, 16, 17, 18, 19, 20]\`). Populate the 'vacationDays' output field.
+      *   Ignore columns you do not understand, such as "Number of Calls". Do not attempt to parse them.
+
   *   **For On-Call Schedules ("staffCall", "residentCall"):**
       *   For each date, identify who is on call.
       *   Look for keywords: "Cranial" and "Spine" for staff call. "Day Call", "Night Call", "Weekend", "Backup" for resident call.
       *   Match the names to the provided lists to correctly populate either 'staffCall' or 'residentCall'.
+
   *   **For OR Slates ("orCases"):**
       *   For each date, identify the surgeon (must be a name from the staff list).
       *   Extract patient MRN, age, sex, diagnosis, and the procedure description.
+
   *   **For Clinic Assignments ("clinicAssignments"):**
       *   Identify the staff member, the date, and the type of clinic (Cranial, Spine, or General).
+
   *   **For Academic Events ("academicEvents"):**
       *   Look for keywords like "Case Rounds" or "Journal Club".
       *   Identify the date and the name of the presenter.

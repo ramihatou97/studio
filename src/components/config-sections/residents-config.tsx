@@ -263,53 +263,71 @@ export function ResidentsConfig({ appState, setAppState }: ResidentsConfigProps)
   };
 
   const handleRosterParsed = (data: any) => {
-    if (!data.newResidents || data.newResidents.length === 0) {
-      toast({ title: 'No new residents found in the document.' });
+    if (!data.newResidents && !data.vacationDays) {
+      toast({ title: 'No usable data found', description: 'The AI could not extract resident or vacation information.' });
       return;
     }
+    
     setAppState(prev => {
-      if (!prev) return null;
-      const existingNames = new Set(prev.residents.map(r => r.name.toLowerCase()));
-      const newResidents: Resident[] = [];
-      data.newResidents.forEach((res: any) => {
-        if (!existingNames.has(res.name.toLowerCase())) {
-          existingNames.add(res.name.toLowerCase());
-          const isNeuro = !res.specialty || res.specialty.toLowerCase().includes('neuro');
-          newResidents.push({
-            id: uuidv4(),
-            type: isNeuro ? 'neuro' : 'non-neuro',
-            name: res.name,
-            email: `${res.name.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
-            level: res.level,
-            onService: res.onService,
-            specialty: isNeuro ? undefined : res.specialty,
-            vacationDays: [],
-            isChief: false,
-            chiefTakesCall: true,
-            chiefOrDays: [],
-            maxOnServiceCalls: 0,
-            offServiceMaxCall: 4,
-            schedule: [],
-            weekendCalls: 0,
-            callDays: [],
-            doubleCallDays: 0,
-            orDays: 0,
-            holidayGroup: 'neither',
-            allowSoloPgy1Call: false,
-            canBeBackup: false,
-          });
-        }
-      });
+        if (!prev) return null;
+        let updatedResidents = [...prev.residents];
+        const existingNames = new Set(updatedResidents.map(r => r.name.toLowerCase()));
+        let addedCount = 0;
+        let vacationCount = 0;
 
-      if (newResidents.length > 0) {
-        toast({ title: 'Success', description: `Added ${newResidents.length} new residents.` });
-        return { ...prev, residents: [...prev.residents, ...newResidents] };
-      } else {
-        toast({ title: 'No new residents added', description: 'All residents from the source already exist.' });
-        return prev;
-      }
+        if (data.newResidents) {
+            data.newResidents.forEach((res: any) => {
+                const trimmedName = res.name.trim();
+                if (!existingNames.has(trimmedName.toLowerCase())) {
+                    addedCount++;
+                    existingNames.add(trimmedName.toLowerCase());
+                    const isNeuro = !res.specialty || res.specialty.toLowerCase().includes('neuro');
+                    updatedResidents.push({
+                        id: uuidv4(),
+                        type: isNeuro ? 'neuro' : 'non-neuro',
+                        name: trimmedName,
+                        email: `${trimmedName.toLowerCase().replace(/\s/g, '.')}@medishift.com`,
+                        level: res.level,
+                        onService: res.onService,
+                        specialty: isNeuro ? undefined : res.specialty,
+                        vacationDays: [],
+                        isChief: false,
+                        chiefTakesCall: true,
+                        chiefOrDays: [],
+                        maxOnServiceCalls: 0,
+                        offServiceMaxCall: 4,
+                        schedule: [],
+                        weekendCalls: 0,
+                        callDays: [],
+                        doubleCallDays: 0,
+                        orDays: 0,
+                        holidayGroup: 'neither',
+                        allowSoloPgy1Call: false,
+                        canBeBackup: false,
+                    });
+                }
+            });
+        }
+        
+        if (data.vacationDays) {
+            data.vacationDays.forEach((vacationInfo: { residentName: string; days: number[] }) => {
+                const residentIndex = updatedResidents.findIndex(r => r.name === vacationInfo.residentName);
+                if (residentIndex > -1) {
+                    vacationCount++;
+                    updatedResidents[residentIndex].vacationDays = vacationInfo.days;
+                }
+            });
+        }
+
+        if (addedCount > 0 || vacationCount > 0) {
+            toast({ title: 'Success', description: `Added ${addedCount} new residents and updated ${vacationCount} vacation schedules.` });
+        } else {
+            toast({ title: 'No new residents added', description: 'All residents from the source already exist.' });
+        }
+        
+        return { ...prev, residents: updatedResidents };
     });
-  };
+};
 
   return (
     <Card>
