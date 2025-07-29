@@ -236,6 +236,9 @@ function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, 
             })}
           </div>
          )}
+         <DialogFooter>
+             <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -272,6 +275,8 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
           default: return 'border-gray-400 text-gray-700 bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:bg-gray-900/50';
       }
   }
+
+  const showCallSchedulers = appState.general.usePredefinedCall || appState.staffCall.length > 0 || appState.residentCall.length > 0;
 
   return (
     <AccordionItem value="staff-config">
@@ -318,14 +323,14 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
           description="Upload an image, PDF, or Word Doc of the hospital's official on-call list for the month. The AI will extract and place staff and resident call assignments."
         />
         
-        <div className={cn(!appState.general.usePredefinedCall && "hidden")}>
-           <ResidentCallScheduler appState={appState} setAppState={setAppState} />
-        </div>
+        {showCallSchedulers && (
+          <>
+            <ResidentCallScheduler appState={appState} setAppState={setAppState} />
+            <StaffCallScheduler appState={appState} setAppState={setAppState} />
+          </>
+        )}
 
-        <StaffCallScheduler appState={appState} setAppState={setAppState} />
       </AccordionContent>
     </AccordionItem>
   );
 }
-
-    

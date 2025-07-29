@@ -131,28 +131,31 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
             let residentCount = 0;
             if (data.staffCall) {
                 data.staffCall.forEach((call: any) => {
-                    const dayIndex = call.day - 1;
                     staffCount++;
-                    newStaffCall = newStaffCall.filter(c => !(c.day === (dayIndex + 1) && c.callType === call.callType));
-                    newStaffCall.push({ day: dayIndex + 1, callType: call.callType, staffName: call.staffName });
+                    // Remove any existing call of the same type on the same day before adding
+                    newStaffCall = newStaffCall.filter(c => !(c.day === call.day && c.callType === call.callType));
+                    newStaffCall.push({ day: call.day, callType: call.callType, staffName: call.staffName });
                 });
             }
             if (data.residentCall) {
                 data.residentCall.forEach((call: any) => {
-                    const dayIndex = call.day - 1;
                     const resident = prev.residents.find(r => r.name === call.residentName);
                     if (resident) {
                         residentCount++;
-                        const callType = call.callType;
-                        if (callType) {
-                           newResidentCall = newResidentCall.filter(c => !(c.day === (dayIndex + 1) && c.residentId === resident.id));
-                           newResidentCall.push({ day: dayIndex + 1, callType, residentId: resident.id });
+                        // For Day and Night Call, only one resident can be assigned, so we filter first
+                        if (['Day Call', 'Night Call'].includes(call.callType)) {
+                           newResidentCall = newResidentCall.filter(c => !(c.day === call.day && c.callType === call.callType));
                         }
+                        newResidentCall.push({ day: call.day, callType: call.callType, residentId: resident.id });
                     }
                 });
             }
             toastMessage = `Populated ${staffCount} staff and ${residentCount} resident call assignments.`;
             finalState = { ...finalState, staffCall: newStaffCall, residentCall: newResidentCall };
+            // If we've successfully parsed call data, we should assume the user wants to use a pre-defined schedule
+            if (staffCount > 0 || residentCount > 0) {
+                finalState.general.usePredefinedCall = true;
+            }
         }
 
         // OR/Clinic parsing logic
@@ -349,5 +352,3 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
     </div>
   );
 }
-
-    
