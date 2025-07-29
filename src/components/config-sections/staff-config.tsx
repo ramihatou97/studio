@@ -1,5 +1,5 @@
 
-import type { AppState, Staff, StaffCall } from "@/lib/types";
+import type { AppState, Staff, StaffCall, ResidentCall } from "@/lib/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,14 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Brain, Bone, User } from "lucide-react";
+import { PlusCircle, Trash2, Brain, Bone, User, Sun, Moon, Shield } from "lucide-react";
 import { useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, getMonth, getYear } from 'date-fns';
 import { AiPrepopulation } from "../ai-prepopulation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface StaffConfigProps {
   appState: AppState;
@@ -38,7 +40,6 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   const { general, staff, staffCall } = appState;
   const { startDate, endDate } = general;
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
-  const { toast } = useToast();
   
   const allStaff = staff;
 
@@ -59,37 +60,6 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
         } else {
             return { ...prev, staffCall: otherCalls };
         }
-    });
-  };
-
-  const handleDataParsed = (data: any) => {
-    if (!data.staffCall || data.staffCall.length === 0) {
-      toast({ title: "No staff call data found." });
-      return;
-    }
-    setAppState(prev => {
-      if (!prev) return null;
-      let newStaffCall: StaffCall[] = [...prev.staffCall];
-      const rotationStartDate = new Date(prev.general.startDate);
-      const rotationYear = getYear(rotationStartDate);
-      let count = 0;
-
-      data.staffCall.forEach((call: any) => {
-        const day = call.day;
-        const month = call.month ? call.month - 1 : getMonth(rotationStartDate); // AI should return 1-based month
-        const date = new Date(rotationYear, month, day);
-        const dayIndex = differenceInDays(date, rotationStartDate);
-
-        if (dayIndex >= 0 && dayIndex < numberOfDays) {
-            count++;
-            // Remove existing call for this type and day to prevent duplicates
-            newStaffCall = newStaffCall.filter(c => !(c.day === (dayIndex + 1) && c.callType === call.callType));
-            newStaffCall.push({ day: dayIndex + 1, callType: call.callType, staffName: call.staffName });
-        }
-      });
-
-      toast({ title: "Success", description: `Populated ${count} staff call assignments.` });
-      return { ...prev, staffCall: newStaffCall };
     });
   };
 
@@ -125,69 +95,152 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   }
 
   return (
-    <>
-      <AiPrepopulation
-        appState={appState}
-        setAppState={setAppState}
-        onDataParsed={handleDataParsed}
-        dataType="on-call"
-        title="Upload On-Call Schedule"
-        description="Upload an image, PDF, or Word Doc of the hospital's official on-call list for the month. The AI will extract and place staff call assignments."
-      />
-      <Dialog>
-          <div className="mt-6 border-t pt-6">
-              <h3 className="text-lg font-medium mb-3">Staff On-Call Schedule</h3>
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                  {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
-              </div>
-          </div>
+    <Dialog>
+        <div className="mt-6 border-t pt-6">
+            <h3 className="text-lg font-medium mb-3">Staff On-Call Schedule</h3>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
+            </div>
+        </div>
 
-          <DialogContent className="max-w-md">
-              <DialogHeader>
-                  <DialogTitle>Manage Staff Call for Day {currentEditingDay}</DialogTitle>
-              </DialogHeader>
-              {currentEditingDay !== null && (
-                  <div className="space-y-4 pt-4">
-                      <div>
-                          <Label className="flex items-center gap-2 font-semibold"><Brain className="w-5 h-5 text-red-500"/> Cranial Call</Label>
-                          <Select 
-                              value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'cranial')?.staffName || 'none'}
-                              onValueChange={val => handleStaffCallChange(currentEditingDay, 'cranial', val)}
-                          >
-                              <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  {allStaff.filter(s => s.specialtyType === 'cranial' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                      </div>
-                      <div>
-                          <Label className="flex items-center gap-2 font-semibold"><Bone className="w-5 h-5 text-blue-500"/> Spine Call</Label>
-                          <Select
-                              value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'spine')?.staffName || 'none'}
-                              onValueChange={val => handleStaffCallChange(currentEditingDay, 'spine', val)}
-                          >
-                              <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  {allStaff.filter(s => s.specialtyType === 'spine' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                      </div>
-                  </div>
-              )}
-              <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
-    </>
+        <DialogContent className="max-w-md">
+            <DialogHeader>
+                <DialogTitle>Manage Staff Call for Day {currentEditingDay}</DialogTitle>
+            </DialogHeader>
+            {currentEditingDay !== null && (
+                <div className="space-y-4 pt-4">
+                    <div>
+                        <Label className="flex items-center gap-2 font-semibold"><Brain className="w-5 h-5 text-red-500"/> Cranial Call</Label>
+                        <Select 
+                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'cranial')?.staffName || 'none'}
+                            onValueChange={val => handleStaffCallChange(currentEditingDay, 'cranial', val)}
+                        >
+                            <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {allStaff.filter(s => s.specialtyType === 'cranial' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label className="flex items-center gap-2 font-semibold"><Bone className="w-5 h-5 text-blue-500"/> Spine Call</Label>
+                        <Select
+                            value={staffCall.find(c => c.day === currentEditingDay && c.callType === 'spine')?.staffName || 'none'}
+                            onValueChange={val => handleStaffCallChange(currentEditingDay, 'spine', val)}
+                        >
+                            <SelectTrigger><SelectValue placeholder="Select staff..."/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {allStaff.filter(s => s.specialtyType === 'spine' || s.specialtyType === 'other').map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            )}
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
   );
 }
+
+function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, setAppState: (updater: React.SetStateAction<AppState | null>) => void }) {
+  const { general, residents, residentCall } = appState;
+  const { startDate, endDate } = general;
+  const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
+  const neuroResidents = residents.filter(r => r.type === 'neuro');
+
+  const { numberOfDays } = (() => {
+    if (!startDate || !endDate) return { numberOfDays: 0 };
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return { numberOfDays: 0 };
+    return { numberOfDays: Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 };
+  })();
+
+  const handleResidentCallChange = (day: number, callType: 'D' | 'N' | 'W' | 'B', residentId: string, isAdding: boolean) => {
+    setAppState(prev => {
+      if (!prev) return null;
+      let newResidentCall = [...prev.residentCall];
+      if (isAdding) {
+        newResidentCall.push({ day, call: callType, residentId });
+      } else {
+        newResidentCall = newResidentCall.filter(c => !(c.day === day && c.call === callType && c.residentId === residentId));
+      }
+      return { ...prev, residentCall: newResidentCall };
+    });
+  };
+  
+  const getResidentName = (id: string) => residents.find(r => r.id === id)?.name;
+
+  const DayButton = ({ dayNumber }: { dayNumber: number }) => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + dayNumber - 1);
+    const dayOfMonth = d.getDate();
+    const dayCalls = residentCall.filter(c => c.day === dayNumber && c.call === 'D');
+    const nightCalls = residentCall.filter(c => c.day === dayNumber && c.call === 'N');
+    const weekendCalls = residentCall.filter(c => c.day === dayNumber && c.call === 'W');
+
+    return (
+        <DialogTrigger asChild>
+          <Button variant="outline" className="h-24 flex-col relative text-left items-start p-2" onClick={() => setCurrentEditingDay(dayNumber)}>
+            <div className="font-bold text-md">{dayOfMonth}</div>
+            <div className="text-xs text-muted-foreground">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+            <div className="mt-1 space-y-1 text-xs w-full overflow-hidden">
+                {weekendCalls.map(c => <div key={c.residentId} className="flex items-center gap-1.5 text-destructive font-semibold"><Shield className="w-4 h-4 shrink-0" /><span className="truncate">{getResidentName(c.residentId)}</span></div>)}
+                {dayCalls.map(c => <div key={c.residentId} className="flex items-center gap-1.5 text-amber-700 dark:text-amber-500"><Sun className="w-4 h-4 shrink-0" /><span className="truncate">{getResidentName(c.residentId)}</span></div>)}
+                {nightCalls.map(c => <div key={c.residentId} className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400"><Moon className="w-4 h-4 shrink-0" /><span className="truncate">{getResidentName(c.residentId)}</span></div>)}
+            </div>
+          </Button>
+        </DialogTrigger>
+    );
+  };
+  
+  if (numberOfDays === 0) {
+    return <p className="text-muted-foreground italic text-center mt-4">Please set a valid date range.</p>;
+  }
+
+  return (
+    <Dialog>
+      <div className="mt-6 border-t pt-6">
+          <h3 className="text-lg font-medium mb-3">Resident On-Call Schedule</h3>
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
+          </div>
+      </div>
+      <DialogContent>
+         <DialogHeader>
+           <DialogTitle>Manage Resident Call for Day {currentEditingDay}</DialogTitle>
+         </DialogHeader>
+         {currentEditingDay !== null && (
+          <div className="space-y-4 pt-4">
+            {(['W', 'D', 'N', 'B'] as const).map(callType => {
+              const assigned = residentCall.filter(c => c.day === currentEditingDay && c.call === callType);
+              return (
+                <div key={callType}>
+                  <Label>{ {D: 'Day Call', N: 'Night Call', W: 'Weekend Call', B: 'Backup'}[callType] }</Label>
+                  {neuroResidents.map(res => (
+                    <div key={res.id} className="flex items-center space-x-2">
+                      <input type="checkbox" id={`${callType}-${res.id}`} checked={assigned.some(a => a.residentId === res.id)} onChange={e => handleResidentCallChange(currentEditingDay, callType, res.id, e.target.checked)} />
+                      <label htmlFor={`${callType}-${res.id}`}>{res.name}</label>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
   const [staffInput, setStaffInput] = useState<StaffInputState>({ name: '', subspecialty: '', specialtyType: 'other' });
   const { staff } = appState;
+  const { toast } = useToast();
 
   const addStaffMember = () => {
     if (!staffInput.name) return;
@@ -215,6 +268,45 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
           default: return 'border-gray-400 text-gray-700 bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:bg-gray-900/50';
       }
   }
+
+  const handleCallDataParsed = (data: any) => {
+    setAppState(prev => {
+        if (!prev) return null;
+        let newStaffCall: StaffCall[] = [...prev.staffCall];
+        let newResidentCall: ResidentCall[] = [...prev.residentCall];
+        const rotationStartDate = new Date(prev.general.startDate);
+        let staffCount = 0;
+        let residentCount = 0;
+
+        if (data.staffCall) {
+            data.staffCall.forEach((call: any) => {
+                const dayIndex = call.day - 1;
+                staffCount++;
+                newStaffCall = newStaffCall.filter(c => !(c.day === (dayIndex + 1) && c.callType === call.callType));
+                newStaffCall.push({ day: dayIndex + 1, callType: call.callType, staffName: call.staffName });
+            });
+        }
+        
+        if (data.residentCall) {
+            const callTypeMap: Record<string, 'D' | 'N' | 'W' | 'B'> = {'Day': 'D', 'Night': 'N', 'Weekend': 'W', 'Backup': 'B'};
+            data.residentCall.forEach((call: any) => {
+                const dayIndex = call.day - 1;
+                const resident = prev.residents.find(r => r.name === call.residentName);
+                if (resident) {
+                    residentCount++;
+                    const callType = callTypeMap[call.callType];
+                    if (callType) {
+                       newResidentCall = newResidentCall.filter(c => !(c.day === (dayIndex + 1) && c.residentId === resident.id));
+                       newResidentCall.push({ day: dayIndex + 1, call: callType, residentId: resident.id });
+                    }
+                }
+            });
+        }
+
+        toast({ title: "Success", description: `Populated ${staffCount} staff and ${residentCount} resident call assignments.` });
+        return { ...prev, staffCall: newStaffCall, residentCall: newResidentCall };
+    });
+  };
 
   return (
     <AccordionItem value="staff-config">
@@ -251,10 +343,22 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
                 ))}
               </div>
             </CardContent>
-          </Card>
+        </Card>
         
-        <StaffCallScheduler appState={appState} setAppState={setAppState} />
+        <AiPrepopulation
+          appState={appState}
+          setAppState={setAppState}
+          onDataParsed={handleCallDataParsed}
+          dataType="on-call"
+          title="Upload On-Call Schedule"
+          description="Upload an image, PDF, or Word Doc of the hospital's official on-call list for the month. The AI will extract and place staff and resident call assignments."
+        />
+        
+        <div className={cn(!appState.general.usePredefinedCall && "hidden")}>
+           <ResidentCallScheduler appState={appState} setAppState={setAppState} />
+        </div>
 
+        <StaffCallScheduler appState={appState} setAppState={setAppState} />
       </AccordionContent>
     </AccordionItem>
   );

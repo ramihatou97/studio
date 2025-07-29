@@ -156,8 +156,13 @@ export function generateSchedules(appState: AppState, scope: GenerationScope = {
       if (dayIndex >= startDayIndex && dayIndex <= endDayIndex) {
           const resident = processedResidents.find(r => r.id === call.residentId);
           if (resident) {
-            const callMap = { 'D': 'Day Call', 'N': 'Night Call', 'W': 'Weekend Call' };
-            resident.schedule[dayIndex] = [callMap[call.call]];
+            const callMap = { 'D': 'Day Call', 'N': 'Night Call', 'W': 'Weekend Call', 'B': 'Backup' };
+            const callActivity = callMap[call.call];
+             if (resident.schedule[dayIndex].length === 0) {
+              resident.schedule[dayIndex] = [callActivity];
+            } else {
+              resident.schedule[dayIndex].push(callActivity);
+            }
           }
       }
     });
