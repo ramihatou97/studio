@@ -106,7 +106,7 @@ const prepopulateDataFlow = ai.defineFlow(
 
         **CRITICAL INSTRUCTIONS & PARSING GUIDE:**
 
-        1.  **Analyze Goal from Instructions**: First, read the user's instructions to understand what kind of data to extract. The instructions will tell you if it's a roster, an on-call schedule, an OR slate, or something else. This context is key.
+        1.  **Analyze Goal from Instructions**: First, read the user's instructions to understand what kind of data to extract. This context is key.
             *   User Instructions: "{{{instructions}}}"
 
         2.  **Date Context**: Use the provided 'startDate' ({{{context.startDate}}}) to understand the current month and year for all date-related parsing.
@@ -122,20 +122,27 @@ const prepopulateDataFlow = ai.defineFlow(
                 *   **Parse Each Person**: For each person listed, extract the following details:
                     *   **Name & PGY Level**: The name is the primary identifier. The PGY level is usually at the end of the name string, formatted like 'R1', 'R2', etc. You MUST convert this to a number (e.g., 'R4' becomes level: 4).
                     *   **Determine Type & On-Service Status**:
-                        *   **Non-Neurosurgery Resident**: If a name has a specialty in parentheses like '(Neurology)', that person is a **non-neurosurgical** resident. Extract their specialty (e.g., specialty: 'Neurology'). You MUST set 'onService: true' for them (as they are on service for their specialty).
+                        *   **Non-Neurosurgery Resident**: If a name has a specialty in parentheses like '(Neurology)' or '(Neurology off service)', that person is a **non-neurosurgical** resident. Extract their specialty (e.g., specialty: 'Neurology'). You MUST set 'onService: true' for them (as they are on service for their specialty).
                         *   **Neurosurgery Resident (On-Service)**: If a person is under the "On service residents" header and does NOT have a specialty in parentheses, they are a neurosurgery resident, and you MUST set 'onService: true'.
                         *   **Neurosurgery Resident (Off-Service)**: If a person is under the "Off service residents" or "Fly-In Residents" header, they are a neurosurgery resident on an off-service rotation. You MUST set 'onService: false'.
                     *   **Vacation Dates**: Look for a 'Vacation' column or section associated with the resident. Parse the dates carefully. You must handle ranges (e.g., "August 14-20" becomes '[14, 15, 16, 17, 18, 19, 20]') and comma-separated lists. You must associate these dates with the correct resident name.
                 *   **Ignore Irrelevant Data**: You must ignore rows or columns that you do not understand, such as "Teams" or "Number of Calls". Do not attempt to parse them.
 
             *   **If parsing an ON-CALL SCHEDULE:**
-                *   For each day of the month, identify who is on call.
-                *   **Staff Call:** Look for staff names associated with keywords like "Cranial" or "Spine". The name should match someone in the existing staff context.
-                *   **Resident Call:** Look for resident names associated with keywords like "Day Call", "Night Call", "Weekend", or "Backup". The name should match someone in the existing resident context.
+                *   **Identify the Table Structure**: First, identify the columns in the schedule, which are typically 'Date', 'Day', 'Cranial', 'Spine', 'Day Call', 'Night Call', etc.
+                *   **Process Row by Row**: Go through the document one row at a time. For each row:
+                    *   **Extract the Date**: The first column is usually the day of the month (e.g., '1', '2', '3'). This is the 'day' for all other entries in that same row.
+                    *   **Extract Assignments**: For the current row's date, look across the other columns.
+                        *   Under the 'Cranial' column, find the staff name. Create a \`staffCall\` entry with \`callType: 'cranial'\`, the extracted \`day\`, and the \`staffName\`.
+                        *   Under the 'Spine' column, find the staff name. Create a \`staffCall\` entry with \`callType: 'spine'\`, the extracted \`day\`, and the \`staffName\`.
+                        *   Under the 'Day Call' column, find the resident name. Create a \`residentCall\` entry with \`callType: 'Day Call'\`, the extracted \`day\`, and the \`residentName\`.
+                        *   Under the 'Night Call' column, find the resident name. Create a \`residentCall\` entry with \`callType: 'Night Call'\`, the extracted \`day\`, and the \`residentName\`.
+                        *   Do the same for 'Weekend Call' and 'Backup' if those columns exist.
+                *   **Match Names**: For every name you extract, make sure it matches a name from the \`context.residents\` or \`context.staff\` lists to ensure accuracy.
 
             *   **If parsing an OR/CLINIC SCHEDULE:**
                 *   For each entry, extract the surgeon, patient details (MRN, age, sex), diagnosis, and procedure.
-                *   For clinics, extract the staff member, clinic type, and number of appointments if available.
+                *   For clinics, extract the staff member, clinicType, and number of appointments if available.
                 *   Associate each event with the correct day of the month.
 
         **Source Data to be Parsed:**
@@ -149,5 +156,3 @@ const prepopulateDataFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
