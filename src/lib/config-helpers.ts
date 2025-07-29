@@ -12,8 +12,15 @@ export const ALL_USERS: CurrentUser[] = [
 
 export function getInitialAppState(): AppState {
   const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  let academicYear = today.getFullYear();
+  // Academic year starts in July. If current month is before July, we are in the previous academic year.
+  if (today.getMonth() < 6) { // 6 is July
+    academicYear--;
+  }
+
+  const firstDayOfRotation = new Date(academicYear, 6, 1); // July 1st
+  const lastDayOfRotation = new Date(firstDayOfRotation);
+  lastDayOfRotation.setDate(lastDayOfRotation.getDate() + 27); // 28 days inclusive
   
   const sampleResidents: Resident[] = [
       { id: '1', type: 'neuro', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@medishift.com', level: 6, onService: true, isChief: true, chiefTakesCall: true, chiefOrDays: [3, 10, 17, 24], vacationDays: [], maxOnServiceCalls: 0, offServiceMaxCall: 4, schedule: [], weekendCalls: 0, callDays: [], holidayGroup: 'christmas', allowSoloPgy1Call: false, canBeBackup: true, doubleCallDays: 0, orDays: 0 },
@@ -33,8 +40,8 @@ export function getInitialAppState(): AppState {
 
   const initialState: AppState = {
     general: {
-      startDate: firstDayOfMonth.toISOString().split('T')[0],
-      endDate: lastDayOfMonth.toISOString().split('T')[0],
+      startDate: firstDayOfRotation.toISOString().split('T')[0],
+      endDate: lastDayOfRotation.toISOString().split('T')[0],
       statHolidays: '',
       usePredefinedCall: false,
       christmasStart: '',
