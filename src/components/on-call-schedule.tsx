@@ -8,7 +8,7 @@ interface OnCallScheduleProps {
 }
 
 export function OnCallSchedule({ appState }: OnCallScheduleProps) {
-  const { general, residents, staffCall, caseRounds, articleDiscussions, mmRounds } = appState;
+  const { general, residents, staff, staffCall, residentCall, caseRounds, articleDiscussions, mmRounds } = appState;
   const { startDate, endDate } = general;
   if (!startDate || !endDate) return null;
 
@@ -20,10 +20,10 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
     const dayDate = new Date(start);
     dayDate.setDate(dayDate.getDate() + dayIndex);
     
-    const dayCallResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Day Call'));
-    const nightCallResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Night Call'));
-    const weekendCallResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Weekend Call'));
-    const backupResidents = residents.filter(r => r.schedule[dayIndex]?.includes('Backup'));
+    const dayCallResident = residents.find(r => residentCall.some(rc => rc.day === dayIndex + 1 && rc.residentId === r.id && rc.callType === 'Day Call'));
+    const nightCallResident = residents.find(r => residentCall.some(rc => rc.day === dayIndex + 1 && rc.residentId === r.id && rc.callType === 'Night Call'));
+    const weekendCallResident = residents.find(r => residentCall.some(rc => rc.day === dayIndex + 1 && rc.residentId === r.id && rc.callType === 'Weekend Call'));
+    const backupResident = residents.find(r => residentCall.some(rc => rc.day === dayIndex + 1 && rc.residentId === r.id && rc.callType === 'Backup'));
 
     const caseRoundPresenter = caseRounds.find(cr => cr.dayIndex === dayIndex);
     const articleDiscussion = articleDiscussions.find(ad => ad.dayIndex === dayIndex);
@@ -45,10 +45,10 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
       date: dayDate,
       dayNumber: dayDate.getDate(),
       isWeekend: dayDate.getDay() === 0 || dayDate.getDay() === 6,
-      dayCallResidents,
-      nightCallResidents,
-      weekendCallResidents,
-      backupResidents,
+      dayCallResident,
+      nightCallResident,
+      weekendCallResident,
+      backupResident,
       cranialCallStaff,
       spineCallStaff,
       caseRoundPresenter,
@@ -91,7 +91,7 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
                 {day.articleDiscussion && (
                      <div className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
                         <BookOpen className="w-4 h-4 flex-shrink-0" />
-                        <span className="font-medium truncate" title={staffCall.find(s=>s.staffName === day.articleDiscussion?.staffId)?.staffName}>
+                        <span className="font-medium truncate" title={staff.find(s=>s.id === day.articleDiscussion?.staffId)?.name}>
                            Journal Club
                         </span>
                     </div>
@@ -118,32 +118,32 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
                 )}
                 
                 {/* Resident Call */}
-                 {day.weekendCallResidents.map(r => (
-                    <div key={r.id} className="flex items-center gap-1.5 text-destructive font-semibold">
+                 {day.weekendCallResident && (
+                    <div key={day.weekendCallResident.id} className="flex items-center gap-1.5 text-destructive font-semibold">
                         <Shield className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate" title={r.name}>{r.name} (PGY-{r.level})</span>
+                        <span className="truncate" title={day.weekendCallResident.name}>{day.weekendCallResident.name} (PGY-{day.weekendCallResident.level})</span>
                     </div>
-                ))}
-                {day.dayCallResidents.map(r => (
-                    <div key={r.id} className="flex items-center gap-1.5 text-amber-700 dark:text-amber-500">
+                )}
+                {day.dayCallResident && (
+                    <div key={day.dayCallResident.id} className="flex items-center gap-1.5 text-amber-700 dark:text-amber-500">
                         <Sun className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate" title={r.name}>{r.name} (PGY-{r.level})</span>
+                        <span className="truncate" title={day.dayCallResident.name}>{day.dayCallResident.name} (PGY-{day.dayCallResident.level})</span>
                     </div>
-                ))}
-                 {day.nightCallResidents.map(r => (
-                    <div key={r.id} className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400">
+                )}
+                 {day.nightCallResident && (
+                    <div key={day.nightCallResident.id} className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400">
                         <Moon className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate" title={r.name}>{r.name} (PGY-{r.level})</span>
+                        <span className="truncate" title={day.nightCallResident.name}>{day.nightCallResident.name} (PGY-{day.nightCallResident.level})</span>
                     </div>
-                ))}
+                )}
 
                 {/* Backup */}
-                {day.backupResidents.map(r => (
-                     <div key={r.id} className="flex items-center gap-1.5 text-green-700 dark:text-green-500">
+                {day.backupResident && (
+                     <div key={day.backupResident.id} className="flex items-center gap-1.5 text-green-700 dark:text-green-500">
                         <UserCheck className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate" title={r.name}>B: {r.name} (PGY-{r.level})</span>
+                        <span className="truncate" title={day.backupResident.name}>B: {day.backupResident.name} (PGY-{day.backupResident.level})</span>
                     </div>
-                ))}
+                )}
             </div>
           </div>
         ))}

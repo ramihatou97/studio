@@ -131,10 +131,13 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
             let residentCount = 0;
             if (data.staffCall) {
                 data.staffCall.forEach((call: any) => {
-                    staffCount++;
-                    // Remove any existing call of the same type on the same day before adding
-                    newStaffCall = newStaffCall.filter(c => !(c.day === call.day && c.callType === call.callType));
-                    newStaffCall.push({ day: call.day, callType: call.callType, staffName: call.staffName });
+                    const staffMember = prev.staff.find(s => s.name === call.staffName);
+                    if (staffMember) {
+                        staffCount++;
+                        // Remove any existing call of the same type on the same day before adding
+                        newStaffCall = newStaffCall.filter(c => !(c.day === call.day && c.callType === call.callType));
+                        newStaffCall.push({ day: call.day, callType: call.callType, staffName: call.staffName });
+                    }
                 });
             }
             if (data.residentCall) {
@@ -154,7 +157,7 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
             finalState = { ...finalState, staffCall: newStaffCall, residentCall: newResidentCall };
             // If we've successfully parsed call data, we should assume the user wants to use a pre-defined schedule
             if (staffCount > 0 || residentCount > 0) {
-                finalState.general.usePredefinedCall = true;
+                finalState.general = { ...finalState.general, usePredefinedCall: true };
             }
         }
 
