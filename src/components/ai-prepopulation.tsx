@@ -32,8 +32,9 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
 
   const parsePdf = async (file: File): Promise<string> => {
     const pdfjs = await import('pdfjs-dist/build/pdf');
-    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    // The workerSrc property expects a URL string, not a module object.
+    // We will use the CDN version that matches the installed package version.
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.mjs`;
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
