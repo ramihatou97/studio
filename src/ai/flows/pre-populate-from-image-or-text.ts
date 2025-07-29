@@ -43,7 +43,7 @@ const PrepopulateDataOutputSchema = z.object({
     z.object({
         day: z.number().describe('The day of the month (1-indexed).'),
         residentName: z.string().describe('The name of the resident on call.'),
-        callType: z.enum(['Day', 'Night', 'Weekend', 'Backup']).describe('The type of call assignment.'),
+        callType: z.enum(['Day Call', 'Night Call', 'Weekend Call', 'Backup']).describe('The type of call assignment.'),
     })
   ).optional().describe('The extracted resident on-call schedule.'),
 

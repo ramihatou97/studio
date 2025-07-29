@@ -182,9 +182,9 @@ export interface StaffCall {
 }
 
 export interface ResidentCall {
-  day: number;
-  residentId: string;
-  call: 'D' | 'N' | 'W' | 'B';
+    day: number;
+    residentId: string;
+    callType: 'Day Call' | 'Night Call' | 'Weekend Call' | 'Backup';
 }
 
 export interface HistoricalCase {

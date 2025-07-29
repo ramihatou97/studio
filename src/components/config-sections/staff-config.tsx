@@ -159,28 +159,38 @@ function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, 
     return { numberOfDays: Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 };
   })();
 
-  const handleResidentCallChange = (day: number, callType: 'D' | 'N' | 'W' | 'B', residentId: string, isAdding: boolean) => {
+  const handleResidentCallChange = (day: number, callType: 'Day Call' | 'Night Call' | 'Weekend Call' | 'Backup', residentId: string) => {
     setAppState(prev => {
-      if (!prev) return null;
-      let newResidentCall = [...prev.residentCall];
-      if (isAdding) {
-        newResidentCall.push({ day, call: callType, residentId });
-      } else {
-        newResidentCall = newResidentCall.filter(c => !(c.day === day && c.call === callType && c.residentId === residentId));
-      }
-      return { ...prev, residentCall: newResidentCall };
+        if (!prev) return null;
+
+        const callExists = prev.residentCall.some(c => c.day === day && c.callType === callType && c.residentId === residentId);
+
+        let newResidentCall: ResidentCall[];
+        if (callExists) {
+            newResidentCall = prev.residentCall.filter(c => !(c.day === day && c.callType === callType && c.residentId === residentId));
+        } else {
+            // For Day and Night calls, only one resident can be assigned.
+            if (callType === 'Day Call' || callType === 'Night Call') {
+                newResidentCall = prev.residentCall.filter(c => !(c.day === day && c.callType === callType));
+                newResidentCall.push({ day, callType, residentId });
+            } else {
+                 newResidentCall = [...prev.residentCall, { day, callType, residentId }];
+            }
+        }
+        
+        return { ...prev, residentCall: newResidentCall };
     });
   };
-  
+
   const getResidentName = (id: string) => residents.find(r => r.id === id)?.name;
 
   const DayButton = ({ dayNumber }: { dayNumber: number }) => {
     const d = new Date(startDate);
     d.setDate(d.getDate() + dayNumber - 1);
     const dayOfMonth = d.getDate();
-    const dayCalls = residentCall.filter(c => c.day === dayNumber && c.call === 'D');
-    const nightCalls = residentCall.filter(c => c.day === dayNumber && c.call === 'N');
-    const weekendCalls = residentCall.filter(c => c.day === dayNumber && c.call === 'W');
+    const dayCalls = residentCall.filter(c => c.day === dayNumber && c.callType === 'Day Call');
+    const nightCalls = residentCall.filter(c => c.day === dayNumber && c.callType === 'Night Call');
+    const weekendCalls = residentCall.filter(c => c.day === dayNumber && c.callType === 'Weekend Call');
 
     return (
         <DialogTrigger asChild>
@@ -209,23 +219,30 @@ function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, 
               {[...Array(numberOfDays)].map((_, i) => <DayButton key={i} dayNumber={i + 1} />)}
           </div>
       </div>
-      <DialogContent>
+      <DialogContent className="max-w-xl">
          <DialogHeader>
            <DialogTitle>Manage Resident Call for Day {currentEditingDay}</DialogTitle>
          </DialogHeader>
          {currentEditingDay !== null && (
-          <div className="space-y-4 pt-4">
-            {(['W', 'D', 'N', 'B'] as const).map(callType => {
-              const assigned = residentCall.filter(c => c.day === currentEditingDay && c.call === callType);
+          <div className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto">
+            {(['Day Call', 'Night Call', 'Weekend Call', 'Backup'] as const).map(callType => {
+              const assignedResidents = residentCall.filter(c => c.day === currentEditingDay && c.callType === callType).map(c => c.residentId);
               return (
                 <div key={callType}>
-                  <Label>{ {D: 'Day Call', N: 'Night Call', W: 'Weekend Call', B: 'Backup'}[callType] }</Label>
-                  {neuroResidents.map(res => (
-                    <div key={res.id} className="flex items-center space-x-2">
-                      <input type="checkbox" id={`${callType}-${res.id}`} checked={assigned.some(a => a.residentId === res.id)} onChange={e => handleResidentCallChange(currentEditingDay, callType, res.id, e.target.checked)} />
-                      <label htmlFor={`${callType}-${res.id}`}>{res.name}</label>
-                    </div>
-                  ))}
+                  <Label className="font-semibold">{callType}</Label>
+                  <div className="space-y-1 mt-2">
+                      {neuroResidents.map(res => (
+                        <div key={res.id} className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-muted">
+                          <input 
+                            type="checkbox" 
+                            id={`${callType}-${res.id}`} 
+                            checked={assignedResidents.includes(res.id)} 
+                            onChange={() => handleResidentCallChange(currentEditingDay, callType, res.id)} 
+                          />
+                          <label htmlFor={`${callType}-${res.id}`} className="text-sm w-full cursor-pointer">{res.name} (PGY-{res.level})</label>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               );
             })}
@@ -274,7 +291,6 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
         if (!prev) return null;
         let newStaffCall: StaffCall[] = [...prev.staffCall];
         let newResidentCall: ResidentCall[] = [...prev.residentCall];
-        const rotationStartDate = new Date(prev.general.startDate);
         let staffCount = 0;
         let residentCount = 0;
 
@@ -288,16 +304,15 @@ export function StaffConfig({ appState, setAppState }: StaffConfigProps) {
         }
         
         if (data.residentCall) {
-            const callTypeMap: Record<string, 'D' | 'N' | 'W' | 'B'> = {'Day': 'D', 'Night': 'N', 'Weekend': 'W', 'Backup': 'B'};
             data.residentCall.forEach((call: any) => {
                 const dayIndex = call.day - 1;
                 const resident = prev.residents.find(r => r.name === call.residentName);
                 if (resident) {
                     residentCount++;
-                    const callType = callTypeMap[call.callType];
+                    const callType = call.callType;
                     if (callType) {
                        newResidentCall = newResidentCall.filter(c => !(c.day === (dayIndex + 1) && c.residentId === resident.id));
-                       newResidentCall.push({ day: dayIndex + 1, call: callType, residentId: resident.id });
+                       newResidentCall.push({ day: dayIndex + 1, callType, residentId: resident.id });
                     }
                 }
             });
