@@ -355,4 +355,3 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
     </div>
   );
 }
-
