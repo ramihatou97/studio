@@ -8,8 +8,7 @@ import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident, Staff } from "@/lib/types";
 import { Sparkles, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { getMonth, getYear } from 'date-fns';
-import { differenceInDays } from 'date-fns';
+import { getMonth, getYear, differenceInDays } from 'date-fns';
 import { calculateNumberOfDays } from '@/lib/utils';
 
 
@@ -34,7 +33,8 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
 
   const parsePdf = async (file: File): Promise<string> => {
     const pdfjs = await import('pdfjs-dist/build/pdf');
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.mjs`;
+    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
@@ -355,3 +355,4 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
     </div>
   );
 }
+
