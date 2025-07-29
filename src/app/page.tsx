@@ -31,8 +31,7 @@ import { YearlyRotationModal } from '@/components/modals/yearly-rotation-modal';
 import { Loader2, GraduationCap, BookUser, CalendarDays, ScrollText, Users } from 'lucide-react';
 import { RoleSwitcher } from '@/components/role-switcher';
 
-// A mock in-memory store.
-let memoryState: AppState | null = null;
+const LOCAL_STORAGE_KEY = 'medishift-app-state';
 
 export default function AppPage() {
   const { toast } = useToast();
@@ -54,19 +53,31 @@ export default function AppPage() {
 
   const isMobile = useIsMobile();
   
-  // Load initial state from our in-memory store
+  // Load initial state from localStorage or use initial state
   useEffect(() => {
-    if (!memoryState) {
-        memoryState = getInitialAppState();
+    try {
+      const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedStateJSON) {
+        const savedState = JSON.parse(savedStateJSON);
+        setAppState(savedState);
+      } else {
+        setAppState(getInitialAppState());
+      }
+    } catch (error) {
+      console.error("Failed to load state from localStorage:", error);
+      setAppState(getInitialAppState());
     }
-    setAppState(memoryState);
   }, []);
 
   const updateAppState = (updater: React.SetStateAction<AppState | null>) => {
     setAppState(prevState => {
       const newState = typeof updater === 'function' ? updater(prevState) : updater;
       if (newState) {
-        memoryState = newState;
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newState));
+        } catch (error) {
+          console.error("Failed to save state to localStorage:", error);
+        }
       }
       return newState;
     });
