@@ -10,6 +10,7 @@ import { Sparkles, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { getMonth, getYear, differenceInDays } from 'date-fns';
 import { calculateNumberOfDays } from '@/lib/utils';
+import { read, utils } from 'xlsx';
 
 
 interface AiPrepopulationProps {
@@ -33,10 +34,8 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
 
   const parsePdf = async (file: File): Promise<string> => {
     const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
-    const workerSrc = (await import('pdfjs-dist/build/pdf.worker.mjs')).default;
-    if (typeof window !== 'undefined') {
-        GlobalWorkerOptions.workerSrc = workerSrc;
-    }
+    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
+    GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await getDocument({ data: arrayBuffer }).promise;
@@ -55,6 +54,22 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
   };
+
+  const parseXlsx = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = read(arrayBuffer);
+    let fullText = '';
+    workbook.SheetNames.forEach(sheetName => {
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = utils.sheet_to_json(worksheet, { header: 1 });
+        fullText += `Sheet: ${sheetName}\n`;
+        jsonData.forEach((row: any) => {
+            fullText += (row as any[]).join('\t') + '\n';
+        });
+        fullText += '\n';
+    });
+    return fullText;
+  }
 
   const onDataParsed = (data: any) => {
     setAppState(prev => {
@@ -286,7 +301,10 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
             return;
         }
 
-        if (file.type.startsWith('image/')) {
+        const fileType = file.type;
+        const fileName = file.name.toLowerCase();
+
+        if (fileType.startsWith('image/')) {
             sourceType = 'image';
             sourceData = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -294,14 +312,18 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
-        } else if (file.type === 'application/pdf') {
+        } else if (fileType === 'application/pdf') {
             sourceType = 'text';
             sourceData = await parsePdf(file);
-        } else if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        } else if (fileName.endsWith('.docx') || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             sourceType = 'text';
             sourceData = await parseDocx(file);
-        } else {
-            toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload an image, PDF, or .docx file.' });
+        } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+            sourceType = 'text';
+            sourceData = await parseXlsx(file);
+        }
+         else {
+            toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload an image, PDF, DOCX, or Excel file.' });
             setIsLoading(false);
             return;
         }
@@ -339,7 +361,7 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
       <div className="space-y-2">
         <div>
           <Label htmlFor={`file-upload-${dataType}`}>Upload Roster/Schedule File</Label>
-          <Input id={`file-upload-${dataType}`} type="file" accept="image/*,.pdf,.docx" onChange={handleFileChange} className="mt-1" />
+          <Input id={`file-upload-${dataType}`} type="file" accept="image/*,.pdf,.docx,.xlsx,.xls" onChange={handleFileChange} className="mt-1" />
         </div>
       </div>
       <div className="mt-4 flex justify-end">

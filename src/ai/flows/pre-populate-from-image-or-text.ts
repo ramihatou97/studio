@@ -102,7 +102,7 @@ const prepopulateDataFlow = ai.defineFlow(
         name: 'prepopulateDataPrompt',
         input: {schema: PrepopulateDataInputSchema},
         output: {schema: PrepopulateDataOutputSchema},
-        prompt: `You are an expert AI assistant that extracts structured data from medical documents provided as an image or text. Analyze the user's instructions and the provided source data to extract all relevant information and return it in the specified JSON format.
+        prompt: `You are an expert AI assistant that extracts structured data from medical documents provided as an image, text, or spreadsheet data. Analyze the user's instructions and the provided source data to extract all relevant information and return it in the specified JSON format.
 
         **CRITICAL INSTRUCTIONS & PARSING GUIDE:**
 
@@ -117,7 +117,7 @@ const prepopulateDataFlow = ai.defineFlow(
         
         4.  **Parsing Guide by Task**:
         
-            *   **If parsing a ROSTER:**
+            *   **If parsing a ROSTER or a table of people:**
                 *   **Identify Sections**: The document may have sections like "On service residents" and "Off service residents" or "Fly-In Residents". You must identify which section each person belongs to.
                 *   **Parse Each Person**: For each person listed, extract the following details:
                     *   **Name & PGY Level**: The name is the primary identifier. The PGY level is usually at the end of the name string, formatted like 'R1', 'R2', etc. You MUST convert this to a number (e.g., 'R4' becomes level: 4).
@@ -128,8 +128,8 @@ const prepopulateDataFlow = ai.defineFlow(
                     *   **Vacation Dates**: Look for a 'Vacation' column or section associated with the resident. Parse the dates carefully. You must handle ranges (e.g., "August 14-20" becomes '[14, 15, 16, 17, 18, 19, 20]') and comma-separated lists. You must associate these dates with the correct resident name.
                 *   **Ignore Irrelevant Data**: You must ignore rows or columns that you do not understand, such as "Teams" or "Number of Calls". Do not attempt to parse them.
 
-            *   **If parsing an ON-CALL SCHEDULE:**
-                *   **Identify the Table Structure**: First, identify the columns in the schedule, which are typically 'Date', 'Day', 'Cranial', 'Spine', 'Day Call', 'Night Call', etc.
+            *   **If parsing an ON-CALL SCHEDULE (often in a table/grid format):**
+                *   **Identify the Table Structure**: First, identify the columns in the schedule, which are typically 'Date', 'Day', 'Cranial', 'Spine', 'Day Call', 'Night Call', etc. The data can be plain text, in an image, or from a spreadsheet.
                 *   **Process Row by Row**: Go through the document one row at a time. For each row:
                     *   **Extract the Date**: The first column is usually the day of the month (e.g., '1', '2', '3'). This is the 'day' for all other entries in that same row.
                     *   **Extract Assignments**: For the current row's date, look across the other columns.
