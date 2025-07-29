@@ -16,6 +16,7 @@ import { Trash2 } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
 import { AiPrepopulation } from "../ai-prepopulation";
 import { useToast } from "@/hooks/use-toast";
+import { calculateNumberOfDays } from "@/lib/utils";
 
 interface ResidentsConfigProps {
   appState: AppState;
@@ -33,13 +34,7 @@ function AcademicEventsConfig({ appState, setAppState }: ResidentsConfigProps) {
   const { startDate, endDate } = general;
   const neuroResidents = residents.filter(r => r.type === 'neuro');
 
-  const numberOfDays = (() => {
-    if (!startDate || !endDate) return 0;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 0;
-    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  })();
+  const numberOfDays = calculateNumberOfDays(startDate, endDate);
 
   const getFridays = () => {
     const fridays = [];

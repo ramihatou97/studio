@@ -24,6 +24,7 @@ import { differenceInDays, getMonth, getYear } from 'date-fns';
 import { AiPrepopulation } from "../ai-prepopulation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { cn } from "@/lib/utils";
+import { calculateNumberOfDays } from "@/lib/utils";
 
 interface StaffConfigProps {
   appState: AppState;
@@ -43,13 +44,7 @@ function StaffCallScheduler({ appState, setAppState }: { appState: AppState, set
   
   const allStaff = staff;
 
-  const { numberOfDays } = (() => {
-    if (!startDate || !endDate) return { numberOfDays: 0 };
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return { numberOfDays: 0 };
-    return { numberOfDays: Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 };
-  })();
+  const numberOfDays = calculateNumberOfDays(startDate, endDate);
 
   const handleStaffCallChange = (day: number, callType: 'cranial' | 'spine', staffName: string) => {
     setAppState(prev => {
@@ -151,13 +146,7 @@ function ResidentCallScheduler({ appState, setAppState }: { appState: AppState, 
   const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
   const neuroResidents = residents.filter(r => r.type === 'neuro');
 
-  const { numberOfDays } = (() => {
-    if (!startDate || !endDate) return { numberOfDays: 0 };
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return { numberOfDays: 0 };
-    return { numberOfDays: Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 };
-  })();
+  const numberOfDays = calculateNumberOfDays(startDate, endDate);
 
   const handleResidentCallChange = (day: number, callType: 'Day Call' | 'Night Call' | 'Weekend Call' | 'Backup', residentId: string) => {
     setAppState(prev => {

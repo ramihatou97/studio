@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { suggestProcedureCodeAction } from "@/ai/actions";
 import { AiPrepopulation } from "../ai-prepopulation";
 import { differenceInDays, getMonth, getYear } from "date-fns";
+import { calculateNumberOfDays } from "@/lib/utils";
 
 interface OrClinicConfigProps {
   appState: AppState;
@@ -37,13 +38,7 @@ export function OrClinicConfig({ appState, setAppState }: OrClinicConfigProps) {
   const [isSuggestingCode, setIsSuggestingCode] = useState(false);
   const { toast } = useToast();
 
-  const { numberOfDays } = (() => {
-    if (!startDate || !endDate) return { numberOfDays: 0 };
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return { numberOfDays: 0 };
-    return { numberOfDays: Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 };
-  })();
+  const numberOfDays = calculateNumberOfDays(startDate, endDate);
   
   if (numberOfDays === 0) {
     return (

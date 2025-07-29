@@ -1,6 +1,7 @@
 
 import type { AppState } from '@/lib/types';
 import { Brain, Bone, UserCheck, Sun, Moon, Shield, Stethoscope, BookOpen, Users, GraduationCap, Briefcase, Minus } from 'lucide-react';
+import { calculateNumberOfDays } from '@/lib/utils';
 
 interface OnCallScheduleProps {
   appState: AppState;
@@ -12,8 +13,7 @@ export function OnCallSchedule({ appState }: OnCallScheduleProps) {
   if (!startDate || !endDate) return null;
 
   const start = new Date(startDate);
-  const end = new Date(endDate);
-  const numberOfDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const numberOfDays = calculateNumberOfDays(startDate, endDate);
   const startDayOfWeek = start.getDay(); // 0 for Sunday, 1 for Monday, etc.
 
   const dailyRoster = [...Array(numberOfDays)].map((_, dayIndex) => {
