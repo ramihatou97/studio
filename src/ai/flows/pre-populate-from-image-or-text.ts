@@ -101,15 +101,15 @@ const prompt = ai.definePrompt({
   **CRITICAL INSTRUCTIONS:**
   1.  **Analyze the Goal**: First, carefully read the user's instructions to understand what kind of information they want to extract (e.g., "Extract the resident roster," "Parse the on-call schedule," "Get the OR slate"). This will determine which output fields you should populate.
   2.  **Determine the Date Context**: The user has provided a 'startDate' ({{{context.startDate}}}) for the rotation. Use the YEAR and MONTH from this 'startDate' as the primary context. If the document mentions a *different* month (e.g., the document says "August 2025" but the start date is in July), the document's month takes precedence. Your primary task is to correctly identify the day of the month (1-31) for every dated entry.
-  3.  **Distinguish People**: Use the provided lists of existing residents and staff to help differentiate between them. A name on the staff list is a staff member. A name on the resident list is a resident. If a name is not on either list but the user's instructions say "Extract all PGY-1 to PGY-6 residents", you should assume it's a new resident and populate the 'newResidents' field.
+  3.  **Distinguish People**: Use the provided lists of existing residents and staff to help differentiate between them. A name on the staff list is a staff member. A name on the resident list is a resident. If a name is not on either list but the user's instructions say to extract residents, you should assume it's a new resident and populate the 'newResidents' field.
   4.  **Be Precise**: Extract the information as accurately as possible. Pay close attention to keywords to determine the type of data.
 
   **Parsing Guide by Task:**
 
   *   **For Rosters ("newResidents", "vacationDays"):**
-      *   Look for names and associated PGY levels (e.g., R1, R2, R3, R4, R5, R6). You must convert the 'R' number to a simple integer level (e.g., "R4" becomes level: 4).
+      *   Look for names and associated PGY levels (e.g., R1, R2, R3, R4, R5, R6). You must convert the 'R' number to a simple integer level (e.g., 'R4' becomes level: 4).
       *   **Neurosurgery vs. Non-Neurosurgery:**
-          *   If a name has a specialty in parentheses like '(Neurology)' or '(Plastics)', that person is a **non-neurosurgical** resident. Their specialty should be extracted (e.g., specialty: 'Neurology'). They are considered 'onService: true' to their own service, but you should set their specialty field.
+          *   If a name has a specialty in parentheses like '(Neurology)', that person is a **non-neurosurgical** resident. Their specialty should be extracted (e.g., specialty: 'Neurology'). They are still considered 'onService: true' because they are on service for their own specialty, and you must set their specialty field.
           *   Anyone without a specialty in parentheses is a **neurosurgery resident**.
       *   **On-Service vs. Off-Service (for Neurosurgery Residents):**
           *   If a neurosurgery resident is listed under a header like "On service residents", they are 'onService: true'.

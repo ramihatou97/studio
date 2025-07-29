@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { prepopulateDataAction } from "@/ai/actions";
 import type { AppState, Resident, Staff } from "@/lib/types";
@@ -19,7 +18,6 @@ interface AiPrepopulationProps {
 }
 
 export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType, title, description }: AiPrepopulationProps) {
-  const [instructions, setInstructions] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -32,8 +30,6 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
 
   const parsePdf = async (file: File): Promise<string> => {
     const pdfjs = await import('pdfjs-dist/build/pdf');
-    // The workerSrc property expects a URL string, not a module object.
-    // We will use the CDN version that matches the installed package version.
     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.mjs`;
 
     const arrayBuffer = await file.arrayBuffer();
@@ -56,9 +52,26 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
   
   const handleParse = async () => {
     setIsLoading(true);
-    let sourceType: 'text' | 'image' | null = 'image';
+    let sourceType: 'text' | 'image' | null = null;
     let sourceData: string | null = null;
-    let textInstructions = instructions;
+    
+    // Generate instructions based on the data type context
+    let instructions = '';
+    switch (dataType) {
+        case 'roster':
+            instructions = 'This is the team roster. Extract all resident names, PGY levels, on-service status, and vacation schedules.';
+            break;
+        case 'on-call':
+            instructions = 'This is the on-call schedule. Extract all staff and resident on-call assignments for each day.';
+            break;
+        case 'or-clinic':
+            instructions = 'This is the OR and Clinic schedule. Extract all OR cases and clinic assignments.';
+            break;
+        case 'academic':
+            instructions = 'This is the academic schedule. Extract all Case Rounds and Journal Club presentations.';
+            break;
+    }
+
 
     try {
         if (!file) {
@@ -78,13 +91,9 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
         } else if (file.type === 'application/pdf') {
             sourceType = 'text';
             sourceData = await parsePdf(file);
-            // Use the extracted text as instructions if none are provided
-            if (!textInstructions) textInstructions = sourceData;
         } else if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             sourceType = 'text';
             sourceData = await parseDocx(file);
-             // Use the extracted text as instructions if none are provided
-            if (!textInstructions) textInstructions = sourceData;
         } else {
             toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload an image, PDF, or .docx file.' });
             setIsLoading(false);
@@ -97,7 +106,7 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
             startDate: appState.general.startDate,
         };
 
-        const result = await prepopulateDataAction(sourceType, sourceData, textInstructions, context);
+        const result = await prepopulateDataAction(sourceType, sourceData, instructions, context);
 
         if (result.success && result.data) {
           onDataParsed(result.data);
@@ -121,25 +130,14 @@ export function AiPrepopulation({ appState, setAppState, onDataParsed, dataType,
       <p className="text-sm text-muted-foreground mb-4">
         {description}
       </p>
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div>
           <Label htmlFor={`file-upload-${dataType}`}>Upload Roster/Schedule File</Label>
           <Input id={`file-upload-${dataType}`} type="file" accept="image/*,.pdf,.docx" onChange={handleFileChange} className="mt-1" />
         </div>
-        <div>
-          <Label htmlFor={`instructions-${dataType}`}>Or Paste Instructions/Text</Label>
-          <Textarea
-            id={`instructions-${dataType}`}
-            rows={3}
-            className="mt-1"
-            placeholder="Provide specific instructions for the AI, or paste the text directly here..."
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-          />
-        </div>
       </div>
       <div className="mt-4 flex justify-end">
-        <Button onClick={handleParse} disabled={isLoading} className="bg-primary hover:bg-primary/90">
+        <Button onClick={handleParse} disabled={isLoading || !file} className="bg-primary hover:bg-primary/90">
           {isLoading ? 'Parsing...' : 'Upload and Parse'}
         </Button>
       </div>
