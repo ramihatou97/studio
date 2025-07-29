@@ -108,8 +108,12 @@ const prompt = ai.definePrompt({
 
   *   **For Rosters ("newResidents", "vacationDays"):**
       *   Look for names and associated PGY levels (e.g., R1, R2, R3, R4, R5, R6). You must convert the 'R' number to a simple integer level (e.g., "R4" becomes level: 4).
-      *   If a name has text in parentheses like "(Neurology off service)", that person is **off service** ('onService: false') and their specialty should be extracted (e.g., 'specialty: "Neurology"'). All other neurosurgery residents are on service ('onService: true').
-      *   The "On service residents" are on service. The "Off service residents" are not.
+      *   **Neurosurgery vs. Non-Neurosurgery:**
+          *   If a name has a specialty in parentheses like '(Neurology)' or '(Plastics)', that person is a **non-neurosurgical** resident. Their specialty should be extracted (e.g., 'specialty: "Neurology"'). They are considered 'onService: true' to their own service, but you should set their specialty field.
+          *   Anyone without a specialty in parentheses is a **neurosurgery resident**.
+      *   **On-Service vs. Off-Service (for Neurosurgery Residents):**
+          *   If a neurosurgery resident is listed under a header like "On service residents", they are 'onService: true'.
+          *   If a neurosurgery resident is listed under a header like "Off service residents", they are doing a non-neurosurgical rotation. You must set 'onService: false' for them.
       *   If there is a "Vacation" column, you must parse the dates and associate them with the correct resident. The dates can be ranges (e.g., "August 14-20") or individual days (e.g., "25"). You must expand the ranges into individual day numbers (e.g., "14-20" becomes '[14, 15, 16, 17, 18, 19, 20]'). Populate the 'vacationDays' output field.
       *   Ignore columns you do not understand, such as "Number of Calls". Do not attempt to parse them.
 
