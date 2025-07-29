@@ -32,12 +32,14 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
   };
 
   const parsePdf = async (file: File): Promise<string> => {
-    const pdfjs = await import('pdfjs-dist/build/pdf');
-    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
+    const workerSrc = (await import('pdfjs-dist/build/pdf.worker.mjs')).default;
+    if (typeof window !== 'undefined') {
+        GlobalWorkerOptions.workerSrc = workerSrc;
+    }
 
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -48,7 +50,7 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
   };
   
   const parseDocx = async (file: File): Promise<string> => {
-    const mammoth = await import('mammoth');
+    const mammoth = (await import('mammoth')).default;
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
@@ -230,7 +232,7 @@ export function AiPrepopulation({ appState, setAppState, dataType, title, descri
                       newCaseRounds.push({ dayIndex, residentId: resident.id });
                     }
                   } else if (event.eventType === 'Journal Club') {
-                    const staffMember = prev.staff.find(s => s.name === event.presenter);
+                    const staffMember = prev.staff.find(s => s.id === event.presenter);
                     if (staffMember) {
                       newArticleDiscussions.push({
                         dayIndex,
