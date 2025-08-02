@@ -4,76 +4,19 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
         {
-            "name": "Attach to Chrome",
-            "port": 9222,
-            "request": "attach",
+            "name": "Launch Chrome",
+            "request": "launch",
             "type": "chrome",
-            "webRoot": "${workspaceFolder}"
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "userDataDir": false,
+            "runtimeArgs": [
+                "--disable-web-security",
+                "--disable-features=VizDisplayCompositor"
+            ]
         },
-        {
-            "name": "Attach to Chrome",
-            "port": 9222,
-            "request": "attach",
-            "type": "chrome",
-            "webRoot": "${workspaceFolder}"
-        },
-
-
-        {
-        // Use IntelliSense to learn about possible attributes.
-        // Hover to view descriptions of existing attributes.
-        // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-        "version": "0.2.0",
-        "configurations": [
-            // Existing configurations
-            {
-                "name": "Attach to Chrome",
-                "port": 9222,
-                "request": "attach",
-                "type": "chrome",
-                "webRoot": "${workspaceFolder}"
-            },
-            {
-                "type": "chrome",
-                "request": "launch",
-                "name": "Launch Chrome against localhost",
-                "url": "http://localhost:8080",
-                "webRoot": "${workspaceFolder}"
-            },
-            // New configuration for debugging the Next.js server
-            {
-                "name": "Next.js: Debug Server",
-                "type": "node",
-                "request": "launch",
-                "program": "${workspaceFolder}/node_modules/.bin/next",
-                "args": ["dev"],
-                "cwd": "${workspaceFolder}",
-                "protocol": "inspector",
-                "console": "integratedTerminal"
-            },
-            // New configuration for debugging the Next.js client (browser)
-            {
-                "name": "Next.js: Debug Client",
-                "type": "chrome",
-                "request": "launch",
-                "url": "http://localhost:3000", // Adjust the port if your Next.js app runs on a different one
-                "webRoot": "${workspaceFolder}"
-            }
-        ]
-    }
-    
-
-
-
-
-
-
-
-
-
-
         {
             "name": "Attach to Chrome",
             "port": 9222,
@@ -87,6 +30,80 @@
             "name": "Launch Chrome against localhost",
             "url": "http://localhost:8080",
             "webRoot": "${workspaceFolder}"
+        },
+        {
+            "name": "Next.js: Debug Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/.bin/next",
+            "args": [
+                "dev"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Next.js: Debug Client",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}"
+        },
+        {
+            "name": "Next.js: Debug Full Stack",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/.bin/next",
+            "args": [
+                "dev"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "serverReadyAction": {
+                "pattern": "ready - started server on .+, url: (https?://.+)",
+                "uriFormat": "%s",
+                "action": "debugWithChrome"
+            }
+        },
+        {
+            "name": "Debug Firebase Functions",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/functions/node_modules/.bin/firebase",
+            "args": [
+                "emulators:start",
+                "--inspect-functions"
+            ],
+            "cwd": "${workspaceFolder}/src/functions",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Debug Jest Tests",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/.bin/jest",
+            "args": [
+                "--runInBand",
+                "--no-cache"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Debug Genkit Flows",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/.bin/genkit",
+            "args": [
+                "start",
+                "--port",
+                "4000"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "NODE_ENV": "development"
+            }
         }
     ]
 }
