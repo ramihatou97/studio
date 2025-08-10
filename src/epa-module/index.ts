@@ -12,7 +12,16 @@ export type {
   EpaStage,
   EpaType,
   EpaIndexEntry,
-  EpaSearchResult
+  EpaSearchResult,
+  // Workflow Management Types
+  ORCase,
+  EpaAssignment,
+  EpaCompletion,
+  NotificationRecord,
+  OrEpaMapping,
+  EmailFormConfig,
+  ReminderSettings,
+  EpaWorkflowStats
 } from './types/epa';
 
 // Type utilities and helpers
@@ -22,7 +31,10 @@ export {
   isValidEpaStage,
   isValidEpaType,
   getStageVariant,
-  getTypeVariant
+  getTypeVariant,
+  // Workflow helper functions
+  getAssignmentStatusVariant,
+  getPriorityVariant
 } from './types/epa';
 
 // Search and indexing utilities
@@ -36,6 +48,21 @@ export {
   countByStage,
   countByType
 } from './utils/indexing';
+
+// Workflow management utilities
+export {
+  generateEmailFormToken,
+  createEpaAssignment,
+  linkAssignmentToOR,
+  generateEmailFormConfig,
+  shouldSendReminder,
+  shouldEscalateAssignment,
+  createNotification,
+  completeEpaAssignment,
+  findRelevantEpasForOR,
+  calculateWorkflowStats,
+  formatNotificationContent
+} from './utils/workflow';
 
 // Data exports (re-exported from existing source)
 export {
@@ -53,6 +80,20 @@ export {
   type EpaListProps,
   type EpaListRenderers
 } from './components/EpaList';
+
+// Workflow management components
+export {
+  EpaAssignmentManager,
+  type EpaAssignmentManagerProps
+} from './components/EpaAssignmentManager';
+
+export {
+  EmailFormGenerator,
+  EmailEvaluationForm,
+  generateEmailContent,
+  type EmailFormGeneratorProps,
+  type EmailFormProps
+} from './components/EmailFormGenerator';
 
 // Default export for convenience
 export { EpaList as default } from './components/EpaList';

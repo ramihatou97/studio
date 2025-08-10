@@ -1,368 +1,492 @@
 # EPA Module
 
-A portable, reusable module for working with Entrustable Professional Activities (EPAs) in React applications. This module provides strongly typed domain models, search utilities, and a flexible React component for displaying and interacting with EPAs.
+A comprehensive, portable module for Entrustable Professional Activities (EPA) management with strongly typed domain models, search utilities, reusable React components, and **complete workflow management capabilities**.
 
-## Features
+## Table of Contents
 
-- **Strongly Typed Domain Models**: Complete TypeScript support for EPAs, milestones, stages, and types
-- **Search & Indexing**: Fast, client-side search with relevance scoring and filtering
-- **Reusable React Component**: Design-system-agnostic `EpaList` component with overridable renderers
-- **Zero Duplication**: Re-exports existing EPA dataset without duplication
-- **Role-Based Actions**: Automatic action labels based on user roles
-- **Debounced Search**: Built-in search debouncing for better performance
-- **Extensible**: Easy to customize and extend for specific use cases
+- [Overview](#overview)
+- [Installation & Setup](#installation--setup)
+- [Core Features](#core-features)
+- [Workflow Management](#workflow-management)
+- [API Reference](#api-reference)
+- [Usage Examples](#usage-examples)
+- [Customization](#customization)
+- [Future Enhancements](#future-enhancements)
 
-## Installation
+## Overview
+
+This module provides everything needed to work with EPAs across different repositories and applications:
+
+### ✅ **Core EPA Management**
+- Strongly typed domain models with utility functions
+- Fast, client-side search with relevance scoring
+- Reusable, design-system-agnostic React components
+- Zero data duplication (re-exports existing dataset)
+
+### 🚀 **NEW: Complete Workflow Management**
+- **EPA Assignment System**: Link EPAs to residents with OR case correlation
+- **Notification & Reminder System**: Automated reminders via email, phone, and in-app
+- **OR-EPA Mapping**: Intelligent matching of EPAs to surgical cases
+- **Email Form Generation**: External evaluation completion via secure email links
+- **Completion Tracking**: Comprehensive workflow analytics and progress monitoring
+
+## Installation & Setup
 
 ```typescript
-// Import what you need from the module
-import { EpaList, ALL_EPAS, simpleSearch } from '@/epa-module';
+// Import the entire module
+import { 
+  EpaList, 
+  EpaAssignmentManager,
+  EmailFormGenerator,
+  ALL_EPAS, 
+  simpleSearch,
+  createEpaAssignment,
+  findRelevantEpasForOR
+} from '@/epa-module';
+
+// Or import specific components
+import { EpaList } from '@/epa-module';
 ```
 
-## Quick Start
+## Core Features
 
-### Basic Usage
+### 🔍 Search & Indexing
+```typescript
+import { simpleSearch, buildEpaIndex } from '@/epa-module';
 
-```tsx
-import { EpaList, ALL_EPAS } from '@/epa-module';
+// Simple search with relevance scoring
+const results = simpleSearch(ALL_EPAS, 'cranial surgery', {
+  maxResults: 10,
+  filterByStage: ['Core', 'Foundations']
+});
 
-function MyComponent() {
-  const handleEpaSelect = (epa) => {
-    console.log('Selected EPA:', epa);
-  };
+// Build optimized search index for repeated searches
+const index = buildEpaIndex(ALL_EPAS);
+```
 
-  return (
-    <EpaList
-      epas={ALL_EPAS}
-      role="resident"
-      onSelect={handleEpaSelect}
-    />
+### ⚛️ Reusable Components
+```typescript
+import { EpaList } from '@/epa-module';
+
+<EpaList
+  epas={ALL_EPAS}
+  role="resident"
+  onSelect={handleEpaSelect}
+  debounceMs={300}
+  renderers={{
+    searchInput: CustomSearchInput,
+    item: CustomEpaItem
+  }}
+/>
+```
+
+## Workflow Management
+
+### 📋 EPA Assignment System
+
+Create and manage EPA assignments linked to OR cases:
+
+```typescript
+import { 
+  EpaAssignmentManager,
+  createEpaAssignment,
+  linkAssignmentToOR 
+} from '@/epa-module';
+
+// Create an EPA assignment
+const assignment = createEpaAssignment(
+  'TTD EPA #1',           // EPA ID
+  'resident-123',         // Resident ID  
+  'staff-456',           // Assigning Staff ID
+  {
+    priority: 'High',
+    dueDate: new Date('2024-02-15'),
+    orCaseId: 'or-case-789'
+  }
+);
+
+// Use the assignment manager component
+<EpaAssignmentManager
+  epas={ALL_EPAS}
+  assignments={assignments}
+  orCases={orCases}
+  userRole="staff"
+  userId="staff-456"
+  residents={residents}
+  staff={staff}
+  onCreateAssignment={handleCreateAssignment}
+  onUpdateAssignment={handleUpdateAssignment}
+  onSendNotification={handleSendNotification}
+  onGenerateEmailForm={handleGenerateEmailForm}
+/>
+```
+
+### 🔗 OR-EPA Mapping
+
+Intelligently match EPAs to surgical cases:
+
+```typescript
+import { findRelevantEpasForOR } from '@/epa-module';
+
+const orCase = {
+  id: 'or-123',
+  procedure: 'Cranial Tumor Resection',
+  surgeon: 'Dr. Smith',
+  residentId: 'resident-456',
+  complexity: 'High'
+};
+
+// Find relevant EPAs for this OR case
+const relevantEpas = findRelevantEpasForOR(orCase, ALL_EPAS, 0.6);
+// Returns EPAs with relevance scores and reasons
+```
+
+### 📧 Email Form Generation
+
+Generate secure email forms for external EPA completion:
+
+```typescript
+import { 
+  EmailFormGenerator, 
+  EmailEvaluationForm,
+  generateEmailFormConfig 
+} from '@/epa-module';
+
+// Generate email form configuration
+const emailConfig = generateEmailFormConfig(
+  assignment,
+  'staff@hospital.com',
+  'https://yourapp.com',
+  30 // expires in 30 days
+);
+
+// Email form generator component
+<EmailFormGenerator
+  assignment={assignment}
+  epa={epa}
+  staffEmail="staff@hospital.com"
+  baseUrl="https://yourapp.com"
+  onFormGenerated={handleFormGenerated}
+/>
+
+// External evaluation form (accessible via secure token)
+<EmailEvaluationForm
+  config={emailConfig}
+  epa={epa}
+  assignment={assignment}
+  staff={staff}
+  resident={resident}
+  onSubmit={handleEvaluationSubmit}
+/>
+```
+
+### 🔔 Notification & Reminder System
+
+Automated reminders and escalation management:
+
+```typescript
+import { 
+  shouldSendReminder,
+  shouldEscalateAssignment,
+  createNotification,
+  formatNotificationContent 
+} from '@/epa-module';
+
+// Check if assignment needs a reminder
+if (shouldSendReminder(assignment, lastReminderDate, existingNotifications)) {
+  // Send reminder via configured methods (email, phone, in-app)
+  const notification = createNotification(
+    'Reminder',
+    assignment.residentId,
+    'Resident',
+    'Email',
+    {
+      content: formatNotificationContent('Reminder', assignment, epa),
+      relatedAssignmentId: assignment.id
+    }
   );
+  
+  sendNotification(notification);
+}
+
+// Check for escalation
+if (shouldEscalateAssignment(assignment, existingNotifications)) {
+  // Escalate to supervisor
+  escalateToSupervisor(assignment);
 }
 ```
 
-### With Custom Renderers
+### 📊 Workflow Analytics
 
-```tsx
-import { EpaList, ALL_EPAS } from '@/epa-module';
+Comprehensive statistics and monitoring:
 
-function CustomEpaList() {
-  const customRenderers = {
-    // Custom search input
-    searchInput: ({ value, onChange, placeholder }) => (
-      <MyCustomInput
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        icon="search"
-      />
-    ),
-    
-    // Custom EPA item rendering
-    item: ({ epa, onSelect, actionLabel, children }) => (
-      <MyCard className="epa-item">
-        <MyCardHeader>
-          <h3>{epa.id}: {epa.title}</h3>
-        </MyCardHeader>
-        <MyCardContent>
-          <p>{epa.keyFeatures}</p>
-          {children}
-        </MyCardContent>
-        <MyCardFooter>
-          <MyButton onClick={() => onSelect(epa)}>
-            {actionLabel}
-          </MyButton>
-        </MyCardFooter>
-      </MyCard>
-    ),
-    
-    // Custom loading state
-    loadingState: () => (
-      <MySpinner size="large" text="Loading EPAs..." />
-    )
-  };
+```typescript
+import { calculateWorkflowStats } from '@/epa-module';
 
-  return (
-    <EpaList
-      epas={ALL_EPAS}
-      role="staff"
-      onSelect={handleEpaSelect}
-      renderers={customRenderers}
-      debounceMs={500}
-    />
-  );
-}
+const stats = calculateWorkflowStats(
+  assignments,
+  completions,
+  notifications,
+  ALL_EPAS
+);
+
+// Returns detailed statistics:
+// - Total/completed/overdue assignments
+// - Completion rates by stage/resident
+// - Reminder effectiveness
+// - Average completion times
 ```
 
 ## API Reference
 
-### Core Types
+### Types
+
+**Core EPA Types:**
+- `EPA` - Complete EPA definition with milestones
+- `EpaStage` - EPA stage type
+- `EpaType` - EPA type (Procedural, Non-Procedural, Mixed)
+
+**Workflow Management Types:**
+- `EpaAssignment` - EPA assignment with due dates, priority, and OR links
+- `ORCase` - Operating room case information
+- `EpaCompletion` - Completed evaluation with scores and feedback
+- `NotificationRecord` - Notification tracking and delivery status
+- `EmailFormConfig` - Email form configuration with secure tokens
+- `EpaWorkflowStats` - Comprehensive workflow analytics
+
+### Components
+
+**Core Components:**
+- `EpaList` - Searchable, filterable EPA list with custom renderers
+- `EpaAssignmentManager` - Complete assignment management interface
+- `EmailFormGenerator` - Generate secure email evaluation forms
+- `EmailEvaluationForm` - External evaluation form for email completion
+
+### Utilities
+
+**Search & Data:**
+- `simpleSearch()` - Fast EPA search with relevance scoring
+- `getEpaById()`, `getEpasByStage()`, `getEpasByType()` - Data accessors
+
+**Workflow Management:**
+- `createEpaAssignment()` - Create new EPA assignments
+- `findRelevantEpasForOR()` - Match EPAs to OR cases
+- `generateEmailFormConfig()` - Create secure email forms
+- `shouldSendReminder()` - Check reminder eligibility
+- `calculateWorkflowStats()` - Generate workflow analytics
+
+## Usage Examples
+
+### Complete Workflow Example
 
 ```typescript
-interface EPA {
-  id: string;
-  stage: EpaStage;
-  title: string;
-  keyFeatures: string;
-  assessmentPlan: string;
-  milestones: Milestone[];
-  type: EpaType;
-}
+import {
+  EpaAssignmentManager,
+  EmailFormGenerator,
+  ALL_EPAS,
+  createEpaAssignment,
+  findRelevantEpasForOR,
+  calculateWorkflowStats
+} from '@/epa-module';
 
-interface Milestone {
-  id: number;
-  text: string;
-}
-
-type EpaStage = 'Transition to Discipline' | 'Foundations' | 'Core' | 'Transition to Practice';
-type EpaType = 'Procedural' | 'Non-Procedural' | 'Mixed';
-```
-
-### EpaList Component
-
-```typescript
-interface EpaListProps {
-  epas: EPA[];                    // Array of EPAs to display
-  role: UserRole;                 // User role for action labels
-  onSelect: (epa: EPA) => void;   // Selection callback
-  isLoading?: boolean;            // Loading state
-  debounceMs?: number;            // Search debounce delay (default: 300)
-  renderers?: EpaListRenderers;   // Custom component renderers
-  className?: string;             // Additional CSS classes
-  searchPlaceholder?: string;     // Search input placeholder
-  maxHeight?: string;             // Maximum height for scroll area
-  searchOptions?: {               // Search configuration
-    maxResults?: number;
-    minScore?: number;
-    filterByStage?: string[];
-    filterByType?: string[];
+function EpaManagementDashboard() {
+  const [assignments, setAssignments] = useState([]);
+  const [orCases, setOrCases] = useState([]);
+  
+  // Handle creating new assignment after OR case
+  const handlePostORAssignment = async (orCase) => {
+    // Find relevant EPAs for this OR case
+    const relevantEpas = findRelevantEpasForOR(orCase, ALL_EPAS, 0.7);
+    
+    // Create assignment for the most relevant EPA
+    if (relevantEpas.length > 0) {
+      const assignment = createEpaAssignment(
+        relevantEpas[0].id,
+        orCase.residentId,
+        orCase.surgeon,
+        {
+          orCaseId: orCase.id,
+          priority: orCase.complexity === 'High' ? 'High' : 'Medium',
+          reminderSettings: {
+            enabled: true,
+            intervalDays: 3,
+            methods: ['Email', 'InApp'],
+            escalationAfterDays: 14
+          }
+        }
+      );
+      
+      setAssignments(prev => [...prev, assignment]);
+      
+      // Send notification to resident
+      await sendAssignmentNotification(assignment);
+    }
   };
+  
+  // Handle email form generation
+  const handleGenerateEmailForm = async (emailConfig) => {
+    // Store token and send email
+    await storeEmailToken(emailConfig.token, emailConfig.assignmentId);
+    await sendEvaluationEmail(emailConfig);
+  };
+  
+  return (
+    <div className="space-y-6">
+      <EpaAssignmentManager
+        epas={ALL_EPAS}
+        assignments={assignments}
+        orCases={orCases}
+        userRole="staff"
+        userId="current-staff-id"
+        residents={residents}
+        staff={staff}
+        onCreateAssignment={(assignment, mapping) => {
+          setAssignments(prev => [...prev, assignment]);
+          if (mapping) handleOrEpaMapping(mapping);
+        }}
+        onGenerateEmailForm={handleGenerateEmailForm}
+        baseUrl="https://yourapp.com"
+      />
+      
+      {/* Analytics Dashboard */}
+      <WorkflowAnalytics 
+        stats={calculateWorkflowStats(assignments, completions, notifications, ALL_EPAS)}
+      />
+    </div>
+  );
 }
 ```
 
-### Search Utilities
+### Email Integration Example
 
 ```typescript
-// Build search index for faster searching
-const index = buildEpaIndex(ALL_EPAS);
-
-// Perform search with options
-const results = simpleSearch(ALL_EPAS, 'cranial surgery', {
-  maxResults: 10,
-  minScore: 5,
-  filterByStage: ['Core', 'Foundations']
-});
-
-// Get unique values for filters
-const stages = getUniqueStages(ALL_EPAS);
-const types = getUniqueTypes(ALL_EPAS);
-
-// Filter by criteria
-const coreEpas = filterByStage(ALL_EPAS, ['Core']);
-const proceduralEpas = filterByType(ALL_EPAS, ['Procedural']);
-```
-
-### Data Access
-
-```typescript
-// Access the complete dataset
-import { ALL_EPAS, EPA_STATISTICS } from '@/epa-module';
-
-// Get specific EPAs
-const coreEpas = getEpasByStage('Core');
-const proceduralEpas = getEpasByType('Procedural');
-const specificEpa = getEpaById('Core EPA #1');
-const randomEpa = getRandomEpa();
-
-// View statistics
-console.log(EPA_STATISTICS.total);        // Total number of EPAs
-console.log(EPA_STATISTICS.byStage);      // Count by stage
-console.log(EPA_STATISTICS.byType);       // Count by type
+// API route for handling email form submissions
+export async function POST(request: Request) {
+  const { token, scores, feedback } = await request.json();
+  
+  // Validate token and get assignment
+  const assignment = await validateEmailToken(token);
+  if (!assignment) {
+    return new Response('Invalid or expired token', { status: 401 });
+  }
+  
+  // Complete the EPA evaluation
+  const completion = completeEpaAssignment(
+    assignment,
+    'staff-from-email',
+    scores,
+    feedback,
+    'Email'
+  );
+  
+  // Save completion and notify relevant parties
+  await saveCompletion(completion);
+  await notifyCompletionStakeholders(completion);
+  
+  return Response.json({ success: true });
+}
 ```
 
 ## Customization
 
 ### Custom Renderers
 
-The `EpaList` component accepts custom renderers for maximum flexibility:
+Override default components for any design system:
 
 ```typescript
-interface EpaListRenderers {
-  searchInput?: (props) => ReactNode;    // Custom search input
-  wrapper?: (props) => ReactNode;        // Custom container wrapper
-  item?: (props) => ReactNode;           // Custom EPA item
-  badges?: (props) => ReactNode;         // Custom stage/type badges
-  actionButton?: (props) => ReactNode;   // Custom action button
-  loadingState?: () => ReactNode;        // Custom loading indicator
-  emptyState?: (props) => ReactNode;     // Custom empty state
-}
-```
-
-### Role-Based Action Labels
-
-Action labels are automatically determined by user role:
-
-```typescript
-import { getEpaActionLabel } from '@/epa-module';
-
-getEpaActionLabel('program-director'); // "Evaluate"
-getEpaActionLabel('staff');            // "Evaluate"
-getEpaActionLabel('resident');         // "Request Evaluation"
-getEpaActionLabel('developer');        // "View Details"
-```
-
-### Search Configuration
-
-Fine-tune search behavior:
-
-```typescript
-const searchOptions = {
-  maxResults: 20,          // Limit number of results
-  minScore: 10,           // Minimum relevance score
-  filterByStage: ['Core'], // Only search in specific stages
-  filterByType: ['Procedural'] // Only search specific types
-};
-```
-
-## Design System Integration
-
-The module is designed to work with any design system. Default renderers use shadcn/ui components, but you can easily substitute your own:
-
-```tsx
-// Using Material-UI
-const materialRenderers = {
+const customRenderers = {
   searchInput: ({ value, onChange, placeholder }) => (
-    <TextField
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+    <MyCustomSearchInput 
+      value={value} 
+      onChange={onChange} 
       placeholder={placeholder}
-      InputProps={{
-        startAdornment: <SearchIcon />
-      }}
     />
   ),
   
-  item: ({ epa, onSelect, actionLabel, children }) => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6">{epa.title}</Typography>
-        <Typography variant="body2">{epa.keyFeatures}</Typography>
-        {children}
-      </CardContent>
-      <CardActions>
-        <Button onClick={() => onSelect(epa)}>
-          {actionLabel}
-        </Button>
-      </CardActions>
-    </Card>
+  item: ({ epa, onSelect, actionLabel }) => (
+    <MyCustomEpaCard 
+      epa={epa} 
+      onAction={() => onSelect(epa)}
+      actionText={actionLabel}
+    />
+  ),
+  
+  badges: ({ epa }) => (
+    <MyCustomBadgeGroup stage={epa.stage} type={epa.type} />
   )
 };
+
+<EpaList epas={ALL_EPAS} renderers={customRenderers} />
 ```
 
-## Data Source Rationale
+### Custom Notification Methods
 
-This module re-exports the existing EPA dataset from `src/lib/epa-data.ts` rather than duplicating it. This approach:
+Extend notification delivery:
 
-- **Prevents Data Duplication**: Single source of truth for EPA data
-- **Maintains Consistency**: Changes to the original dataset are automatically reflected
-- **Reduces Bundle Size**: No duplicate data in the final bundle
-- **Simplifies Maintenance**: Updates only need to happen in one place
+```typescript
+// Custom notification handler
+const handleCustomNotification = async (notification) => {
+  switch (notification.method) {
+    case 'Email':
+      await sendEmail(notification);
+      break;
+    case 'Phone':
+      await sendSMS(notification);
+      break;
+    case 'InApp':
+      await createInAppNotification(notification);
+      break;
+    case 'Slack': // Custom method
+      await sendSlackMessage(notification);
+      break;
+  }
+};
+```
 
 ## Future Enhancements
 
-### Virtualization
-For very large EPA datasets, consider implementing virtualization:
+### Planned Features
 
-```typescript
-// Future enhancement idea
-import { FixedSizeList as List } from 'react-window';
+- **🔄 Real-time Synchronization**: WebSocket-based live updates
+- **📱 Mobile App Integration**: React Native components
+- **🤖 AI-Powered Matching**: ML-based EPA-OR case correlation
+- **📈 Advanced Analytics**: Predictive modeling and insights
+- **🔐 Advanced Security**: Enhanced token management and encryption
+- **📋 Template System**: Customizable evaluation forms
+- **🌐 Multi-language Support**: Internationalization capabilities
 
-const VirtualizedEpaList = ({ epas, ...props }) => {
-  const ItemRenderer = ({ index, style }) => (
-    <div style={style}>
-      <EpaItem epa={epas[index]} {...props} />
-    </div>
-  );
+### Contributing
 
-  return (
-    <List
-      height={600}
-      itemCount={epas.length}
-      itemSize={120}
-    >
-      {ItemRenderer}
-    </List>
-  );
-};
-```
+The module is designed to be extended and customized. Key extension points:
 
-### Schema Validation
-Add runtime validation with Zod:
+1. **Custom Renderers**: Override any UI component
+2. **Notification Methods**: Add new delivery channels
+3. **Search Algorithms**: Implement custom relevance scoring
+4. **Analytics**: Add custom metrics and reporting
+5. **Integration APIs**: Connect with external systems
 
-```typescript
-// Future enhancement idea
-import { z } from 'zod';
-
-const EpaSchema = z.object({
-  id: z.string(),
-  stage: z.enum(['Transition to Discipline', 'Foundations', 'Core', 'Transition to Practice']),
-  title: z.string(),
-  keyFeatures: z.string(),
-  assessmentPlan: z.string(),
-  milestones: z.array(z.object({
-    id: z.number(),
-    text: z.string()
-  })),
-  type: z.enum(['Procedural', 'Non-Procedural', 'Mixed'])
-});
-
-export const validateEpa = (epa: unknown): EPA => {
-  return EpaSchema.parse(epa);
-};
-```
-
-### Server-Side Search
-For larger datasets, implement server-side search:
-
-```typescript
-// Future enhancement idea
-export async function serverSearch(
-  query: string, 
-  options: SearchOptions
-): Promise<EpaSearchResult[]> {
-  const response = await fetch('/api/epas/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, options })
-  });
-  
-  return response.json();
-}
-```
-
-## Publishing as a Package
+### Publishing as Standalone Package
 
 To publish this module as a standalone npm package:
 
-1. **Extract the Module**: Move `src/epa-module` to a separate repository
-2. **Add Package Configuration**:
-   ```json
-   {
-     "name": "@your-org/epa-module",
-     "version": "1.0.0",
-     "main": "dist/index.js",
-     "types": "dist/index.d.ts",
-     "peerDependencies": {
-       "react": "^18.0.0",
-       "react-dom": "^18.0.0"
-     }
-   }
-   ```
-3. **Build Configuration**: Add TypeScript build configuration
-4. **Documentation**: Expand this README for standalone usage
-5. **Testing**: Add comprehensive unit and integration tests
-6. **CI/CD**: Set up automated testing and publishing
+1. Move module to separate repository
+2. Update imports to use relative paths
+3. Add peer dependencies for React components
+4. Include TypeScript definitions
+5. Create comprehensive documentation
+6. Set up CI/CD pipeline for automated testing
+
+```json
+{
+  "name": "@medical-education/epa-module",
+  "version": "1.0.0",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "typescript": ">=4.9.0"
+  }
+}
+```
 
 ## License
 
-This EPA module is part of the studio project and follows the same licensing terms.
+This module is designed for medical education applications and follows healthcare data handling best practices.
